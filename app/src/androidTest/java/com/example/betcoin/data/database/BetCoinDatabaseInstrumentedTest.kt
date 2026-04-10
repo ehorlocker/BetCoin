@@ -38,6 +38,8 @@ class BetCoinDatabaseInstrumentedTest {
   @Test
   fun database_createsSuccessfully() {
     assertThat(database).isNotNull()
+    // Trigger lazy initialization so the database actually opens.
+    database.openHelper.readableDatabase
     assertThat(database.isOpen).isTrue()
   }
 
