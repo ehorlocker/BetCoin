@@ -1,0 +1,84 @@
+name: Feature Request
+description: Propose a new feature or enhancement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of the feature you'd like.
+      placeholder: What do you want to add or change?
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this feature needed? What problem does it solve?
+      placeholder: Explain the use case or pain point this addresses.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-area
+    attributes:
+      label: Affected Area
+      description: Which part of the app does this feature relate to?
+      options:
+        - Home
+        - Create Bet
+        - Bet Detail
+        - Player Management
+        - Player Detail
+        - Admin Panel
+        - Leaderboard
+        - History
+        - Navigation
+        - New Screen
+        - Infrastructure/DI
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: architecture-layers
+    attributes:
+      label: Architecture Layers Involved
+      description: Which architecture layers would this feature likely touch?
+      options:
+        - label: Database/Entity
+        - label: DAO/Repository
+        - label: ViewModel
+        - label: UI/Composable
+        - label: Navigation
+        - label: DI Module
+
+  - type: textarea
+    id: spec-reference
+    attributes:
+      label: Spec Reference
+      description: If this relates to a section of the app spec, reference it here.
+      placeholder: "e.g., Section 5.3 — Bet Resolution"
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed-implementation
+    attributes:
+      label: Proposed Implementation
+      description: Any ideas on how this could be implemented?
+      placeholder: Optional — describe your approach if you have one in mind.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know when this feature is done?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: false
