@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BetCoin App — Design Spec</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #f0b429;
+    --accent-dim: #f0b42930;
+    --green: #3fb950;
+    --green-dim: #3fb95020;
+    --red: #f85149;
+    --red-dim: #f8514920;
+    --blue: #58a6ff;
+    --blue-dim: #58a6ff20;
+    --purple: #bc8cff;
+    --purple-dim: #bc8cff20;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1a1208 0%, #0d1117 40%, #0d1117 60%, #0f1318 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -20%;
+    width: 140%;
+    height: 200%;
+    background: radial-gradient(ellipse at 50% 0%, var(--accent-dim) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero-coin {
+    font-size: 64px;
+    margin-bottom: 16px;
+    display: inline-block;
+    filter: drop-shadow(0 0 24px rgba(240, 180, 41, 0.4));
+  }
+  .hero h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent) 0%, #ffd866 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .hero .subtitle {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .hero .badges {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .badge .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .badge .dot.gold { background: var(--accent); }
+  .badge .dot.blue { background: var(--blue); }
+  .badge .dot.green { background: var(--green); }
+  .badge .dot.purple { background: var(--purple); }
+
+  /* Layout */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  /* Section */
+  section {
+    margin-bottom: 48px;
+  }
+  section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent-dim);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 24px 0 12px;
+    color: var(--blue);
+  }
+  p, li {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  p { margin-bottom: 12px; }
+  ul, ol { padding-left: 24px; margin-bottom: 16px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--text); font-weight: 600; }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .card-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 16px 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead {
+    background: var(--surface2);
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface); }
+  td code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  td .type {
+    color: var(--purple);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  /* Code blocks */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* Flow diagram */
+  .flow {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+  }
+  .flow-box {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-box.pending { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); }
+  .flow-box.active { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
+  .flow-box.resolved { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .flow-box.cancelled { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .flow-arrow {
+    color: var(--text-muted);
+    font-size: 18px;
+  }
+
+  /* Nav graph */
+  .nav-tree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 2;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .nav-tree .node {
+    color: var(--text);
+    font-weight: 600;
+    background: var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .nav-tree .leaf {
+    color: var(--blue);
+  }
+  .nav-tree .connector { color: var(--border); }
+
+  /* Callout */
+  .callout {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout.info { border-left-color: var(--blue); }
+  .callout.warn { border-left-color: var(--red); }
+  .callout-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .callout .callout-title { color: var(--accent); }
+  .callout.info .callout-title { color: var(--blue); }
+  .callout.warn .callout-title { color: var(--red); }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tag.pk { background: var(--accent-dim); color: var(--accent); }
+  .tag.fk { background: var(--blue-dim); color: var(--blue); }
+  .tag.req { background: var(--green-dim); color: var(--green); }
+  .tag.null { background: var(--purple-dim); color: var(--purple); }
+
+  /* Sticky TOC */
+  .toc {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 12px;
+    z-index: 10;
+  }
+  .toc-title {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .toc a {
+    display: block;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 4px 0;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: var(--accent); }
+
+  @media (max-width: 1200px) {
+    .toc { display: none; }
+  }
+
+  /* Screen cards */
+  .screen-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .screen-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .screen-card:hover { border-color: var(--accent); }
+  .screen-card h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .screen-card p {
+    font-size: 13px;
+    margin-bottom: 0;
+    color: var(--text-muted);
+  }
+  .screen-card .screen-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  /* Edge case rows */
+  .edge-grid {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .edge-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  .edge-row .scenario {
+    flex: 1;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .edge-row .behavior {
+    flex: 1.2;
+    color: var(--text-muted);
+  }
+  .edge-row .block-tag {
+    display: inline-block;
+    background: var(--red-dim);
+    color: var(--red);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
+  }
+
+  /* Phone mockup */
+  .mockup-phone {
+    max-width: 380px;
+    margin: 20px auto;
+    background: #0a0e14;
+    border: 2px solid var(--border);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .mockup-status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .mockup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px 12px;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .mockup-back {
+    font-size: 20px;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .mockup-section {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mockup-section:last-child {
+    border-bottom: none;
+    padding-bottom: 24px;
+  }
+  .mockup-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .mockup-prompt {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  /* Outcomes */
+  .mockup-outcomes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mockup-outcome {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .mockup-outcome.winner {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid #3fb95040;
+  }
+  .mockup-outcome-icon {
+    font-size: 14px;
+  }
+  .mockup-winner-tag {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: var(--green);
+    color: #0d1117;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  /* Participants */
+  .mockup-participants {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .mockup-participant-row {
+    display: grid;
+    grid-template-columns: 1.1fr 0.8fr 0.7fr 0.7fr 0.7fr;
+    align-items: center;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    border-bottom: 1px solid #1c2129;
+  }
+  .mockup-participant-row:last-child { border-bottom: none; }
+  .mockup-participant-row.header-row {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 700;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mockup-participant-row .col-name { font-weight: 600; color: var(--text); }
+  .win-row { background: #3fb95008; }
+  .lose-row { background: #f8514908; }
+  .result-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+  }
+  .result-badge.win { background: var(--green-dim); color: var(--green); }
+  .result-badge.loss { background: var(--red-dim); color: var(--red); }
+  .col-payout.gain { color: var(--green); font-weight: 700; }
+  .col-payout.loss-amount { color: var(--red); font-weight: 700; }
+
+  /* Pot summary */
+  .mockup-pot {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .mockup-pot-item {
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--surface);
+    border-radius: 8px;
+  }
+  .mockup-pot-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .mockup-pot-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOC -->
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#overview">Overview</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#data-model">Data Model</a>
+  <a href="#screens">Screens & Nav</a>
+  <a href="#logic">Business Logic</a>
+  <a href="#repos">Repositories</a>
+  <a href="#viewmodels">ViewModels</a>
+  <a href="#edge-cases">Edge Cases</a>
+  <a href="#flavors">Build Flavors</a>
+  <a href="#structure">Project Structure</a>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-coin">&#x1FA99;</div>
+  <h1>BetCoin</h1>
+  <p class="subtitle">Pass-the-phone betting with imaginary currency</p>
+  <div class="badges">
+    <span class="badge"><span class="dot gold"></span> Native Kotlin</span>
+    <span class="badge"><span class="dot blue"></span> Jetpack Compose</span>
+    <span class="badge"><span class="dot green"></span> Room + Flow</span>
+    <span class="badge"><span class="dot purple"></span> Dagger-Hilt</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 1. Overview -->
+  <section id="overview">
+    <h2><span class="num">1</span> Overview</h2>
+    <p>BetCoin is a <strong>single-device Android app</strong> where friends bet imaginary "BetCoin" currency against each other on made-up bets. Pass the phone around, place your wagers, and see who comes out on top.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label">Model</div>
+        <div class="card-value">Pass-the-phone</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Data</div>
+        <div class="card-value">100% Local (Room)</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Starting Balance</div>
+        <div class="card-value">1,000 BetCoin</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Bet Type</div>
+        <div class="card-value">Multi-outcome</div>
+      </div>
+    </div>
+
+    <h3>Core Flow</h3>
+    <ol>
+      <li>Someone creates a bet with a prompt and <strong>2+ outcomes</strong></li>
+      <li>Each participant picks an outcome, sets a wager, confirms with <strong>PIN</strong></li>
+      <li>The bet goes <strong>ACTIVE</strong> — wagers are deducted</li>
+      <li>When the real event resolves, participants select the winning outcome</li>
+      <li>Winnings are distributed <strong>proportionally</strong> from the pot</li>
+    </ol>
+  </section>
+
+  <!-- 2. Architecture -->
+  <section id="architecture">
+    <h2><span class="num">2</span> Architecture</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+        <tbody>
+          <tr><td>UI</td><td>Jetpack Compose</td></tr>
+          <tr><td>Navigation</td><td>Navigation Compose</td></tr>
+          <tr><td>State</td><td>StateFlow in ViewModels</td></tr>
+          <tr><td>DI</td><td>Dagger-Hilt</td></tr>
+          <tr><td>Database</td><td>Room</td></tr>
+          <tr><td>Async</td><td>Kotlin Coroutines + Flow</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Reactive Data Flow</h3>
+    <pre>Room DAO (Flow) &rarr; Repository &rarr; ViewModel (StateFlow via .stateIn()) &rarr; Compose UI</pre>
+
+    <div class="callout info">
+      <div class="callout-title">Pattern</div>
+      One ViewModel per screen, annotated <code>@HiltViewModel</code>. Room Flow queries collected via <code>.stateIn()</code>. One-shot actions via <code>viewModelScope.launch</code>. Sealed UI state classes for loading/success/error.
+    </div>
+  </section>
+
+  <!-- 3. Data Model -->
+  <section id="data-model">
+    <h2><span class="num">3</span> Data Model</h2>
+    <p>All currency values stored as <strong>Long</strong> (integer BetCoin) to avoid floating-point rounding.</p>
+
+    <h3>User</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><span class="type">Long</span></td><td><span class="tag pk">PK</span> auto-generate</td></tr>
+          <tr><td><code>username</code></td><td><span class="type">String</span></td><td><span class="tag req">UNIQUE</span> NOT NULL</td></tr>
+          <tr><td><code>pinHash</code></td><td><span class="type">String</span></td><td>NOT NULL</td></tr>
+          <tr><td><code>balance</code></td><td><span class="type">Long</span></td><td>NOT NULL, default 1000</td></tr>
+          <tr><td><code>totalWins</code></td><td><span class="type">Int</span></td><td>NOT NULL, default 0</td></tr>
+          <tr><td><code>totalLosses</code></td><td><span class="type">Int</span></td><td>NOT NULL, default 0</td></tr>
+          <tr><td><code>totalEarnings</code></td><td><span class="type">Long</span></td><td>NOT NULL, default 0</td></tr>
+          <tr><td><code>totalLost</code></td><td><span class="type">Long</span></td><td>NOT NULL, default 0</td></tr>
+          <tr><td><code>bailoutCount</code></td><td><span class="type">Int</span></td><td>NOT NULL, default 0</td></tr>
+          <tr><td><code>totalDebt</code></td><td><span class="type">Long</span></td><td>NOT NULL, default 0</td></tr>
+          <tr><td><code>createdAt</code></td><td><span class="type">Long</span></td><td>NOT NULL (epoch ms)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Bet</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><span class="type">Long</span></td><td><span class="tag pk">PK</span> auto-generate</td></tr>
+          <tr><td><code>prompt</code></td><td><span class="type">String</span></td><td>NOT NULL</td></tr>
+          <tr><td><code>status</code></td><td><span class="type">BetStatus</span></td><td>NOT NULL (enum)</td></tr>
+          <tr><td><code>winningOutcomeId</code></td><td><span class="type">Long?</span></td><td><span class="tag fk">FK</span> &rarr; BetOutcome.id, nullable</td></tr>
+          <tr><td><code>createdAt</code></td><td><span class="type">Long</span></td><td>NOT NULL (epoch ms)</td></tr>
+          <tr><td><code>resolvedAt</code></td><td><span class="type">Long?</span></td><td><span class="tag null">NULL</span> until resolved</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>BetOutcome</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><span class="type">Long</span></td><td><span class="tag pk">PK</span> auto-generate</td></tr>
+          <tr><td><code>betId</code></td><td><span class="type">Long</span></td><td><span class="tag fk">FK</span> &rarr; Bet.id</td></tr>
+          <tr><td><code>outcomeText</code></td><td><span class="type">String</span></td><td>NOT NULL</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>BetParticipant</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><span class="type">Long</span></td><td><span class="tag pk">PK</span> auto-generate</td></tr>
+          <tr><td><code>betId</code></td><td><span class="type">Long</span></td><td><span class="tag fk">FK</span> &rarr; Bet.id</td></tr>
+          <tr><td><code>userId</code></td><td><span class="type">Long?</span></td><td><span class="tag fk">FK</span> &rarr; User.id, <span class="tag null">NULL</span> after deletion</td></tr>
+          <tr><td><code>outcomeId</code></td><td><span class="type">Long</span></td><td><span class="tag fk">FK</span> &rarr; BetOutcome.id</td></tr>
+          <tr><td><code>wagerAmount</code></td><td><span class="type">Long</span></td><td>NOT NULL</td></tr>
+          <tr><td><code>payout</code></td><td><span class="type">Long?</span></td><td><span class="tag null">NULL</span> until resolved</td></tr>
+          <tr><td><code>deletedUsername</code></td><td><span class="type">String?</span></td><td>Snapshot on user deletion</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>AppSettings</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Column</th><th>Type</th><th>Constraints</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><span class="type">Int</span></td><td><span class="tag pk">PK</span> always 1 (single-row)</td></tr>
+          <tr><td><code>adminPinHash</code></td><td><span class="type">String</span></td><td>NOT NULL</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4. Screens & Navigation -->
+  <section id="screens">
+    <h2><span class="num">4</span> Screens & Navigation</h2>
+
+    <h3>Navigation Graph</h3>
+    <div class="nav-tree">
+      <span class="node">App Launch</span> <span class="connector">&rarr;</span> Check for PENDING bets?<br>
+      <span class="connector">&nbsp;&nbsp;├── YES &rarr;</span> <span class="node" style="background: var(--red-dim); color: var(--red);">Recovery Screen</span> <span class="connector">&rarr;</span> <span class="leaf">Return to Bet</span> / <span class="leaf">Discard Bet</span><br>
+      <span class="connector">&nbsp;&nbsp;└── NO &nbsp;&rarr;</span> First Launch / <span class="node">Home</span><br>
+      <br>
+      <span class="node">Home</span><br>
+      <span class="connector">&nbsp;&nbsp;├──</span> <span class="node">New Bet</span> <span class="connector">&rarr;</span> <span class="leaf">Step A (Create)</span> <span class="connector">&rarr;</span> <span class="leaf">Step B (Participants)</span> <span class="connector">&rarr;</span> <span class="leaf">Step C (Review & Lock)</span><br>
+      <span class="connector">&nbsp;&nbsp;├──</span> <span class="node">Leaderboard</span> <span class="connector">&rarr;</span> <span class="leaf">Player Detail</span><br>
+      <span class="connector">&nbsp;&nbsp;├──</span> <span class="node">Bet History</span> <span class="connector">&rarr;</span> <span class="leaf">Bet Detail</span> <span class="connector">&rarr;</span> <span class="leaf">Resolve / Cancel / Reopen / Repeat</span><br>
+      <span class="connector">&nbsp;&nbsp;└──</span> <span class="node">Manage Players</span> <span class="connector">&rarr;</span> <span class="leaf">Add Player</span> / <span class="leaf">Player Detail</span> / <span class="leaf">Admin Panel</span>
+    </div>
+
+    <h3>Screen Overview</h3>
+    <div class="screen-cards">
+      <div class="screen-card" style="border-color: var(--red); background: #f8514908;">
+        <span class="screen-icon">&#x26A0;&#xFE0F;</span>
+        <h4>Recovery Screen</h4>
+        <p>Shown on launch if a PENDING bet exists. Two options only: <strong>Return to Bet</strong> or <strong>Discard Bet</strong>. No other navigation.</p>
+      </div>
+      <div class="screen-card">
+        <span class="screen-icon">&#x1F3E0;</span>
+        <h4>Home</h4>
+        <p>Hub with navigation to New Bet, Leaderboard, Bet History, and Manage Players. Shows summary stats. <strong>Dev flavor</strong> shows a persistent "DEV MODE" banner.</p>
+      </div>
+      <div class="screen-card">
+        <span class="screen-icon">&#x1F3B2;</span>
+        <h4>New Bet Flow</h4>
+        <p><strong>Step A:</strong> Enter prompt + outcomes. <strong>Step B:</strong> Add participants with picks, wagers, PIN. <strong>Step C:</strong> Review, unanimous check, lock.</p>
+      </div>
+      <div class="screen-card">
+        <span class="screen-icon">&#x1F3C6;</span>
+        <h4>Leaderboard</h4>
+        <p>Table sorted by balance: Rank, Username, Balance, W-L, Earnings, Losses, Bailouts, Debt.</p>
+      </div>
+      <div class="screen-card">
+        <span class="screen-icon">&#x1F4DC;</span>
+        <h4>Bet History</h4>
+        <p>All bets with filter tabs (All/Active/Resolved/Cancelled). Tap for detail with resolve or cancel.</p>
+      </div>
+      <div class="screen-card">
+        <span class="screen-icon">&#x1F50D;</span>
+        <h4>Bet Detail</h4>
+        <p>Full breakdown: prompt, status, outcomes, participant table (pick, wager, result, payout), pot total, resolution info. Actions: <strong>Resolve/Cancel</strong> (ACTIVE), <strong>Reopen/Repeat</strong> (RESOLVED/CANCELLED).</p>
+      </div>
+      <div class="screen-card">
+        <span class="screen-icon">&#x1F465;</span>
+        <h4>Manage Players</h4>
+        <p>List users, add new players, tap for detail. Gear icon opens the PIN-gated Admin Panel.</p>
+      </div>
+      <div class="screen-card" style="grid-column: span 2;">
+        <span class="screen-icon">&#x1F6E1;&#xFE0F;</span>
+        <h4>Admin Panel</h4>
+        <p style="margin-bottom: 10px;">Requires master admin PIN. <strong>Design principle:</strong> admin can fix anything without wiping data.</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px;">
+          <span style="color: var(--blue);">&#x2022; Delete player</span>
+          <span style="color: var(--blue);">&#x2022; Set player balance</span>
+          <span style="color: var(--blue);">&#x2022; Edit username</span>
+          <span style="color: var(--blue);">&#x2022; Reset player PIN</span>
+          <span style="color: var(--green);">&#x2022; Force cancel bet</span>
+          <span style="color: var(--green);">&#x2022; Admin resolve bet</span>
+          <span style="color: var(--green);">&#x2022; Edit bet prompt</span>
+          <span style="color: var(--green);">&#x2022; Remove participant</span>
+          <span style="color: var(--green);">&#x2022; Edit participant wager</span>
+          <span style="color: var(--red);">&#x2022; Delete bet from history</span>
+          <span style="color: var(--accent);">&#x2022; Change admin PIN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bet Detail Mockup -->
+    <h3>Bet Detail Screen — Layout</h3>
+    <p>Tap any bet in Bet History to see the full breakdown:</p>
+
+    <div class="mockup-phone">
+      <div class="mockup-status-bar">
+        <span>9:41</span>
+        <span>&#x1F50B; 87%</span>
+      </div>
+
+      <div class="mockup-header">
+        <span class="mockup-back">&larr;</span>
+        <span>Bet Detail</span>
+        <span></span>
+      </div>
+
+      <!-- Bet prompt + status -->
+      <div class="mockup-section">
+        <div class="mockup-prompt">"Who wins the next Smash game?"</div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+          <span class="flow-box resolved" style="font-size: 11px; padding: 4px 10px;">RESOLVED</span>
+          <span style="font-size: 12px; color: var(--text-muted);">Created Apr 9 &middot; Resolved Apr 9</span>
+        </div>
+      </div>
+
+      <!-- Outcomes -->
+      <div class="mockup-section">
+        <div class="mockup-section-title">Outcomes</div>
+        <div class="mockup-outcomes">
+          <div class="mockup-outcome winner">
+            <span class="mockup-outcome-icon">&#x2705;</span>
+            <span>Jay</span>
+            <span class="mockup-winner-tag">WINNER</span>
+          </div>
+          <div class="mockup-outcome">
+            <span class="mockup-outcome-icon" style="opacity:0.4;">&#x26AA;</span>
+            <span>Austin</span>
+          </div>
+          <div class="mockup-outcome">
+            <span class="mockup-outcome-icon" style="opacity:0.4;">&#x26AA;</span>
+            <span>Mike</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Participants -->
+      <div class="mockup-section">
+        <div class="mockup-section-title">Participants</div>
+        <div class="mockup-participants">
+          <div class="mockup-participant-row header-row">
+            <span class="col-name">Player</span>
+            <span class="col-pick">Pick</span>
+            <span class="col-wager">Wager</span>
+            <span class="col-result">Result</span>
+            <span class="col-payout">Payout</span>
+          </div>
+          <div class="mockup-participant-row win-row">
+            <span class="col-name">Jay</span>
+            <span class="col-pick">Jay</span>
+            <span class="col-wager">200</span>
+            <span class="col-result"><span class="result-badge win">WIN</span></span>
+            <span class="col-payout gain">+300</span>
+          </div>
+          <div class="mockup-participant-row win-row">
+            <span class="col-name">Dan</span>
+            <span class="col-pick">Jay</span>
+            <span class="col-wager">100</span>
+            <span class="col-result"><span class="result-badge win">WIN</span></span>
+            <span class="col-payout gain">+150</span>
+          </div>
+          <div class="mockup-participant-row lose-row">
+            <span class="col-name">Austin</span>
+            <span class="col-pick">Austin</span>
+            <span class="col-wager">150</span>
+            <span class="col-result"><span class="result-badge loss">LOSS</span></span>
+            <span class="col-payout loss-amount">-150</span>
+          </div>
+          <div class="mockup-participant-row lose-row">
+            <span class="col-name">Mike</span>
+            <span class="col-pick">Mike</span>
+            <span class="col-wager">50</span>
+            <span class="col-result"><span class="result-badge loss">LOSS</span></span>
+            <span class="col-payout loss-amount">-50</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pot summary -->
+      <div class="mockup-section">
+        <div class="mockup-pot">
+          <div class="mockup-pot-item">
+            <div class="mockup-pot-label">Total Pot</div>
+            <div class="mockup-pot-value">500</div>
+          </div>
+          <div class="mockup-pot-item">
+            <div class="mockup-pot-label">Participants</div>
+            <div class="mockup-pot-value">4</div>
+          </div>
+          <div class="mockup-pot-item">
+            <div class="mockup-pot-label">Winning Outcome</div>
+            <div class="mockup-pot-value" style="color: var(--green);">Jay</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons (shown for RESOLVED/CANCELLED) -->
+      <div class="mockup-section" style="display: flex; gap: 8px;">
+        <div style="flex: 1; text-align: center; padding: 10px; background: var(--blue-dim); border: 1px solid var(--blue); border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--blue); cursor: pointer;">Reopen Bet</div>
+        <div style="flex: 1; text-align: center; padding: 10px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--accent); cursor: pointer;">Repeat Bet</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 5. Business Logic -->
+  <section id="logic">
+    <h2><span class="num">5</span> Business Logic</h2>
+
+    <h3>Bet Lifecycle</h3>
+    <div class="flow">
+      <div class="flow-row">
+        <span class="flow-box pending">PENDING_CONFIRMATION</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-box active">ACTIVE</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-box resolved">RESOLVED</span>
+      </div>
+      <div class="flow-row" style="margin-top: 4px;">
+        <span style="width: 340px;"></span>
+        <span class="flow-arrow">&darr;</span>
+      </div>
+      <div class="flow-row">
+        <span style="width: 290px;"></span>
+        <span class="flow-box cancelled">CANCELLED</span>
+      </div>
+      <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border);">
+        <div class="flow-row">
+          <span class="flow-box resolved">RESOLVED</span>
+          <span class="flow-arrow">&larr; Reopen &rarr;</span>
+          <span class="flow-box active">ACTIVE</span>
+          <span class="flow-arrow">&larr; Reopen &rarr;</span>
+          <span class="flow-box cancelled">CANCELLED</span>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">Reopen requires <strong>unanimous participant PIN consent</strong>. Payouts reversed (resolved) or wagers re-deducted (cancelled).</p>
+      </div>
+    </div>
+
+    <h3>Payout Calculation</h3>
+    <pre>totalPot      = sum of all wagers
+winningWagers = sum of wagers on winning outcome
+
+Each winner:
+  payout = (theirWager / winningWagers) * totalPot
+
+Integer math &mdash; rounding remainder &rarr; largest-wager winner (tiebreaker: first added)</pre>
+
+    <h3>Unanimous Pick Prevention</h3>
+    <div class="callout warn">
+      <div class="callout-title">Blocked</div>
+      If all participants pick the same outcome at lock time, the bet is <strong>blocked</strong>. No wagers are deducted. Users must go back and change picks.
+    </div>
+
+    <h3>Bailout System</h3>
+    <div class="callout">
+      <div class="callout-title">Bailout Rules</div>
+      Available <strong>when balance &lt; 100</strong>. Adds 1,000 BetCoin. Increments bailout count. Adds 1,000 to total debt. Shame stats visible on leaderboard.
+    </div>
+
+    <h3>PIN System</h3>
+    <ul>
+      <li><strong>4-digit numeric</strong>, stored as bcrypt/Argon2 hash</li>
+      <li>No lockout on failed attempts &mdash; just "Wrong PIN" error</li>
+      <li>Required at: joining bet, bet confirmation, resolution, cancellation</li>
+      <li>UI: reusable <strong>modal dialog composable</strong> (not a nav destination)</li>
+    </ul>
+
+    <h3>Win/Loss Tracking</h3>
+    <ul>
+      <li><strong>Winners:</strong> totalWins += 1, totalEarnings += (payout &minus; wager)</li>
+      <li><strong>Losers:</strong> totalLosses += 1, totalLost += wagerAmount</li>
+    </ul>
+
+    <h3>User Deletion</h3>
+    <ul>
+      <li><strong>Blocked</strong> if user has ACTIVE bets</li>
+      <li>For resolved/cancelled: preserve BetParticipant rows, snapshot username, null out userId FK</li>
+    </ul>
+  </section>
+
+  <!-- 6. Repositories -->
+  <section id="repos">
+    <h2><span class="num">6</span> Repository Layer</h2>
+
+    <div class="callout">
+      <div class="callout-title">Abstraction Strategy</div>
+      Repositories are <strong>interfaces</strong>. Current implementation is <code>Local*Repository</code> backed by Room DAOs. To migrate online: create <code>Remote*Repository</code>, swap <code>@Binds</code> in Hilt. ViewModels and UI stay untouched.
+      <pre style="margin-top: 10px; margin-bottom: 0; border: none; background: transparent; padding: 0;">ViewModel &rarr; Repository Interface &rarr; LocalRepository (Room)
+                                    &rarr; RemoteRepository (future)</pre>
+    </div>
+
+    <h3>UserRepository <span style="color: var(--text-muted); font-weight: 400; font-size: 13px;">(interface)</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>createUser(username, pin)</code></td><td>Create user with hashed PIN, starting balance 1000</td></tr>
+          <tr><td><code>verifyPin(userId, pin)</code></td><td>Verify PIN against stored hash</td></tr>
+          <tr><td><code>getUser(userId)</code></td><td>Get user by ID</td></tr>
+          <tr><td><code>getAllUsers()</code></td><td>Flow of all users</td></tr>
+          <tr><td><code>getLeaderboard()</code></td><td>Flow of users sorted by balance desc</td></tr>
+          <tr><td><code>bailout(userId)</code></td><td>Add 1000, increment bailoutCount + totalDebt</td></tr>
+          <tr><td><code>deleteUser(userId)</code></td><td>Cascade: block if ACTIVE, snapshot, null FK</td></tr>
+          <tr><td><code>resetPin(userId, newPin)</code></td><td>Admin resets PIN (no old PIN needed)</td></tr>
+          <tr><td><code>setBalance(userId, newBalance)</code></td><td>Admin sets balance to arbitrary value</td></tr>
+          <tr><td><code>updateUsername(userId, newUsername)</code></td><td>Admin renames user (must be unique)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>BetRepository <span style="color: var(--text-muted); font-weight: 400; font-size: 13px;">(interface)</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>createBet(prompt, outcomes)</code></td><td>Create bet + outcomes, status PENDING</td></tr>
+          <tr><td><code>addParticipant(...)</code></td><td>Add participant to bet</td></tr>
+          <tr><td><code>removeParticipant(id)</code></td><td>Remove participant before lock</td></tr>
+          <tr><td><code>getBetWithDetails(betId)</code></td><td>Flow of BetWithDetails</td></tr>
+          <tr><td><code>lockBet(betId)</code></td><td>@Transaction: validate, deduct, set ACTIVE</td></tr>
+          <tr><td><code>resolveBet(betId, outcomeId)</code></td><td>@Transaction: payouts, stats, set RESOLVED</td></tr>
+          <tr><td><code>cancelBet(betId)</code></td><td>@Transaction: refund wagers, set CANCELLED</td></tr>
+          <tr><td><code>forceCancelBet(betId)</code></td><td>@Transaction: admin override cancel, no participant PINs needed</td></tr>
+          <tr><td><code>adminResolveBet(betId, outcomeId)</code></td><td>@Transaction: admin override resolve, no participant PINs</td></tr>
+          <tr><td><code>updateBetPrompt(betId, newPrompt)</code></td><td>Admin edits bet prompt text</td></tr>
+          <tr><td><code>adminRemoveParticipant(...)</code></td><td>@Transaction: refund wager, remove from ACTIVE bet</td></tr>
+          <tr><td><code>adminEditWager(participantId, newWager)</code></td><td>@Transaction: adjust wager, refund/deduct difference</td></tr>
+          <tr><td><code>deleteBet(betId)</code></td><td>Delete bet + outcomes + participants (RESOLVED/CANCELLED only)</td></tr>
+          <tr><td><code>reopenBet(betId)</code></td><td>@Transaction: reverse payouts/refunds, clear resolution, set ACTIVE</td></tr>
+          <tr><td><code>repeatBet(betId)</code></td><td>Create new bet with same prompt + outcomes, no participants</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>SettingsRepository <span style="color: var(--text-muted); font-weight: 400; font-size: 13px;">(interface)</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>setAdminPin(pin)</code></td><td>Set/update admin PIN (hashed)</td></tr>
+          <tr><td><code>verifyAdminPin(pin)</code></td><td>Verify admin PIN against stored hash</td></tr>
+          <tr><td><code>isFirstLaunch()</code></td><td>Check if admin PIN has been set</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Transaction Boundaries</h3>
+    <div class="callout info">
+      <div class="callout-title">@Transaction</div>
+      <strong>lockBet:</strong> validate unanimous check &rarr; deduct wagers &rarr; set ACTIVE<br>
+      <strong>resolveBet:</strong> calculate payouts &rarr; credit winners &rarr; update W/L &rarr; set RESOLVED<br>
+      <strong>cancelBet:</strong> refund all wagers &rarr; set CANCELLED<br>
+      <strong>forceCancelBet:</strong> same as cancelBet &mdash; admin override, no participant PINs<br>
+      <strong>adminResolveBet:</strong> same as resolveBet &mdash; admin override<br>
+      <strong>adminRemoveParticipant:</strong> refund wager &rarr; remove row &rarr; validate &ge; 2 remain<br>
+      <strong>adminEditWager:</strong> calc difference &rarr; refund/deduct balance &rarr; update wager<br>
+      <strong>deleteBet:</strong> delete participants &rarr; delete outcomes &rarr; delete bet<br>
+      <strong>reopenBet (RESOLVED):</strong> deduct payouts from winners &rarr; return wagers to losers &rarr; revert W/L stats &rarr; clear resolution &rarr; set ACTIVE<br>
+      <strong>reopenBet (CANCELLED):</strong> re-deduct wagers from all participants &rarr; set ACTIVE<br>
+      <strong>deleteUser:</strong> snapshot username &rarr; null FK &rarr; delete row
+    </div>
+  </section>
+
+  <!-- 7. ViewModels -->
+  <section id="viewmodels">
+    <h2><span class="num">7</span> ViewModels</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ViewModel</th><th>Screen</th><th>Key State</th></tr></thead>
+        <tbody>
+          <tr><td><code>HomeViewModel</code></td><td>Home</td><td>Active bet count, user count</td></tr>
+          <tr><td><code>ManagePlayersViewModel</code></td><td>Manage Players</td><td>User list (Flow)</td></tr>
+          <tr><td><code>PlayerDetailViewModel</code></td><td>Player Detail</td><td>User stats, bailout eligibility</td></tr>
+          <tr><td><code>AdminViewModel</code></td><td>Admin Panel</td><td>User list, admin actions</td></tr>
+          <tr><td><code>CreateBetViewModel</code></td><td>New Bet (A-C)</td><td>Prompt, outcomes, mutable participants</td></tr>
+          <tr><td><code>BetDetailViewModel</code></td><td>Bet Detail</td><td>BetWithDetails (Flow)</td></tr>
+          <tr><td><code>LeaderboardViewModel</code></td><td>Leaderboard</td><td>Sorted user list (Flow)</td></tr>
+          <tr><td><code>BetHistoryViewModel</code></td><td>Bet History</td><td>All bets (Flow), filter state</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8. Edge Cases -->
+  <section id="edge-cases">
+    <h2><span class="num">8</span> Edge Cases & Validation</h2>
+    <div class="edge-grid">
+      <div class="edge-row">
+        <div class="scenario">Wager exceeds balance</div>
+        <div class="behavior"><span class="block-tag">Block</span> Cannot exceed current balance</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">All pick same outcome</div>
+        <div class="behavior"><span class="block-tag">Block</span> Error at lock, no wagers deducted</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Bailout with balance &ge; 100</div>
+        <div class="behavior"><span class="block-tag">Block</span> Only available when balance &lt; 100</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Delete user with ACTIVE bets</div>
+        <div class="behavior"><span class="block-tag">Block</span> Must resolve/cancel first</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Same user joins bet twice</div>
+        <div class="behavior"><span class="block-tag">Block</span> One participation per user per bet</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">< 2 participants at lock</div>
+        <div class="behavior"><span class="block-tag">Block</span> Minimum 2 required</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">< 2 outcomes</div>
+        <div class="behavior"><span class="block-tag">Block</span> Minimum 2 required</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Rounding remainder</div>
+        <div class="behavior">Goes to largest-wager winner (first added as tiebreaker)</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Wrong PIN</div>
+        <div class="behavior">"Wrong PIN" message, no lockout, retry</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">App force-closed during bet creation</div>
+        <div class="behavior">Recovery Screen on relaunch &mdash; resume or discard only</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Admin renames to existing username</div>
+        <div class="behavior"><span class="block-tag">Block</span> Username must remain unique</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Admin removes participant leaving &lt; 2</div>
+        <div class="behavior"><span class="block-tag">Block</span> Must force cancel instead</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Admin edits wager, user can't cover increase</div>
+        <div class="behavior"><span class="block-tag">Block</span> Insufficient balance</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Admin deletes ACTIVE bet</div>
+        <div class="behavior"><span class="block-tag">Block</span> Must cancel/resolve first</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Reopen cancelled bet, participant can't cover wager</div>
+        <div class="behavior"><span class="block-tag">Block</span> All participants must have sufficient balance</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Reopen resolved bet, winner spent winnings</div>
+        <div class="behavior"><span class="block-tag">Block</span> Winner must have enough balance to return payouts</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Reopen bet with deleted participant</div>
+        <div class="behavior"><span class="block-tag">Block</span> All original participants must still exist</div>
+      </div>
+      <div class="edge-row">
+        <div class="scenario">Repeat bet</div>
+        <div class="behavior">Creates new independent bet, original unaffected</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Build Flavors -->
+  <section id="flavors">
+    <h2><span class="num">&#x2699;</span> Build Flavors</h2>
+    <p>Two product flavors ensure testing <strong>never touches the production database</strong>.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">
+      <div class="card" style="border-left: 3px solid var(--green);">
+        <div class="card-label">prod</div>
+        <div class="card-value" style="margin-bottom: 6px;">BetCoin</div>
+        <div style="font-size: 13px; color: var(--text-muted);">
+          <code>com.betcoin</code><br>
+          Database: <code>betcoin.db</code><br>
+          Your real data
+        </div>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--accent);">
+        <div class="card-label">dev</div>
+        <div class="card-value" style="margin-bottom: 6px;">BetCoin DEV</div>
+        <div style="font-size: 13px; color: var(--text-muted);">
+          <code>com.betcoin.dev</code><br>
+          Database: <code>betcoin_dev.db</code><br>
+          Safe to wipe / experiment
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-title">How it works</div>
+      Both flavors share <strong>identical code</strong> &mdash; same DAOs, same schema, same UI. Only the database filename and app name differ. Different <code>applicationId</code> means both install <strong>side-by-side</strong> on the same device. The <strong>dev</strong> flavor shows a persistent <span style="background: var(--red-dim); color: var(--red); padding: 1px 6px; border-radius: 3px; font-size: 11px; font-weight: 700;">DEV MODE</span> banner on the Home Screen so you always know which version you're in.
+    </div>
+
+    <pre>// DatabaseModule.kt
+val dbName = if (BuildConfig.FLAVOR == "dev") "betcoin_dev.db" else "betcoin.db"
+Room.databaseBuilder(ctx, BetCoinDatabase::class.java, dbName).build()
+
+// Install commands
+./gradlew installProdDebug   // production flavor
+./gradlew installDevDebug    // dev/test flavor</pre>
+  </section>
+
+  <!-- 9. Project Structure -->
+  <section id="structure">
+    <h2><span class="num">9</span> Project Structure</h2>
+    <pre>app/src/main/java/com/betcoin/
+├── di/
+│   ├── DatabaseModule.kt
+│   └── RepositoryModule.kt
+├── data/
+│   ├── database/
+│   │   ├── BetCoinDatabase.kt
+│   │   ├── dao/
+│   │   │   ├── UserDao.kt
+│   │   │   ├── BetDao.kt
+│   │   │   ├── BetOutcomeDao.kt
+│   │   │   ├── BetParticipantDao.kt
+│   │   │   └── AppSettingsDao.kt
+│   │   └── entity/
+│   │       ├── User.kt
+│   │       ├── Bet.kt
+│   │       ├── BetOutcome.kt
+│   │       ├── BetParticipant.kt
+│   │       └── AppSettings.kt
+│   ├── model/
+│   │   ├── BetStatus.kt
+│   │   ├── BetWithDetails.kt
+│   │   └── ParticipantWithUser.kt
+│   └── repository/
+│       ├── UserRepository.kt          <span style="color: var(--text-muted);"># Interface</span>
+│       ├── BetRepository.kt           <span style="color: var(--text-muted);"># Interface</span>
+│       ├── SettingsRepository.kt      <span style="color: var(--text-muted);"># Interface</span>
+│       └── local/
+│           ├── LocalUserRepository.kt      <span style="color: var(--green);"># Room impl</span>
+│           ├── LocalBetRepository.kt       <span style="color: var(--green);"># Room impl</span>
+│           └── LocalSettingsRepository.kt  <span style="color: var(--green);"># Room impl</span>
+├── ui/
+│   ├── theme/Theme.kt
+│   ├── components/PinEntryDialog.kt
+│   ├── home/
+│   ├── players/
+│   ├── bet/
+│   ├── leaderboard/
+│   └── history/
+├── navigation/NavGraph.kt
+└── BetCoinApp.kt</pre>
+  </section>
+
+  <!-- First Launch -->
+  <section>
+    <h2><span class="num">10</span> First Launch</h2>
+    <ol>
+      <li>App detects no admin PIN set (<code>isFirstLaunch()</code> returns true)</li>
+      <li>Prompt user to create a <strong>master admin PIN</strong> (4-digit)</li>
+      <li>Store hashed PIN in AppSettings table</li>
+      <li>Navigate to Home Screen</li>
+      <li>User creates their first player(s) via Manage Players</li>
+    </ol>
+  </section>
+
+</div>
+
+</body>
+</html>
