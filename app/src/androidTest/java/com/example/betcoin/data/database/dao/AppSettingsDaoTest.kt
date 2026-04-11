@@ -50,13 +50,23 @@ class AppSettingsDaoTest {
   }
 
   @Test
-  fun insert_alwaysUsesIdOne() = runTest {
+  fun insert_defaultsIdToOne() = runTest {
     val settings = AppSettings(adminPinHash = "some_hash")
     appSettingsDao.insert(settings)
 
     val retrieved = appSettingsDao.getSettings()
     assertThat(retrieved).isNotNull()
     assertThat(retrieved!!.id).isEqualTo(1)
+  }
+
+  @Test
+  fun insert_calledTwice_replacesExistingRow() = runTest {
+    appSettingsDao.insert(AppSettings(adminPinHash = "first_hash"))
+    appSettingsDao.insert(AppSettings(adminPinHash = "second_hash"))
+
+    val retrieved = appSettingsDao.getSettings()
+    assertThat(retrieved).isNotNull()
+    assertThat(retrieved!!.adminPinHash).isEqualTo("second_hash")
   }
 
   // --- getSettings ---
