@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.betcoin"
+    namespace = "com.betcoin"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.betcoin"
+        applicationId = "com.betcoin"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -23,12 +23,12 @@ android {
     productFlavors {
         create("prod") {
             dimension = "environment"
-            applicationId = "com.example.betcoin"
+            applicationId = "com.betcoin"
             buildConfigField("String", "DB_NAME", "\"betcoin.db\"")
         }
         create("dev") {
             dimension = "environment"
-            applicationId = "com.example.betcoin.dev"
+            applicationId = "com.betcoin.dev"
             buildConfigField("String", "DB_NAME", "\"betcoin_dev.db\"")
         }
     }
