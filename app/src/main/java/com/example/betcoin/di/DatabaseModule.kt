@@ -2,6 +2,7 @@ package com.example.betcoin.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.betcoin.BuildConfig
 import com.example.betcoin.data.database.BetCoinDatabase
 import com.example.betcoin.data.database.dao.AppSettingsDao
 import com.example.betcoin.data.database.dao.BetDao
@@ -18,6 +19,9 @@ import javax.inject.Singleton
 /**
  * Hilt module that provides the Room [BetCoinDatabase] instance and all 5 DAO
  * accessors as singleton-scoped dependencies.
+ *
+ * The database filename is determined by [BuildConfig.DB_NAME], which varies by
+ * product flavor: "betcoin.db" for prod and "betcoin_dev.db" for dev.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,7 +33,7 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             BetCoinDatabase::class.java,
-            "betcoin.db"
+            BuildConfig.DB_NAME
         ).build()
     }
 
