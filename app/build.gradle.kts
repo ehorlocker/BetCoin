@@ -19,6 +19,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("prod") {
+            dimension = "environment"
+            applicationId = "com.example.betcoin"
+            buildConfigField("String", "DB_NAME", "\"betcoin.db\"")
+        }
+        create("dev") {
+            dimension = "environment"
+            applicationId = "com.example.betcoin.dev"
+            buildConfigField("String", "DB_NAME", "\"betcoin_dev.db\"")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -37,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
