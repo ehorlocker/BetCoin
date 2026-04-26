@@ -21,8 +21,14 @@ class LocalSettingsRepository @Inject constructor(
     }
 
     override suspend fun setAdminPin(pin: String) {
+        require(pin.length >= 4) { "PIN must be at least 4 characters" }
         val hashed = BCrypt.hashpw(pin, BCrypt.gensalt())
-        appSettingsDao.insert(AppSettings(adminPinHash = hashed))
+        val existing = appSettingsDao.getSettings()
+        if (existing == null) {
+            appSettingsDao.insert(AppSettings(adminPinHash = hashed))
+        } else {
+            appSettingsDao.update(existing.copy(adminPinHash = hashed))
+        }
     }
 
     override suspend fun verifyAdminPin(pin: String): Boolean {

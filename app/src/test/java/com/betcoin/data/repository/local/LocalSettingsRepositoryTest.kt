@@ -74,6 +74,26 @@ class LocalSettingsRepositoryTest {
     assertThat(secondHash).isNotEqualTo(firstHash)
   }
 
+  @Test
+  fun setAdminPin_existingSettings_preservesId() = runTest {
+    fakeDao.insert(AppSettings(id = 1, adminPinHash = "old_hash"))
+
+    repository.setAdminPin("5678")
+
+    val stored = fakeDao.getSettings()!!
+    assertThat(stored.id).isEqualTo(AppSettings.SINGLETON_ID)
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun setAdminPin_emptyPin_throws() = runTest {
+    repository.setAdminPin("")
+  }
+
+  @Test(expected = IllegalArgumentException::class)
+  fun setAdminPin_shortPin_throws() = runTest {
+    repository.setAdminPin("123")
+  }
+
   // --- getAdminPinHash ---
 
   @Test
