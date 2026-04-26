@@ -54,7 +54,7 @@ interface UserRepository {
     /**
      * Deletes a user.
      *
-     * Blocks if the user is a participant in any ACTIVE bet. Before
+     * Refuses to delete if the user is a participant in any ACTIVE bet. Before
      * deletion, snapshots the username into
      * [BetParticipant.deletedUsername][com.betcoin.data.database.entity.BetParticipant.deletedUsername]
      * and nulls the foreign key on all related participants.
@@ -68,9 +68,9 @@ interface UserRepository {
     suspend fun resetPin(userId: Long, newPin: String)
 
     /**
-     * Adjusts the user's balance by signed delta [amount].
+     * Adjusts the user's balance by signed delta [delta].
      */
-    suspend fun updateBalance(userId: Long, amount: Long)
+    suspend fun updateBalance(userId: Long, delta: Long)
 
     /**
      * Sets the user's balance to the exact [newBalance] value (admin operation).

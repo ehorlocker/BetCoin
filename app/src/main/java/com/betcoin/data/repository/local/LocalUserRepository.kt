@@ -19,7 +19,7 @@ class LocalUserRepository @Inject constructor() : UserRepository {
     override suspend fun bailout(userId: Long): Unit = TODO()
     override suspend fun deleteUser(userId: Long): Unit = TODO()
     override suspend fun resetPin(userId: Long, newPin: String): Unit = TODO()
-    override suspend fun updateBalance(userId: Long, amount: Long): Unit = TODO()
+    override suspend fun updateBalance(userId: Long, delta: Long): Unit = TODO()
     override suspend fun setBalance(userId: Long, newBalance: Long): Unit = TODO()
     override suspend fun updateUsername(userId: Long, newUsername: String): Unit = TODO()
 }

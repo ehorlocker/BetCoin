@@ -12,7 +12,7 @@ import javax.inject.Inject
  */
 class LocalBetRepository @Inject constructor() : BetRepository {
     override suspend fun createBet(prompt: String, outcomes: List<String>): Long = TODO()
-    override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wager: Long): Unit = TODO()
+    override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long): Unit = TODO()
     override suspend fun removeParticipant(participantId: Long): Unit = TODO()
     override fun getBetWithDetails(betId: Long): Flow<BetWithDetails> = TODO()
     override fun getActiveBets(): Flow<List<BetWithDetails>> = TODO()
@@ -25,7 +25,7 @@ class LocalBetRepository @Inject constructor() : BetRepository {
     override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long): Unit = TODO()
     override suspend fun updateBetPrompt(betId: Long, newPrompt: String): Unit = TODO()
     override suspend fun adminRemoveParticipant(betId: Long, participantId: Long): Unit = TODO()
-    override suspend fun adminEditWager(participantId: Long, newWager: Long): Unit = TODO()
+    override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long): Unit = TODO()
     override suspend fun deleteBet(betId: Long): Unit = TODO()
     override suspend fun repeatBet(betId: Long): Long = TODO()
 }

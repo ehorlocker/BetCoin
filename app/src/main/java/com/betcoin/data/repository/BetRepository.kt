@@ -22,9 +22,9 @@ interface BetRepository {
     suspend fun createBet(prompt: String, outcomes: List<String>): Long
 
     /**
-     * Adds a participant to [betId] who picks [outcomeId] with [wager].
+     * Adds a participant to [betId] who picks [outcomeId] with [wagerAmount].
      */
-    suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wager: Long)
+    suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long)
 
     /**
      * Removes a participant before the bet is locked.
@@ -105,12 +105,12 @@ interface BetRepository {
     suspend fun adminRemoveParticipant(betId: Long, participantId: Long)
 
     /**
-     * Admin operation: adjusts a participant's wager to [newWager], refunding
+     * Admin operation: adjusts a participant's wager to [newWagerAmount], refunding
      * or deducting the balance difference.
      *
      * Implementation must run inside a transaction.
      */
-    suspend fun adminEditWager(participantId: Long, newWager: Long)
+    suspend fun adminEditWager(participantId: Long, newWagerAmount: Long)
 
     /**
      * Deletes a bet and its outcomes and participants. Only allowed for
