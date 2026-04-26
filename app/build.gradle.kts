@@ -93,6 +93,9 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.hilt.navigation.compose)
 
+    // PIN hashing
+    implementation(libs.jbcrypt)
+
     // Unit tests
     testImplementation(libs.junit)
     testImplementation(libs.truth)

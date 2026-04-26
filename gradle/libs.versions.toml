@@ -18,6 +18,7 @@ lifecycle = "2.9.0"
 navigationCompose = "2.9.0"
 activityCompose = "1.10.1"
 hiltNavigationCompose = "1.2.0"
+jbcrypt = "0.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,6 +56,7 @@ lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-ru
 # Navigation
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+jbcrypt = { group = "org.mindrot", name = "jbcrypt", version.ref = "jbcrypt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
