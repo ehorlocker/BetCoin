@@ -38,4 +38,16 @@ class BetCoinAvatarTest {
         composeTestRule.onNodeWithText("A")
             .assertIsDisplayed()
     }
+
+    @Test
+    fun avatar_displaysUppercaseInitials() {
+        composeTestRule.setContent {
+            BetCoinTheme {
+                BetCoinAvatar(initials = "ab")
+            }
+        }
+
+        composeTestRule.onNodeWithText("AB")
+            .assertIsDisplayed()
+    }
 }

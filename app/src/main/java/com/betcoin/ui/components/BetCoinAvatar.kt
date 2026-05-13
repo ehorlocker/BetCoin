@@ -26,6 +26,15 @@ private val avatarBackgroundColors = listOf(
 )
 
 /**
+ * Returns a deterministic background color for the given initials.
+ * The same initials will always produce the same color.
+ */
+internal fun avatarColorFor(initials: String): Color {
+    val index = initials.sumOf { it.code } % avatarBackgroundColors.size
+    return avatarBackgroundColors[index]
+}
+
+/**
  * A circular avatar displaying user initials.
  *
  * Background color is selected deterministically based on the initials
@@ -41,7 +50,7 @@ fun BetCoinAvatar(
     modifier: Modifier = Modifier,
     size: Int = 48,
 ) {
-    val backgroundColor = rememberAvatarColor(initials)
+    val backgroundColor = avatarColorFor(initials)
 
     Box(
         modifier = modifier
@@ -59,8 +68,4 @@ fun BetCoinAvatar(
     }
 }
 
-@Composable
-private fun rememberAvatarColor(initials: String): Color {
-    val index = initials.sumOf { it.code } % avatarBackgroundColors.size
-    return avatarBackgroundColors[index]
-}
+
