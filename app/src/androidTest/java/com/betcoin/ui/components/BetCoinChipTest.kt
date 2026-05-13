@@ -1,8 +1,8 @@
 package com.betcoin.ui.components
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -33,6 +33,39 @@ class BetCoinChipTest {
 
         composeTestRule.onNodeWithText("Over 2.5")
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun chip_selected_displaysAndIsSelected() {
+        composeTestRule.setContent {
+            BetCoinTheme {
+                BetCoinChip(
+                    label = "Over 2.5",
+                    selected = true,
+                    onClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Over 2.5")
+            .assertIsDisplayed()
+            .assertIsSelected()
+    }
+
+    @Test
+    fun chip_unselected_isNotSelected() {
+        composeTestRule.setContent {
+            BetCoinTheme {
+                BetCoinChip(
+                    label = "Under 2.5",
+                    selected = false,
+                    onClick = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Under 2.5")
+            .assertIsNotSelected()
     }
 
     @Test
