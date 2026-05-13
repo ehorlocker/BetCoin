@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,45 +34,50 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             BetCoinTheme {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
                 ) {
-                    Text(
-                        text = "BetCoin",
-                        style = androidx.compose.material3.MaterialTheme.typography.headlineLarge,
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = "BetCoin",
+                            style = MaterialTheme.typography.headlineLarge,
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                    BetCoinAvatar(initials = "BC")
-                    Spacer(modifier = Modifier.height(12.dp))
+                        BetCoinAvatar(initials = "BC")
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    BetCoinCard {
-                        Text("Welcome to BetCoin")
+                        BetCoinCard {
+                            Text("Welcome to BetCoin")
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        BetCoinChip(label = "Over 2.5", selected = false, onClick = {})
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        BetCoinInput(
+                            value = "",
+                            onValueChange = {},
+                            placeholder = "Enter bet amount",
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        BetCoinButton(text = "Place Bet", onClick = {})
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        BetCoinButton(
+                            text = "Cancel",
+                            variant = ButtonVariant.Secondary,
+                            onClick = {},
+                        )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    BetCoinChip(label = "Over 2.5", selected = false, onClick = {})
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    BetCoinInput(
-                        value = "",
-                        onValueChange = {},
-                        placeholder = "Enter bet amount",
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    BetCoinButton(text = "Place Bet", onClick = {})
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    BetCoinButton(
-                        text = "Cancel",
-                        variant = ButtonVariant.Secondary,
-                        onClick = {},
-                    )
                 }
             }
         }
