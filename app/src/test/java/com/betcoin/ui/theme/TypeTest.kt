@@ -19,6 +19,7 @@ class TypeTest {
         assertThat(style.fontSize).isEqualTo(48.sp)
         assertThat(style.fontWeight).isEqualTo(FontWeight.Black)
         assertThat(style.lineHeight).isEqualTo(52.sp)
+        assertThat(style.letterSpacing).isEqualTo((-0.02).sp)
     }
 
     @Test
@@ -27,6 +28,16 @@ class TypeTest {
         assertThat(style.fontSize).isEqualTo(32.sp)
         assertThat(style.fontWeight).isEqualTo(FontWeight.ExtraBold)
         assertThat(style.lineHeight).isEqualTo(40.sp)
+        assertThat(style.letterSpacing).isEqualTo((-0.01).sp)
+    }
+
+    @Test
+    fun labelLarge_is14spBoldWeight700() {
+        val style = BetCoinTypography.labelLarge
+        assertThat(style.fontSize).isEqualTo(14.sp)
+        assertThat(style.fontWeight).isEqualTo(FontWeight.Bold)
+        assertThat(style.lineHeight).isEqualTo(20.sp)
+        assertThat(style.letterSpacing).isEqualTo(0.05.sp)
     }
 
     @Test
@@ -51,14 +62,6 @@ class TypeTest {
         assertThat(style.fontSize).isEqualTo(16.sp)
         assertThat(style.fontWeight).isEqualTo(FontWeight.Normal)
         assertThat(style.lineHeight).isEqualTo(24.sp)
-    }
-
-    @Test
-    fun labelLarge_is14spBoldWeight700() {
-        val style = BetCoinTypography.labelLarge
-        assertThat(style.fontSize).isEqualTo(14.sp)
-        assertThat(style.fontWeight).isEqualTo(FontWeight.Bold)
-        assertThat(style.lineHeight).isEqualTo(20.sp)
     }
 
     @Test
