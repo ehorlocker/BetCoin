@@ -12,26 +12,25 @@ class ShapeTest {
 
     @Test
     fun small_is8dpRounded() {
-        val shape = BetCoinShapes.small as RoundedCornerShape
-        // RoundedCornerShape stores corner values; we verify via class type
-        assertThat(shape).isInstanceOf(RoundedCornerShape::class.java)
+        val shape = BetCoinShapes.small
+        assertThat(shape).isEqualTo(RoundedCornerShape(8.dp))
     }
 
     @Test
     fun medium_is16dpRounded() {
-        val shape = BetCoinShapes.medium as RoundedCornerShape
-        assertThat(shape).isInstanceOf(RoundedCornerShape::class.java)
+        val shape = BetCoinShapes.medium
+        assertThat(shape).isEqualTo(RoundedCornerShape(16.dp))
     }
 
     @Test
     fun large_is24dpRounded() {
-        val shape = BetCoinShapes.large as RoundedCornerShape
-        assertThat(shape).isInstanceOf(RoundedCornerShape::class.java)
+        val shape = BetCoinShapes.large
+        assertThat(shape).isEqualTo(RoundedCornerShape(24.dp))
     }
 
     @Test
     fun extraLarge_is32dpRounded() {
-        val shape = BetCoinShapes.extraLarge as RoundedCornerShape
-        assertThat(shape).isInstanceOf(RoundedCornerShape::class.java)
+        val shape = BetCoinShapes.extraLarge
+        assertThat(shape).isEqualTo(RoundedCornerShape(32.dp))
     }
 }
