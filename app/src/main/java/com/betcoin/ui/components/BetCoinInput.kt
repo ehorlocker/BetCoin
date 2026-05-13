@@ -2,6 +2,8 @@ package com.betcoin.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +11,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -36,7 +40,8 @@ fun BetCoinInput(
     modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
-    val isFocused = value.isNotEmpty() // Simplified focus detection for testing
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
     val borderColor = if (isFocused) BetCoinPurple else BetCoinOutline.copy(alpha = 0.3f)
 
     BasicTextField(
@@ -50,6 +55,7 @@ fun BetCoinInput(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
         cursorBrush = SolidColor(BetCoinPurple),
+        interactionSource = interactionSource,
         visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->
             if (value.isEmpty()) {
