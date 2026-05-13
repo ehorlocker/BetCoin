@@ -39,6 +39,7 @@ fun BetCoinCard(
         .clip(RoundedCornerShape(24.dp))
         .background(BetCoinSurface)
         .scale(scale)
+        .padding(16.dp)
         .then(
             if (onClick != null) {
                 Modifier.clickable(
@@ -51,7 +52,6 @@ fun BetCoinCard(
                 Modifier
             }
         )
-        .padding(16.dp)
 
     Box(modifier = cardModifier) {
         content()
