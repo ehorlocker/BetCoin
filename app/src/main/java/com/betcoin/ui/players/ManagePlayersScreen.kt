@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.betcoin.ui.components.BetCoinButton
+import com.betcoin.ui.components.DevModeIndicator
 
 /**
  * Manage Players screen — lists all players and provides management actions.
@@ -82,6 +83,8 @@ fun ManagePlayersScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
+            DevModeIndicator(modifier = Modifier.padding(bottom = 8.dp))
+
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

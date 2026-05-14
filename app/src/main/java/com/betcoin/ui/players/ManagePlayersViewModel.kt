@@ -91,7 +91,7 @@ class ManagePlayersViewModel @Inject constructor(
                     addPlayerError = null,
                     snackbarMessage = "Player $username created successfully",
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = currentState.copy(
                     addPlayerError = e.message ?: "Failed to create player",
                 )
@@ -119,7 +119,7 @@ class ManagePlayersViewModel @Inject constructor(
                     selectedPlayerName = "",
                     snackbarMessage = "Player deleted",
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     showDeleteConfirmation = false,
                     selectedPlayerId = null,
@@ -169,7 +169,7 @@ class ManagePlayersViewModel @Inject constructor(
                     renameError = null,
                     snackbarMessage = "Player renamed to $newUsername",
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = currentState.copy(
                     renameError = e.message ?: "Rename failed",
                 )
@@ -185,7 +185,7 @@ class ManagePlayersViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     snackbarMessage = "Bailout granted to ${player?.username}",
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _uiState.value = _uiState.value.copy(
                     snackbarMessage = "Failed to grant bailout",
                 )
