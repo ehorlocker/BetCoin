@@ -17,4 +17,5 @@
 .cxx
 local.properties
 /tmp
+/docs
 AGENTS.md
