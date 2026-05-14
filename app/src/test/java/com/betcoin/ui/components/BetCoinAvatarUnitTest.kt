@@ -1,9 +1,10 @@
 package com.betcoin.ui.components
 
 import androidx.compose.ui.graphics.Color
-import com.betcoin.ui.theme.BetCoinCyan
-import com.betcoin.ui.theme.BetCoinMagenta
-import com.betcoin.ui.theme.BetCoinPurple
+import com.betcoin.ui.theme.BetCoinSecondary
+import com.betcoin.ui.theme.BetCoinTertiary
+import com.betcoin.ui.theme.BetCoinPrimary
+import com.betcoin.ui.theme.BetCoinAvatarSlate
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
@@ -28,9 +29,9 @@ class BetCoinAvatarUnitTest {
 
     @Test
     fun avatarColor_knownInitials_matchExpected() {
-        // "JD" -> J(74) + D(68) = 142 % 5 = 2 -> Magenta
-        assertThat(avatarColorFor("JD")).isEqualTo(BetCoinMagenta)
+        // "JD" -> J(74) + D(68) = 142 % 5 = 2 -> Tertiary
+        assertThat(avatarColorFor("JD")).isEqualTo(BetCoinTertiary)
         // "BC" -> B(66) + C(67) = 133 % 5 = 3 -> Slate
-        assertThat(avatarColorFor("BC")).isEqualTo(Color(0xFF6B7280))
+        assertThat(avatarColorFor("BC")).isEqualTo(BetCoinAvatarSlate)
     }
 }

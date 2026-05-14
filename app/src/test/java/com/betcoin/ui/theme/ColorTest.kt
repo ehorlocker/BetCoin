@@ -14,22 +14,37 @@ class ColorTest {
 
     @Test
     fun primary_isMintGlow() {
-        assertThat(BetCoinPurple).isEqualTo(Color(0xFF7EF2D5))
+        assertThat(BetCoinPrimary).isEqualTo(Color(0xFF7EF2D5))
+    }
+
+    @Test
+    fun primaryContainer_isLightMint() {
+        assertThat(BetCoinPrimaryContainer).isEqualTo(Color(0xFFEAFFF7))
     }
 
     @Test
     fun secondary_isCoralGlow() {
-        assertThat(BetCoinCyan).isEqualTo(Color(0xFFFFB2B7))
+        assertThat(BetCoinSecondary).isEqualTo(Color(0xFFFFB2B7))
     }
 
     @Test
     fun tertiary_isSkyGlow() {
-        assertThat(BetCoinMagenta).isEqualTo(Color(0xFFA4E8FF))
+        assertThat(BetCoinTertiary).isEqualTo(Color(0xFFA4E8FF))
+    }
+
+    @Test
+    fun tertiaryContainer_isLightSky() {
+        assertThat(BetCoinTertiaryContainer).isEqualTo(Color(0xFFF4FCFF))
     }
 
     @Test
     fun background_isMidnightCharcoal() {
         assertThat(BetCoinBackground).isEqualTo(Color(0xFF111316))
+    }
+
+    @Test
+    fun inputBackground_isDarkerThanBackground() {
+        assertThat(BetCoinInputBackground).isEqualTo(Color(0xFF0A0C0E))
     }
 
     @Test
@@ -66,13 +81,23 @@ class ColorTest {
     fun darkColorScheme_usesBetCoinColors() {
         val scheme = BetCoinDarkColorScheme
 
-        assertThat(scheme.primary).isEqualTo(BetCoinPurple)
-        assertThat(scheme.secondary).isEqualTo(BetCoinCyan)
-        assertThat(scheme.tertiary).isEqualTo(BetCoinMagenta)
+        assertThat(scheme.primary).isEqualTo(BetCoinPrimary)
+        assertThat(scheme.secondary).isEqualTo(BetCoinSecondary)
+        assertThat(scheme.tertiary).isEqualTo(BetCoinTertiary)
         assertThat(scheme.background).isEqualTo(BetCoinBackground)
         assertThat(scheme.surface).isEqualTo(BetCoinSurface)
         assertThat(scheme.error).isEqualTo(BetCoinError)
         assertThat(scheme.onSurface).isEqualTo(BetCoinOnSurface)
         assertThat(scheme.outline).isEqualTo(BetCoinOutline)
+    }
+
+    @Test
+    fun primaryAndContainer_areDistinct() {
+        assertThat(BetCoinPrimary).isNotEqualTo(BetCoinPrimaryContainer)
+    }
+
+    @Test
+    fun tertiaryAndContainer_areDistinct() {
+        assertThat(BetCoinTertiary).isNotEqualTo(BetCoinTertiaryContainer)
     }
 }

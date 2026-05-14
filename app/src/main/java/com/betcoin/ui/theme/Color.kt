@@ -3,10 +3,12 @@ package com.betcoin.ui.theme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Brand Accents (Midnight Playground — Mint, Coral, Sky)
-val BetCoinPurple = Color(0xFF7EF2D5)   // Primary: Mint Glow
-val BetCoinCyan = Color(0xFFFFB2B7)     // Secondary: Coral Glow
-val BetCoinMagenta = Color(0xFFA4E8FF)  // Tertiary: Sky Glow
+// Brand Accents (Midnight Playground)
+val BetCoinPrimary = Color(0xFF7EF2D5)      // Primary: Mint Glow (main actions)
+val BetCoinPrimaryContainer = Color(0xFFEAFFF7) // Primary Container: Light Mint
+val BetCoinSecondary = Color(0xFFFFB2B7)    // Secondary: Coral Glow
+val BetCoinTertiary = Color(0xFFA4E8FF)     // Tertiary: Sky Glow
+val BetCoinTertiaryContainer = Color(0xFFF4FCFF) // Tertiary Container: Light Sky
 
 // Semantic Colors
 val BetCoinSuccess = Color(0xFF7EF2D5)
@@ -14,6 +16,7 @@ val BetCoinError = Color(0xFFFFB4AB)
 
 // Surfaces
 val BetCoinBackground = Color(0xFF111316)
+val BetCoinInputBackground = Color(0xFF0A0C0E) // Darker than background per spec
 val BetCoinSurface = Color(0xFF1E2023)
 val BetCoinSurfaceHigh = Color(0xFF282A2D)
 val BetCoinSurfaceContainerLowest = Color(0xFF0C0E11)
@@ -29,6 +32,7 @@ val BetCoinOnSurfaceVariant = Color(0xFFBCCAC4)
 val BetCoinOnPrimary = Color(0xFF00382D)
 val BetCoinOnSecondary = Color(0xFF5B1822)
 val BetCoinOnTertiary = Color(0xFF003642)
+val BetCoinOnError = Color(0xFF690005)
 val BetCoinOnBackground = Color(0xFFE2E2E6)
 
 // Outlines
@@ -55,29 +59,31 @@ val BetCoinOnTertiaryFixed = Color(0xFF001F27)
 val BetCoinOnTertiaryFixedVariant = Color(0xFF004E5F)
 
 // Containers
-val BetCoinPrimaryContainer = Color(0xFF7EF2D5)
 val BetCoinOnPrimaryContainer = Color(0xFF006E5C)
 val BetCoinSecondaryContainer = Color(0xFF7B3039)
 val BetCoinOnSecondaryContainer = Color(0xFFFF9DA5)
-val BetCoinTertiaryContainer = Color(0xFFA4E8FF)
 val BetCoinOnTertiaryContainer = Color(0xFF166A7F)
 val BetCoinErrorContainer = Color(0xFF93000A)
 val BetCoinOnErrorContainer = Color(0xFFFFDAD6)
+
+// Avatar Colors
+val BetCoinAvatarSlate = Color(0xFF6B7280)
+val BetCoinAvatarIndigo = Color(0xFF4F46E5)
 
 // Surface Tint
 val BetCoinSurfaceTint = Color(0xFF65DABE)
 
 val BetCoinDarkColorScheme = darkColorScheme(
-    primary = BetCoinPurple,
+    primary = BetCoinPrimary,
     onPrimary = BetCoinOnPrimary,
     primaryContainer = BetCoinPrimaryContainer,
     onPrimaryContainer = BetCoinOnPrimaryContainer,
     inversePrimary = BetCoinInversePrimary,
-    secondary = BetCoinCyan,
+    secondary = BetCoinSecondary,
     onSecondary = BetCoinOnSecondary,
     secondaryContainer = BetCoinSecondaryContainer,
     onSecondaryContainer = BetCoinOnSecondaryContainer,
-    tertiary = BetCoinMagenta,
+    tertiary = BetCoinTertiary,
     onTertiary = BetCoinOnTertiary,
     tertiaryContainer = BetCoinTertiaryContainer,
     onTertiaryContainer = BetCoinOnTertiaryContainer,
@@ -91,7 +97,7 @@ val BetCoinDarkColorScheme = darkColorScheme(
     inverseSurface = BetCoinInverseSurface,
     inverseOnSurface = BetCoinInverseOnSurface,
     error = BetCoinError,
-    onError = Color(0xFF690005),
+    onError = BetCoinOnError,
     errorContainer = BetCoinErrorContainer,
     onErrorContainer = BetCoinOnErrorContainer,
     outline = BetCoinOutline,

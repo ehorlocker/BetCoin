@@ -13,16 +13,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinCyan
-import com.betcoin.ui.theme.BetCoinMagenta
-import com.betcoin.ui.theme.BetCoinPurple
+import com.betcoin.ui.theme.BetCoinSecondary
+import com.betcoin.ui.theme.BetCoinTertiary
+import com.betcoin.ui.theme.BetCoinPrimary
+import com.betcoin.ui.theme.BetCoinAvatarSlate
+import com.betcoin.ui.theme.BetCoinAvatarIndigo
 
 private val avatarBackgroundColors = listOf(
-    BetCoinPurple,
-    BetCoinCyan,
-    BetCoinMagenta,
-    Color(0xFF6B7280), // Slate
-    Color(0xFF4F46E5), // Indigo
+    BetCoinPrimary,
+    BetCoinSecondary,
+    BetCoinTertiary,
+    BetCoinAvatarSlate,
+    BetCoinAvatarIndigo,
 )
 
 /**
@@ -57,7 +59,7 @@ fun BetCoinAvatar(
             .size(size.dp)
             .clip(CircleShape)
             .background(backgroundColor)
-            .border(2.dp, BetCoinPurple, CircleShape),
+            .border(2.dp, BetCoinPrimary, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text(

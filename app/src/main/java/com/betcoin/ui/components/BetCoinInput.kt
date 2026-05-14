@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinBackground
-import com.betcoin.ui.theme.BetCoinMagenta
+import com.betcoin.ui.theme.BetCoinInputBackground
+import com.betcoin.ui.theme.BetCoinTertiary
 import com.betcoin.ui.theme.BetCoinOutline
 
 /**
@@ -44,7 +44,7 @@ fun BetCoinInput(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val borderColor = if (isFocused) BetCoinMagenta else BetCoinOutline.copy(alpha = 0.3f)
+    val borderColor = if (isFocused) BetCoinTertiary else BetCoinOutline.copy(alpha = 0.3f)
 
     BasicTextField(
         value = value,
@@ -52,11 +52,11 @@ fun BetCoinInput(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(BetCoinBackground)
+            .background(BetCoinInputBackground)
             .border(2.dp, borderColor, RoundedCornerShape(16.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-        cursorBrush = SolidColor(BetCoinMagenta),
+        cursorBrush = SolidColor(BetCoinTertiary),
         interactionSource = interactionSource,
         visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->

@@ -23,6 +23,18 @@ val BetCoinTypography = Typography(
         lineHeight = 48.sp,
         letterSpacing = (-0.02).sp,
     ),
+    displayMedium = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 36.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 44.sp,
+    ),
+    displaySmall = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 32.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 40.sp,
+    ),
     headlineLarge = TextStyle(
         fontFamily = Quicksand,
         fontSize = 32.sp,
@@ -34,6 +46,30 @@ val BetCoinTypography = Typography(
         fontSize = 24.sp,
         fontWeight = FontWeight.SemiBold,
         lineHeight = 31.2.sp,
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 28.sp,
+    ),
+    titleLarge = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 28.sp,
+    ),
+    titleMedium = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 26.sp,
+    ),
+    titleSmall = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 24.sp,
     ),
     bodyLarge = TextStyle(
         fontFamily = Quicksand,
@@ -47,12 +83,25 @@ val BetCoinTypography = Typography(
         fontWeight = FontWeight.Medium,
         lineHeight = 24.sp,
     ),
+    bodySmall = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        lineHeight = 20.sp,
+    ),
     labelLarge = TextStyle(
         fontFamily = Quicksand,
         fontSize = 14.sp,
         fontWeight = FontWeight.SemiBold,
         lineHeight = 19.6.sp,
         letterSpacing = 0.01.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = Quicksand,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 16.sp,
+        letterSpacing = 0.02.sp,
     ),
     labelSmall = TextStyle(
         fontFamily = Quicksand,

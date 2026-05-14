@@ -38,9 +38,9 @@ class ThemeTest {
             }
         }
 
-        assertThat(primary).isEqualTo(BetCoinPurple)
-        assertThat(secondary).isEqualTo(BetCoinCyan)
-        assertThat(tertiary).isEqualTo(BetCoinMagenta)
+        assertThat(primary).isEqualTo(BetCoinPrimary)
+        assertThat(secondary).isEqualTo(BetCoinSecondary)
+        assertThat(tertiary).isEqualTo(BetCoinTertiary)
         assertThat(background).isEqualTo(BetCoinBackground)
         assertThat(surface).isEqualTo(BetCoinSurface)
     }
