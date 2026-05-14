@@ -54,8 +54,12 @@ open class OnboardingViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            settingsRepository.setAdminPin(pin)
-            _onboardingComplete.value = true
+            try {
+                settingsRepository.setAdminPin(pin)
+                _onboardingComplete.value = true
+            } catch (e: Exception) {
+                _errorMessage.value = "Failed to save PIN: ${e.message}"
+            }
         }
     }
 
