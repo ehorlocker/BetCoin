@@ -7,59 +7,59 @@ import org.junit.Test
 /**
  * Unit tests for BetCoin color constants.
  *
- * These tests verify that the design system colors from DESIGN.md
+ * These tests verify that the design system colors from dark-mode-design.md
  * are defined with the exact hex values.
  */
 class ColorTest {
 
     @Test
-    fun primary_isElectricPurple() {
-        assertThat(BetCoinPurple).isEqualTo(Color(0xFF8A2BE2))
+    fun primary_isMintGlow() {
+        assertThat(BetCoinPurple).isEqualTo(Color(0xFF7EF2D5))
     }
 
     @Test
-    fun secondary_isElectricCyan() {
-        assertThat(BetCoinCyan).isEqualTo(Color(0xFF00F5FF))
+    fun secondary_isCoralGlow() {
+        assertThat(BetCoinCyan).isEqualTo(Color(0xFFFFB2B7))
     }
 
     @Test
-    fun tertiary_isMagenta() {
-        assertThat(BetCoinMagenta).isEqualTo(Color(0xFFFF007A))
+    fun tertiary_isSkyGlow() {
+        assertThat(BetCoinMagenta).isEqualTo(Color(0xFFA4E8FF))
     }
 
     @Test
-    fun background_isTrueDark() {
-        assertThat(BetCoinBackground).isEqualTo(Color(0xFF131313))
+    fun background_isMidnightCharcoal() {
+        assertThat(BetCoinBackground).isEqualTo(Color(0xFF111316))
     }
 
     @Test
     fun surface_isDarkElevated() {
-        assertThat(BetCoinSurface).isEqualTo(Color(0xFF1E1E1E))
+        assertThat(BetCoinSurface).isEqualTo(Color(0xFF1E2023))
     }
 
     @Test
     fun surfaceHigh_isFloating() {
-        assertThat(BetCoinSurfaceHigh).isEqualTo(Color(0xFF2A2A2A))
+        assertThat(BetCoinSurfaceHigh).isEqualTo(Color(0xFF282A2D))
     }
 
     @Test
-    fun success_isRadioactiveGreen() {
-        assertThat(BetCoinSuccess).isEqualTo(Color(0xFF39FF14))
+    fun success_isMintGreen() {
+        assertThat(BetCoinSuccess).isEqualTo(Color(0xFF7EF2D5))
     }
 
     @Test
-    fun error_isSharpRed() {
-        assertThat(BetCoinError).isEqualTo(Color(0xFFFF3131))
+    fun error_isSoftRed() {
+        assertThat(BetCoinError).isEqualTo(Color(0xFFFFB4AB))
     }
 
     @Test
     fun onSurface_isLightGray() {
-        assertThat(BetCoinOnSurface).isEqualTo(Color(0xFFE5E2E1))
+        assertThat(BetCoinOnSurface).isEqualTo(Color(0xFFE2E2E6))
     }
 
     @Test
-    fun outline_isMutedPurple() {
-        assertThat(BetCoinOutline).isEqualTo(Color(0xFF988CA0))
+    fun outline_isMutedTeal() {
+        assertThat(BetCoinOutline).isEqualTo(Color(0xFF86948E))
     }
 
     @Test

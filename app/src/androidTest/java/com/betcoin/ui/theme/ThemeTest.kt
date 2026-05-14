@@ -59,7 +59,7 @@ class ThemeTest {
             }
         }
 
-        assertThat(displayLarge?.fontSize).isEqualTo(48.sp)
+        assertThat(displayLarge?.fontSize).isEqualTo(40.sp)
         assertThat(headlineLarge?.fontSize).isEqualTo(32.sp)
         assertThat(bodyLarge?.fontSize).isEqualTo(18.sp)
     }

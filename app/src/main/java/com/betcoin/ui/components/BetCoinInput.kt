@@ -20,11 +20,13 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.betcoin.ui.theme.BetCoinBackground
+import com.betcoin.ui.theme.BetCoinMagenta
 import com.betcoin.ui.theme.BetCoinOutline
-import com.betcoin.ui.theme.BetCoinPurple
 
 /**
- * A dark input field with a purple focus glow.
+ * A dark input field with a sky-blue focus ring.
+ *
+ * Background is darker than the app background per the design spec.
  *
  * @param value The current text value.
  * @param onValueChange Called when the text changes.
@@ -42,19 +44,19 @@ fun BetCoinInput(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val borderColor = if (isFocused) BetCoinPurple else BetCoinOutline.copy(alpha = 0.3f)
+    val borderColor = if (isFocused) BetCoinMagenta else BetCoinOutline.copy(alpha = 0.3f)
 
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(BetCoinBackground)
-            .border(2.dp, borderColor, RoundedCornerShape(24.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-        cursorBrush = SolidColor(BetCoinPurple),
+        cursorBrush = SolidColor(BetCoinMagenta),
         interactionSource = interactionSource,
         visualTransformation = visualTransformation,
         decorationBox = { innerTextField ->

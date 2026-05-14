@@ -8,59 +8,57 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.betcoin.R
 
-val Montserrat = FontFamily(
-    Font(R.font.montserrat_regular, FontWeight.Normal),
-    Font(R.font.montserrat_regular, FontWeight.Medium),
-    Font(R.font.montserrat_regular, FontWeight.SemiBold),
-    Font(R.font.montserrat_regular, FontWeight.Bold),
-    Font(R.font.montserrat_regular, FontWeight.ExtraBold),
-    Font(R.font.montserrat_regular, FontWeight.Black),
+val Quicksand = FontFamily(
+    Font(R.font.quicksand_variable, FontWeight.Normal),
+    Font(R.font.quicksand_variable, FontWeight.Medium),
+    Font(R.font.quicksand_variable, FontWeight.SemiBold),
+    Font(R.font.quicksand_variable, FontWeight.Bold),
 )
 
 val BetCoinTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = Montserrat,
-        fontSize = 48.sp,
-        fontWeight = FontWeight.Black,
-        lineHeight = 52.sp,
+        fontFamily = Quicksand,
+        fontSize = 40.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 48.sp,
         letterSpacing = (-0.02).sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = Quicksand,
         fontSize = 32.sp,
-        fontWeight = FontWeight.ExtraBold,
-        lineHeight = 40.sp,
-        letterSpacing = (-0.01).sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 38.4.sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = Quicksand,
         fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-        lineHeight = 32.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 31.2.sp,
     ),
     bodyLarge = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = Quicksand,
         fontSize = 18.sp,
         fontWeight = FontWeight.Medium,
-        lineHeight = 28.sp,
+        lineHeight = 27.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = Quicksand,
         fontSize = 16.sp,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         lineHeight = 24.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = Quicksand,
         fontSize = 14.sp,
-        fontWeight = FontWeight.Bold,
-        lineHeight = 20.sp,
-        letterSpacing = 0.05.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 19.6.sp,
+        letterSpacing = 0.01.sp,
     ),
     labelSmall = TextStyle(
-        fontFamily = Montserrat,
+        fontFamily = Quicksand,
         fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        lineHeight = 16.sp,
+        fontWeight = FontWeight.Bold,
+        lineHeight = 16.8.sp,
+        letterSpacing = 0.03.sp,
     ),
 )

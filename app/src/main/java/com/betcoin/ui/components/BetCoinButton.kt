@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinCyan
+import com.betcoin.ui.theme.BetCoinOnPrimary
 import com.betcoin.ui.theme.BetCoinPurple
 import com.betcoin.ui.theme.BetCoinSuccess
 
@@ -32,7 +33,7 @@ fun BetCoinButton(
     val (containerColor, contentColor, borderColor) = when (variant) {
         ButtonVariant.Primary -> Triple(
             BetCoinPurple,
-            Color.White,
+            BetCoinOnPrimary,
             Color.Transparent,
         )
         ButtonVariant.Secondary -> Triple(
@@ -42,7 +43,7 @@ fun BetCoinButton(
         )
         ButtonVariant.BettingAction -> Triple(
             BetCoinSuccess,
-            Color.Black,
+            BetCoinOnPrimary,
             Color.Transparent,
         )
     }
@@ -59,7 +60,7 @@ fun BetCoinButton(
             disabledContentColor = contentColor.copy(alpha = 0.38f),
         ),
         border = if (variant == ButtonVariant.Secondary) {
-            androidx.compose.foundation.BorderStroke(2.dp, borderColor)
+            BorderStroke(2.dp, borderColor)
         } else {
             null
         },

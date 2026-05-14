@@ -68,6 +68,7 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 | totalLost | Long | NOT NULL, default 0 |
 | bailoutCount | Int | NOT NULL, default 0 |
 | totalDebt | Long | NOT NULL, default 0 |
+| profilePictureUri | String? | NULL until set (local file URI) |
 | createdAt | Long | NOT NULL (epoch millis) |
 
 ### 3.2 Bet
@@ -138,7 +139,7 @@ Home ──┬── New Bet ── Step A ── Step B ── Step C (Review &
 - **Dev flavor indicator**: When running the `dev` build flavor, display a persistent banner/badge on the Home Screen (e.g., "DEV MODE" in a warning color) so it's immediately obvious this is the test version. Check `BuildConfig.FLAVOR == "dev"` to toggle visibility.
 
 #### Manage Players
-- Lists all registered users
+- Lists all registered users with their profile picture (or default avatar) and username
 - **Add Player** button → navigates to player creation form
 - Tap a player → Player Detail screen
 - Gear icon → Admin Panel (requires master admin PIN)
@@ -233,6 +234,11 @@ Accessed by tapping any bet in Bet History (or Active Bets). Displays the full b
 
 #### Player Detail
 - Shows all user stats
+- **Profile Picture**: displays the player's profile picture (if set) or a default avatar placeholder
+- **Change Profile Picture** button — opens a bottom sheet or dialog with two options:
+  - **Select from Gallery** — pick an image from the device photo gallery
+  - **Take Photo** — capture a new image with the device camera
+  - **Remove Photo** — clear the profile picture and revert to the default avatar
 - **Bailout** button (visible only when balance < 100)
 
 #### Admin Panel (PIN-gated)
@@ -367,6 +373,8 @@ ViewModel → Repository Interface → LocalRepository (Room DAOs)
 | `updateBalance(userId, amount)` | Adjust balance by delta |
 | `setBalance(userId, newBalance)` | Admin sets balance to arbitrary value |
 | `updateUsername(userId, newUsername)` | Admin renames user (must remain unique) |
+| `updateProfilePicture(userId, uri)` | Set or update the user's profile picture URI |
+| `clearProfilePicture(userId)` | Remove the user's profile picture |
 
 ### 6.2 BetRepository (interface)
 | Method | Description |
@@ -493,6 +501,10 @@ abstract class RepositoryModule {
 | Reopen resolved bet, winner spent their winnings | Block — winner must have enough balance to return payouts |
 | Reopen bet with deleted participant | Block — all original participants must still exist |
 | Repeat bet | Creates new independent bet, original unaffected |
+| Profile picture file deleted externally | Gracefully fall back to default avatar placeholder |
+| Profile picture URI is invalid/unreadable | Gracefully fall back to default avatar placeholder |
+| Camera/gallery permission denied | Show permission rationale dialog; if permanently denied, guide user to app settings |
+| Large image selected for profile picture | Resize/compress before saving to avoid memory issues |
 
 ---
 
