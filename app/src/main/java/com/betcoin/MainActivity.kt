@@ -3,26 +3,19 @@ package com.betcoin
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.betcoin.ui.components.BetCoinAvatar
-import com.betcoin.ui.components.BetCoinButton
-import com.betcoin.ui.components.BetCoinCard
-import com.betcoin.ui.components.BetCoinChip
-import com.betcoin.ui.components.BetCoinInput
-import com.betcoin.ui.components.ButtonVariant
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.rememberNavController
+import com.betcoin.data.repository.SettingsRepository
+import com.betcoin.navigation.NavGraph
+import com.betcoin.navigation.Routes
 import com.betcoin.ui.theme.BetCoinTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * The single [ComponentActivity] for BetCoin, annotated with [AndroidEntryPoint]
@@ -30,52 +23,27 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            BetCoinTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
+
+        lifecycleScope.launch {
+            val isFirstLaunch = settingsRepository.isFirstLaunch()
+            val startDestination = if (isFirstLaunch) Routes.ONBOARDING else Routes.HOME
+
+            setContent {
+                BetCoinTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
                     ) {
-                        Text(
-                            text = "BetCoin",
-                            style = MaterialTheme.typography.headlineLarge,
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        BetCoinAvatar(initials = "BC")
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        BetCoinCard {
-                            Text("Welcome to BetCoin")
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        BetCoinChip(label = "Over 2.5", selected = false, onClick = {})
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        BetCoinInput(
-                            value = "",
-                            onValueChange = {},
-                            placeholder = "Enter bet amount",
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        BetCoinButton(text = "Place Bet", onClick = {})
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        BetCoinButton(
-                            text = "Cancel",
-                            variant = ButtonVariant.Secondary,
-                            onClick = {},
+                        val navController = rememberNavController()
+                        NavGraph(
+                            navController = navController,
+                            startDestination = startDestination,
                         )
                     }
                 }
