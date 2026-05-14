@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.betcoin.ui.components.BetCoinButton
@@ -93,7 +96,7 @@ fun ManagePlayersScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(uiState.players) { player ->
+                    items(uiState.players, key = { it.id }) { player ->
                         PlayerCard(
                             username = player.username,
                             balance = player.balance,
@@ -102,7 +105,6 @@ fun ManagePlayersScreen(
                             onDelete = { viewModel.onDeletePlayerClicked(player.id) },
                             onRename = { viewModel.onRenamePlayerClicked(player.id) },
                             onBailout = { viewModel.onBailoutPlayer(player.id) },
-                            onResetPin = { /* TODO */ },
                         )
                     }
                 }
@@ -134,7 +136,7 @@ fun ManagePlayersScreen(
         AlertDialog(
             onDismissRequest = { viewModel.onDismissDeleteConfirmation() },
             title = { Text("Delete Player") },
-            text = { Text("Are you sure you want to delete this player?") },
+            text = { Text("Are you sure you want to delete ${uiState.selectedPlayerName}?") },
             confirmButton = {
                 TextButton(onClick = { viewModel.onConfirmDeletePlayer() }) {
                     Text("Delete")
@@ -183,7 +185,6 @@ private fun PlayerCard(
     onDelete: () -> Unit,
     onRename: () -> Unit,
     onBailout: () -> Unit,
-    onResetPin: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -211,9 +212,6 @@ private fun PlayerCard(
             ) {
                 TextButton(onClick = onRename, modifier = Modifier.weight(1f)) {
                     Text("Rename")
-                }
-                TextButton(onClick = onResetPin, modifier = Modifier.weight(1f)) {
-                    Text("Edit PIN")
                 }
                 TextButton(onClick = onBailout, modifier = Modifier.weight(1f)) {
                     Text("Bailout")
@@ -254,6 +252,8 @@ private fun AddPlayerDialog(
                     onValueChange = onPinChange,
                     label = { Text("PIN (4 digits)") },
                     singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (error != null) {

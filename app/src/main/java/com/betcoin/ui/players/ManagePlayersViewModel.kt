@@ -28,6 +28,7 @@ class ManagePlayersViewModel @Inject constructor(
         val addPlayerError: String? = null,
         val showDeleteConfirmation: Boolean = false,
         val selectedPlayerId: Long? = null,
+        val selectedPlayerName: String = "",
         val showRenameDialog: Boolean = false,
         val renameUsername: String = "",
         val renameError: String? = null,
@@ -58,11 +59,11 @@ class ManagePlayersViewModel @Inject constructor(
     }
 
     fun onUsernameChanged(username: String) {
-        _uiState.value = _uiState.value.copy(newUsername = username)
+        _uiState.value = _uiState.value.copy(newUsername = username, addPlayerError = null)
     }
 
     fun onPinChanged(pin: String) {
-        _uiState.value = _uiState.value.copy(newPin = pin)
+        _uiState.value = _uiState.value.copy(newPin = pin, addPlayerError = null)
     }
 
     fun onConfirmAddPlayer() {
@@ -73,7 +74,7 @@ class ManagePlayersViewModel @Inject constructor(
         val error = when {
             username.isEmpty() -> "Username cannot be empty"
             !pin.matches(Regex("^\\d{4}$")) -> "PIN must be exactly 4 digits"
-            currentState.players.any { it.username == username } -> "Username already exists"
+            currentState.players.any { it.username.equals(username, ignoreCase = true) } -> "Username already exists"
             else -> null
         }
 
@@ -83,19 +84,27 @@ class ManagePlayersViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            userRepository.createUser(username, pin)
-            _uiState.value = currentState.copy(
-                showAddPlayerDialog = false,
-                addPlayerError = null,
-                snackbarMessage = "Player $username created successfully",
-            )
+            try {
+                userRepository.createUser(username, pin)
+                _uiState.value = currentState.copy(
+                    showAddPlayerDialog = false,
+                    addPlayerError = null,
+                    snackbarMessage = "Player $username created successfully",
+                )
+            } catch (e: Exception) {
+                _uiState.value = currentState.copy(
+                    addPlayerError = e.message ?: "Failed to create player",
+                )
+            }
         }
     }
 
     fun onDeletePlayerClicked(playerId: Long) {
+        val player = _uiState.value.players.find { it.id == playerId }
         _uiState.value = _uiState.value.copy(
             showDeleteConfirmation = true,
             selectedPlayerId = playerId,
+            selectedPlayerName = player?.username ?: "",
         )
     }
 
@@ -107,12 +116,14 @@ class ManagePlayersViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     showDeleteConfirmation = false,
                     selectedPlayerId = null,
+                    selectedPlayerName = "",
                     snackbarMessage = "Player deleted",
                 )
-            } catch (e: IllegalStateException) {
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     showDeleteConfirmation = false,
                     selectedPlayerId = null,
+                    selectedPlayerName = "",
                     snackbarMessage = "Cannot delete: ${e.message}",
                 )
             }
@@ -130,7 +141,7 @@ class ManagePlayersViewModel @Inject constructor(
     }
 
     fun onRenameUsernameChanged(username: String) {
-        _uiState.value = _uiState.value.copy(renameUsername = username)
+        _uiState.value = _uiState.value.copy(renameUsername = username, renameError = null)
     }
 
     fun onConfirmRenamePlayer() {
@@ -140,7 +151,7 @@ class ManagePlayersViewModel @Inject constructor(
 
         val error = when {
             newUsername.isEmpty() -> "Username cannot be empty"
-            currentState.players.any { it.id != playerId && it.username == newUsername } -> "Username already exists"
+            currentState.players.any { it.id != playerId && it.username.equals(newUsername, ignoreCase = true) } -> "Username already exists"
             else -> null
         }
 

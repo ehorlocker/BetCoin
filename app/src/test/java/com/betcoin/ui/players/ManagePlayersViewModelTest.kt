@@ -1,7 +1,6 @@
 package com.betcoin.ui.players
 
 import com.betcoin.data.database.entity.User
-import com.betcoin.data.repository.UserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -166,6 +165,68 @@ class ManagePlayersViewModelTest {
     }
 
     @Test
+    fun addPlayer_repositoryThrows_showsErrorAndKeepsDialogOpen() = runTest {
+        fakeUserRepository.shouldThrowOnCreate = RuntimeException("Database error")
+        viewModel = ManagePlayersViewModel(fakeUserRepository)
+        advanceUntilIdle()
+
+        viewModel.onAddPlayerClicked()
+        viewModel.onUsernameChanged("Bob")
+        viewModel.onPinChanged("5678")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.showAddPlayerDialog).isTrue()
+        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Database error")
+    }
+
+    @Test
+    fun addPlayer_errorClearsOnUsernameChange() = runTest {
+        viewModel = ManagePlayersViewModel(fakeUserRepository)
+        advanceUntilIdle()
+
+        viewModel.onAddPlayerClicked()
+        viewModel.onUsernameChanged("")
+        viewModel.onPinChanged("1234")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Username cannot be empty")
+
+        viewModel.onUsernameChanged("A")
+        assertThat(viewModel.uiState.value.addPlayerError).isNull()
+    }
+
+    @Test
+    fun addPlayer_duplicateUsername_caseInsensitive_showsError() = runTest {
+        fakeUserRepository.users = listOf(
+            User(
+                id = 1L,
+                username = "Alice",
+                pinHash = "hash",
+                balance = 1000,
+                totalWins = 0,
+                totalLosses = 0,
+                totalEarnings = 0,
+                totalLost = 0,
+                totalDebt = 0,
+                bailoutCount = 0,
+                createdAt = System.currentTimeMillis(),
+            )
+        )
+        viewModel = ManagePlayersViewModel(fakeUserRepository)
+        advanceUntilIdle()
+
+        viewModel.onAddPlayerClicked()
+        viewModel.onUsernameChanged("alice")
+        viewModel.onPinChanged("1234")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Username already exists")
+    }
+
+    @Test
     fun deletePlayer_showsConfirmation() = runTest {
         fakeUserRepository.users = listOf(
             User(
@@ -189,6 +250,7 @@ class ManagePlayersViewModelTest {
 
         assertThat(viewModel.uiState.value.showDeleteConfirmation).isTrue()
         assertThat(viewModel.uiState.value.selectedPlayerId).isEqualTo(1L)
+        assertThat(viewModel.uiState.value.selectedPlayerName).isEqualTo("Alice")
     }
 
     @Test
