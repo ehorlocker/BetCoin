@@ -17,4 +17,9 @@ class RoutesTest {
     fun homeRoute_isCorrectValue() {
         assertThat(Routes.HOME).isEqualTo("home")
     }
+
+    @Test
+    fun managePlayersRoute_isCorrectValue() {
+        assertThat(Routes.MANAGE_PLAYERS).isEqualTo("manage_players")
+    }
 }

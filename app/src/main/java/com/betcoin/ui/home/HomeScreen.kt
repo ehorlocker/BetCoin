@@ -29,6 +29,7 @@ import com.betcoin.ui.components.BetCoinButton
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    onManagePlayers: () -> Unit = {},
 ) {
     val activeBetCount by viewModel.activeBetCount.collectAsStateWithLifecycle()
     val userCount by viewModel.userCount.collectAsStateWithLifecycle()
@@ -85,7 +86,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Manage Players",
-            onClick = { /* TODO navigate to players */ },
+            onClick = onManagePlayers,
             modifier = Modifier.fillMaxWidth(),
         )
     }
