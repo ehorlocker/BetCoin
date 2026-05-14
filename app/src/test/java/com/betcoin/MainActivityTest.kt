@@ -33,4 +33,11 @@ class MainActivityTest {
         )
         assertThat(method).isNotNull()
     }
+
+    @Test
+    fun mainActivity_hasSettingsRepositoryField() {
+        val field = MainActivity::class.java.getDeclaredField("settingsRepository")
+        assertThat(field).isNotNull()
+        assertThat(field.type.name).contains("SettingsRepository")
+    }
 }

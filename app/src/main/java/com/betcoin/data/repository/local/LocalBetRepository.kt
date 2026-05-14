@@ -3,6 +3,7 @@ package com.betcoin.data.repository.local
 import com.betcoin.data.model.BetWithDetails
 import com.betcoin.data.repository.BetRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 
 /**
@@ -14,9 +15,20 @@ class LocalBetRepository @Inject constructor() : BetRepository {
     override suspend fun createBet(prompt: String, outcomes: List<String>): Long = TODO()
     override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long): Unit = TODO()
     override suspend fun removeParticipant(participantId: Long): Unit = TODO()
-    override fun getBetWithDetails(betId: Long): Flow<BetWithDetails> = TODO()
-    override fun getActiveBets(): Flow<List<BetWithDetails>> = TODO()
-    override fun getAllBets(): Flow<List<BetWithDetails>> = TODO()
+    override fun getBetWithDetails(betId: Long): Flow<BetWithDetails> = flowOf(
+        BetWithDetails(
+            bet = com.betcoin.data.database.entity.Bet(
+                id = 0,
+                prompt = "",
+                status = com.betcoin.data.model.BetStatus.PENDING_CONFIRMATION,
+                createdAt = 0,
+            ),
+            outcomes = emptyList(),
+            participants = emptyList(),
+        )
+    )
+    override fun getActiveBets(): Flow<List<BetWithDetails>> = flowOf(emptyList())
+    override fun getAllBets(): Flow<List<BetWithDetails>> = flowOf(emptyList())
     override suspend fun lockBet(betId: Long): Unit = TODO()
     override suspend fun resolveBet(betId: Long, winningOutcomeId: Long): Unit = TODO()
     override suspend fun cancelBet(betId: Long): Unit = TODO()
