@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.betcoin.ui.components.BetCoinButton
+import com.betcoin.ui.components.DevModeIndicator
 
 /**
  * Onboarding screen shown on first launch.
@@ -56,6 +57,8 @@ fun OnboardingScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        DevModeIndicator(modifier = Modifier.padding(bottom = 8.dp))
+
         Text(
             text = "Welcome to BetCoin",
             style = MaterialTheme.typography.headlineLarge,

@@ -15,8 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.betcoin.BuildConfig
 import com.betcoin.ui.components.BetCoinButton
+import com.betcoin.ui.components.DevModeIndicator
 
 /**
  * Home screen — the main hub of the BetCoin app.
@@ -29,6 +29,7 @@ import com.betcoin.ui.components.BetCoinButton
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    onManagePlayers: () -> Unit = {},
 ) {
     val activeBetCount by viewModel.activeBetCount.collectAsStateWithLifecycle()
     val userCount by viewModel.userCount.collectAsStateWithLifecycle()
@@ -40,14 +41,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (BuildConfig.FLAVOR == "dev") {
-            Text(
-                text = "DEV MODE",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
+        DevModeIndicator(modifier = Modifier.padding(bottom = 8.dp))
 
         Text(
             text = "BetCoin",
@@ -85,7 +79,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Manage Players",
-            onClick = { /* TODO navigate to players */ },
+            onClick = onManagePlayers,
             modifier = Modifier.fillMaxWidth(),
         )
     }

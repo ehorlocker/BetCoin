@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.betcoin.ui.home.HomeScreen
 import com.betcoin.ui.onboarding.OnboardingScreen
+import com.betcoin.ui.players.ManagePlayersScreen
 
 /**
  * Navigation routes used in the BetCoin app.
@@ -15,6 +16,7 @@ import com.betcoin.ui.onboarding.OnboardingScreen
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
+    const val MANAGE_PLAYERS = "manage_players"
 }
 
 /**
@@ -52,6 +54,17 @@ fun NavGraph(
         composable(Routes.HOME) {
             HomeScreen(
                 viewModel = hiltViewModel(),
+                onManagePlayers = {
+                    navController.navigate(Routes.MANAGE_PLAYERS)
+                },
+            )
+        }
+        composable(Routes.MANAGE_PLAYERS) {
+            ManagePlayersScreen(
+                viewModel = hiltViewModel(),
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
             )
         }
     }
