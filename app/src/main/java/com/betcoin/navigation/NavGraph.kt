@@ -75,13 +75,25 @@ fun NavGraph(
             )
         }
         composable(Routes.NEW_BET) {
-            NewBetScreen()
+            NewBetScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+            )
         }
         composable(Routes.LEADERBOARD) {
-            LeaderboardScreen()
+            LeaderboardScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+            )
         }
         composable(Routes.BET_HISTORY) {
-            BetHistoryScreen()
+            BetHistoryScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+            )
         }
         composable(Routes.MANAGE_PLAYERS) {
             ManagePlayersScreen(
