@@ -91,7 +91,7 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onPlayerClick = { userId ->
-                    navController.navigate("player_detail/$userId")
+                    navController.navigate(Routes.PLAYER_DETAIL.replace("{userId}", "$userId"))
                 },
             )
         }
