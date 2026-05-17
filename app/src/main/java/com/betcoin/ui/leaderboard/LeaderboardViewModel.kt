@@ -18,6 +18,7 @@ sealed class LeaderboardUiState {
 }
 
 data class LeaderboardItem(
+    val userId: Long,
     val rank: Int,
     val username: String,
     val balance: Long,
@@ -45,6 +46,7 @@ class LeaderboardViewModel @Inject constructor(
                 } else {
                     val items = users.mapIndexed { index, user ->
                         LeaderboardItem(
+                            userId = user.id,
                             rank = index + 1,
                             username = user.username,
                             balance = user.balance,
