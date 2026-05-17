@@ -9,9 +9,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Compose UI tests for [LeaderboardScreen].
- */
 @RunWith(AndroidJUnit4::class)
 class LeaderboardScreenTest {
 
@@ -19,23 +16,83 @@ class LeaderboardScreenTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun leaderboardScreen_showsTitle() {
+    fun allColumnHeadersDisplayed() {
         composeTestRule.setContent {
             LeaderboardScreen()
         }
-
-        composeTestRule.onNodeWithText("Leaderboard - Coming Soon").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Rank").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Username").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Balance").assertIsDisplayed()
+        composeTestRule.onNodeWithText("W-L").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Earnings").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Losses").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bailouts").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Debt").assertIsDisplayed()
     }
 
     @Test
-    fun leaderboardScreen_backButton_invokesCallback() {
-        var backClicked = false
+    fun rendersCorrectNumberOfRows() {
+        val items = listOf(
+            leaderboardItem(rank = 1, username = "Alice"),
+            leaderboardItem(rank = 2, username = "Bob"),
+            leaderboardItem(rank = 3, username = "Carol"),
+        )
+        composeTestRule.setContent {
+            LeaderboardScreen(uiState = LeaderboardUiState.Success(items))
+        }
+        composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bob").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Carol").assertIsDisplayed()
+    }
 
+    @Test
+    fun rowTap_invokesCallbackWithUserId() {
+        var clickedUserId: Long? = null
+        val items = listOf(
+            leaderboardItem(rank = 1, username = "Alice", userId = 42L),
+        )
+        composeTestRule.setContent {
+            LeaderboardScreen(
+                uiState = LeaderboardUiState.Success(items),
+                onPlayerClick = { clickedUserId = it },
+            )
+        }
+        composeTestRule.onNodeWithText("Alice").performClick()
+        assert(clickedUserId == 42L) { "Expected userId 42, got $clickedUserId" }
+    }
+
+    @Test
+    fun backButton_invokesCallback() {
+        var backClicked = false
         composeTestRule.setContent {
             LeaderboardScreen(onNavigateBack = { backClicked = true })
         }
-
         composeTestRule.onNodeWithText("Back").assertIsDisplayed().performClick()
         assert(backClicked) { "Back callback was not invoked" }
     }
+
+    @Test
+    fun emptyState_showsMessage() {
+        composeTestRule.setContent {
+            LeaderboardScreen(uiState = LeaderboardUiState.Empty)
+        }
+        composeTestRule.onNodeWithText("No players yet").assertIsDisplayed()
+    }
+
+    private fun leaderboardItem(
+        rank: Int,
+        username: String,
+        userId: Long = 0L,
+    ): LeaderboardItem = LeaderboardItem(
+        userId = userId,
+        rank = rank,
+        username = username,
+        balance = 1000,
+        totalWins = 0,
+        totalLosses = 0,
+        totalEarnings = 0,
+        totalLost = 0,
+        bailoutCount = 0,
+        totalDebt = 0,
+    )
 }
