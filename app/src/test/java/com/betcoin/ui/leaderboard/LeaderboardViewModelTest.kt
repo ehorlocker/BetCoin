@@ -1,13 +1,9 @@
 package com.betcoin.ui.leaderboard
 
 import com.betcoin.data.database.entity.User
-import com.betcoin.data.repository.UserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -45,9 +41,9 @@ class LeaderboardViewModelTest {
     fun usersEmitted_computesRanksCorrectly() = runTest {
         fakeRepository.emitLeaderboard(
             listOf(
+                user(balance = 8000),
                 user(balance = 5000),
                 user(balance = 3000),
-                user(balance = 8000),
             )
         )
         viewModel = LeaderboardViewModel(fakeRepository)
@@ -56,11 +52,11 @@ class LeaderboardViewModelTest {
         val state = viewModel.uiState.value as LeaderboardUiState.Success
         assertThat(state.items).hasSize(3)
         assertThat(state.items[0].rank).isEqualTo(1)
-        assertThat(state.items[0].user.balance).isEqualTo(8000)
+        assertThat(state.items[0].balance).isEqualTo(8000)
         assertThat(state.items[1].rank).isEqualTo(2)
-        assertThat(state.items[1].user.balance).isEqualTo(5000)
+        assertThat(state.items[1].balance).isEqualTo(5000)
         assertThat(state.items[2].rank).isEqualTo(3)
-        assertThat(state.items[2].user.balance).isEqualTo(3000)
+        assertThat(state.items[2].balance).isEqualTo(3000)
     }
 
     @Test

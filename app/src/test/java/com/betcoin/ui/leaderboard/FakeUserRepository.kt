@@ -10,7 +10,7 @@ class FakeUserRepository : UserRepository {
     private val _leaderboard = MutableStateFlow<List<User>>(emptyList())
 
     fun emitLeaderboard(users: List<User>) {
-        _leaderboard.value = users.sortedByDescending { it.balance }
+        _leaderboard.value = users
     }
 
     override fun getLeaderboard(): Flow<List<User>> = _leaderboard

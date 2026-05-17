@@ -7,7 +7,7 @@ import com.betcoin.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,7 +19,14 @@ sealed class LeaderboardUiState {
 
 data class LeaderboardItem(
     val rank: Int,
-    val user: User,
+    val username: String,
+    val balance: Long,
+    val totalWins: Int,
+    val totalLosses: Int,
+    val totalEarnings: Long,
+    val totalLost: Long,
+    val bailoutCount: Int,
+    val totalDebt: Long,
 )
 
 @HiltViewModel
@@ -32,12 +39,22 @@ class LeaderboardViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            userRepository.getLeaderboard().collectLatest { users ->
+            userRepository.getLeaderboard().collect { users ->
                 if (users.isEmpty()) {
                     _uiState.value = LeaderboardUiState.Empty
                 } else {
                     val items = users.mapIndexed { index, user ->
-                        LeaderboardItem(rank = index + 1, user = user)
+                        LeaderboardItem(
+                            rank = index + 1,
+                            username = user.username,
+                            balance = user.balance,
+                            totalWins = user.totalWins,
+                            totalLosses = user.totalLosses,
+                            totalEarnings = user.totalEarnings,
+                            totalLost = user.totalLost,
+                            bailoutCount = user.bailoutCount,
+                            totalDebt = user.totalDebt,
+                        )
                     }
                     _uiState.value = LeaderboardUiState.Success(items)
                 }
