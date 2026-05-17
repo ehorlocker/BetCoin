@@ -18,7 +18,7 @@ class LeaderboardScreenTest {
     @Test
     fun allColumnHeadersDisplayed() {
         composeTestRule.setContent {
-            LeaderboardScreen()
+            LeaderboardScreen(uiState = LeaderboardUiState.Success(emptyList()))
         }
         composeTestRule.onNodeWithText("Rank").assertIsDisplayed()
         composeTestRule.onNodeWithText("Username").assertIsDisplayed()
@@ -65,7 +65,10 @@ class LeaderboardScreenTest {
     fun backButton_invokesCallback() {
         var backClicked = false
         composeTestRule.setContent {
-            LeaderboardScreen(onNavigateBack = { backClicked = true })
+            LeaderboardScreen(
+                uiState = LeaderboardUiState.Loading,
+                onNavigateBack = { backClicked = true },
+            )
         }
         composeTestRule.onNodeWithText("Back").assertIsDisplayed().performClick()
         assert(backClicked) { "Back callback was not invoked" }
