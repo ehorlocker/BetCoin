@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,7 +33,7 @@ class LeaderboardScreenTest {
     }
 
     @Test
-    fun rendersCorrectNumberOfRows() {
+    fun rendersPlayerUsernames() {
         val items = listOf(
             leaderboardItem(rank = 1, username = "Alice"),
             leaderboardItem(rank = 2, username = "Bob"),
@@ -43,6 +45,14 @@ class LeaderboardScreenTest {
         composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
         composeTestRule.onNodeWithText("Bob").assertIsDisplayed()
         composeTestRule.onNodeWithText("Carol").assertIsDisplayed()
+    }
+
+    @Test
+    fun loadingState_showsLoadingText() {
+        composeTestRule.setContent {
+            LeaderboardScreen(uiState = LeaderboardUiState.Loading)
+        }
+        composeTestRule.onNodeWithText("Loading...").assertIsDisplayed()
     }
 
     @Test
@@ -58,7 +68,7 @@ class LeaderboardScreenTest {
             )
         }
         composeTestRule.onNodeWithText("Alice").performClick()
-        assert(clickedUserId == 42L) { "Expected userId 42, got $clickedUserId" }
+        assertEquals(42L, clickedUserId)
     }
 
     @Test
@@ -71,7 +81,7 @@ class LeaderboardScreenTest {
             )
         }
         composeTestRule.onNodeWithText("Back").assertIsDisplayed().performClick()
-        assert(backClicked) { "Back callback was not invoked" }
+        assertTrue("Back callback was not invoked", backClicked)
     }
 
     @Test

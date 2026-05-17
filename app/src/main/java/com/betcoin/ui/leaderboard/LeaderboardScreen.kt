@@ -3,6 +3,7 @@ package com.betcoin.ui.leaderboard
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -23,6 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+/**
+ * Leaderboard screen that connects to the [LeaderboardViewModel].
+ *
+ * @param viewModel The view model providing UI state.
+ * @param onNavigateBack Callback invoked when the user navigates back.
+ * @param onPlayerClick Callback invoked when a player row is tapped.
+ */
 @Composable
 fun LeaderboardScreen(
     viewModel: LeaderboardViewModel = hiltViewModel(),
@@ -37,6 +45,13 @@ fun LeaderboardScreen(
     )
 }
 
+/**
+ * Stateless Leaderboard screen for preview and testing.
+ *
+ * @param uiState Current UI state to display.
+ * @param onNavigateBack Callback invoked when the user navigates back.
+ * @param onPlayerClick Callback invoked when a player row is tapped.
+ */
 @Composable
 internal fun LeaderboardScreen(
     uiState: LeaderboardUiState,
@@ -49,25 +64,15 @@ internal fun LeaderboardScreen(
 
     Scaffold(
         topBar = {
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                contentAlignment = Alignment.TopStart,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onNavigateBack) {
-                    Text("Back")
-                }
-            }
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Leaderboard",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(top = 16.dp),
-                )
+                TextButton(onClick = onNavigateBack) { Text("Back") }
+                Text("Leaderboard", style = MaterialTheme.typography.headlineMedium)
             }
         },
     ) { padding ->
@@ -97,7 +102,10 @@ internal fun LeaderboardScreen(
                     }
                 }
                 is LeaderboardUiState.Success -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
                         stickyHeader {
                             LeaderboardHeaderRow()
                         }
