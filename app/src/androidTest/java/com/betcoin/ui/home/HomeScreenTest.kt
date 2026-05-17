@@ -3,6 +3,7 @@ package com.betcoin.ui.home
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.repository.BetRepository
@@ -71,5 +72,158 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText("BetCoin").assertIsDisplayed()
         composeTestRule.onNodeWithText("Active bets: 0").assertIsDisplayed()
         composeTestRule.onNodeWithText("Players: 2").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeScreen_newBetButton_triggersCallback() {
+        val fakeBetRepo = object : BetRepository {
+            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
+                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
+                outcomes = emptyList(),
+                participants = emptyList()
+            ))
+            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
+            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
+            override suspend fun removeParticipant(participantId: Long) {}
+            override suspend fun lockBet(betId: Long) {}
+            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
+            override suspend fun cancelBet(betId: Long) {}
+            override suspend fun forceCancelBet(betId: Long) {}
+            override suspend fun reopenBet(betId: Long) {}
+            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
+            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
+            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
+            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
+            override suspend fun deleteBet(betId: Long) {}
+            override suspend fun repeatBet(betId: Long) = 0L
+        }
+        val fakeUserRepo = object : UserRepository {
+            override fun getAllUsers() = flowOf(emptyList<User>())
+            override fun getLeaderboard() = flowOf(emptyList<User>())
+            override suspend fun createUser(username: String, pin: String) = 0L
+            override suspend fun verifyPin(userId: Long, pin: String) = false
+            override suspend fun getUser(userId: Long) = null
+            override suspend fun bailout(userId: Long) {}
+            override suspend fun deleteUser(userId: Long) {}
+            override suspend fun resetPin(userId: Long, newPin: String) {}
+            override suspend fun updateBalance(userId: Long, delta: Long) {}
+            override suspend fun setBalance(userId: Long, newBalance: Long) {}
+            override suspend fun updateUsername(userId: Long, newUsername: String) {}
+        }
+
+        var newBetClicked = false
+        composeTestRule.setContent {
+            HomeScreen(
+                viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo),
+                onNewBet = { newBetClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithText("New Bet").performClick()
+        assert(newBetClicked) { "New Bet callback was not invoked" }
+    }
+
+    @Test
+    fun homeScreen_leaderboardButton_triggersCallback() {
+        val fakeBetRepo = object : BetRepository {
+            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
+                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
+                outcomes = emptyList(),
+                participants = emptyList()
+            ))
+            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
+            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
+            override suspend fun removeParticipant(participantId: Long) {}
+            override suspend fun lockBet(betId: Long) {}
+            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
+            override suspend fun cancelBet(betId: Long) {}
+            override suspend fun forceCancelBet(betId: Long) {}
+            override suspend fun reopenBet(betId: Long) {}
+            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
+            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
+            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
+            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
+            override suspend fun deleteBet(betId: Long) {}
+            override suspend fun repeatBet(betId: Long) = 0L
+        }
+        val fakeUserRepo = object : UserRepository {
+            override fun getAllUsers() = flowOf(emptyList<User>())
+            override fun getLeaderboard() = flowOf(emptyList<User>())
+            override suspend fun createUser(username: String, pin: String) = 0L
+            override suspend fun verifyPin(userId: Long, pin: String) = false
+            override suspend fun getUser(userId: Long) = null
+            override suspend fun bailout(userId: Long) {}
+            override suspend fun deleteUser(userId: Long) {}
+            override suspend fun resetPin(userId: Long, newPin: String) {}
+            override suspend fun updateBalance(userId: Long, delta: Long) {}
+            override suspend fun setBalance(userId: Long, newBalance: Long) {}
+            override suspend fun updateUsername(userId: Long, newUsername: String) {}
+        }
+
+        var leaderboardClicked = false
+        composeTestRule.setContent {
+            HomeScreen(
+                viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo),
+                onLeaderboard = { leaderboardClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithText("Leaderboard").performClick()
+        assert(leaderboardClicked) { "Leaderboard callback was not invoked" }
+    }
+
+    @Test
+    fun homeScreen_betHistoryButton_triggersCallback() {
+        val fakeBetRepo = object : BetRepository {
+            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
+                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
+                outcomes = emptyList(),
+                participants = emptyList()
+            ))
+            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
+            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
+            override suspend fun removeParticipant(participantId: Long) {}
+            override suspend fun lockBet(betId: Long) {}
+            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
+            override suspend fun cancelBet(betId: Long) {}
+            override suspend fun forceCancelBet(betId: Long) {}
+            override suspend fun reopenBet(betId: Long) {}
+            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
+            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
+            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
+            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
+            override suspend fun deleteBet(betId: Long) {}
+            override suspend fun repeatBet(betId: Long) = 0L
+        }
+        val fakeUserRepo = object : UserRepository {
+            override fun getAllUsers() = flowOf(emptyList<User>())
+            override fun getLeaderboard() = flowOf(emptyList<User>())
+            override suspend fun createUser(username: String, pin: String) = 0L
+            override suspend fun verifyPin(userId: Long, pin: String) = false
+            override suspend fun getUser(userId: Long) = null
+            override suspend fun bailout(userId: Long) {}
+            override suspend fun deleteUser(userId: Long) {}
+            override suspend fun resetPin(userId: Long, newPin: String) {}
+            override suspend fun updateBalance(userId: Long, delta: Long) {}
+            override suspend fun setBalance(userId: Long, newBalance: Long) {}
+            override suspend fun updateUsername(userId: Long, newUsername: String) {}
+        }
+
+        var betHistoryClicked = false
+        composeTestRule.setContent {
+            HomeScreen(
+                viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo),
+                onBetHistory = { betHistoryClicked = true },
+            )
+        }
+
+        composeTestRule.onNodeWithText("Bet History").performClick()
+        assert(betHistoryClicked) { "Bet History callback was not invoked" }
     }
 }

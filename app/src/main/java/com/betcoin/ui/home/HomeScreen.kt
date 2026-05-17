@@ -29,6 +29,9 @@ import com.betcoin.ui.components.DevModeIndicator
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    onNewBet: () -> Unit = {},
+    onLeaderboard: () -> Unit = {},
+    onBetHistory: () -> Unit = {},
     onManagePlayers: () -> Unit = {},
 ) {
     val activeBetCount by viewModel.activeBetCount.collectAsStateWithLifecycle()
@@ -61,19 +64,19 @@ fun HomeScreen(
 
         BetCoinButton(
             text = "New Bet",
-            onClick = { /* TODO navigate to create bet */ },
+            onClick = onNewBet,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Leaderboard",
-            onClick = { /* TODO navigate to leaderboard */ },
+            onClick = onLeaderboard,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Bet History",
-            onClick = { /* TODO navigate to history */ },
+            onClick = onBetHistory,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(12.dp))
