@@ -14,8 +14,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+/**
+ * Placeholder screen for displaying detailed player information.
+ *
+ * @param userId The unique identifier of the player to display (accepted for future use).
+ * @param onNavigateBack Callback invoked when the user requests to navigate back.
+ */
 @Composable
 fun PlayerDetailScreen(
+    @Suppress("UNUSED_PARAMETER")
     userId: Long,
     onNavigateBack: () -> Unit = {},
 ) {

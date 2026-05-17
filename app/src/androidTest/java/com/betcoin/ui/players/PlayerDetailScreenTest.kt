@@ -9,6 +9,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Instrumented tests for the [PlayerDetailScreen] placeholder composable.
+ */
 @RunWith(AndroidJUnit4::class)
 class PlayerDetailScreenTest {
 
@@ -16,7 +19,7 @@ class PlayerDetailScreenTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun showsTitle() {
+    fun playerDetailScreen_showsTitle() {
         composeTestRule.setContent {
             PlayerDetailScreen(userId = 1L)
         }
@@ -24,7 +27,7 @@ class PlayerDetailScreenTest {
     }
 
     @Test
-    fun backButton_invokesCallback() {
+    fun playerDetailScreen_backButton_invokesCallback() {
         var backClicked = false
         composeTestRule.setContent {
             PlayerDetailScreen(userId = 1L, onNavigateBack = { backClicked = true })
