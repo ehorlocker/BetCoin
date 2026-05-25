@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -129,15 +130,16 @@ private fun LeaderboardHeaderRow() {
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 8.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        HeaderCell("Rank", weight = 0.5f)
-        HeaderCell("Username", weight = 1.5f)
+        HeaderCell("Rank", weight = 0.7f)
+        HeaderCell("Username", weight = 1.3f)
         HeaderCell("Balance", weight = 1f)
-        HeaderCell("W-L", weight = 0.8f)
-        HeaderCell("Earnings", weight = 1f)
-        HeaderCell("Losses", weight = 1f)
-        HeaderCell("Bailouts", weight = 0.9f)
-        HeaderCell("Debt", weight = 1f)
+        HeaderCell("W-L", weight = 0.7f)
+        HeaderCell("Earnings", weight = 0.9f)
+        HeaderCell("Losses", weight = 0.9f)
+        HeaderCell("Bailouts", weight = 1f)
+        HeaderCell("Debt", weight = 0.8f)
     }
 }
 
@@ -146,6 +148,8 @@ private fun RowScope.HeaderCell(text: String, weight: Float) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier.weight(weight),
     )
 }
@@ -160,15 +164,16 @@ private fun LeaderboardDataRow(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        DataCell(text = item.rank.toString(), weight = 0.5f)
-        DataCell(text = item.username, weight = 1.5f)
+        DataCell(text = item.rank.toString(), weight = 0.7f)
+        DataCell(text = item.username, weight = 1.3f)
         DataCell(text = item.balance.toString(), weight = 1f)
-        DataCell(text = "${item.totalWins}-${item.totalLosses}", weight = 0.8f)
-        DataCell(text = item.totalEarnings.toString(), weight = 1f)
-        DataCell(text = item.totalLost.toString(), weight = 1f)
-        DataCell(text = item.bailoutCount.toString(), weight = 0.9f)
-        DataCell(text = item.totalDebt.toString(), weight = 1f)
+        DataCell(text = "${item.totalWins}-${item.totalLosses}", weight = 0.7f)
+        DataCell(text = item.totalEarnings.toString(), weight = 0.9f)
+        DataCell(text = item.totalLost.toString(), weight = 0.9f)
+        DataCell(text = item.bailoutCount.toString(), weight = 1f)
+        DataCell(text = item.totalDebt.toString(), weight = 0.8f)
     }
 }
 
@@ -177,6 +182,8 @@ private fun RowScope.DataCell(text: String, weight: Float) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier.weight(weight),
     )
 }
