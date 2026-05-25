@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * In-memory implementation of [UserRepository].
@@ -13,6 +14,7 @@ import javax.inject.Inject
  * Uses [MutableStateFlow] so that collectors automatically receive updates
  * when data changes, mirroring how Room DAOs behave in production.
  */
+@Singleton
 class LocalUserRepository @Inject constructor() : UserRepository {
     private val _users = MutableStateFlow<List<User>>(emptyList())
     private var nextId = 1L

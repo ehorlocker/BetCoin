@@ -5,12 +5,14 @@ import com.betcoin.data.repository.BetRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Room-backed implementation of [BetRepository].
  *
  * Methods will be implemented in later tickets (KAN-13, KAN-14).
  */
+@Singleton
 class LocalBetRepository @Inject constructor() : BetRepository {
     override suspend fun createBet(prompt: String, outcomes: List<String>): Long = TODO()
     override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long): Unit = TODO()
