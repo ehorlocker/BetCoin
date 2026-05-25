@@ -132,14 +132,10 @@ private fun LeaderboardHeaderRow() {
             .padding(horizontal = 8.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        HeaderCell("Rank", weight = 0.7f)
-        HeaderCell("Username", weight = 1.3f)
-        HeaderCell("Balance", weight = 1f)
-        HeaderCell("W-L", weight = 0.7f)
-        HeaderCell("Earnings", weight = 0.9f)
-        HeaderCell("Losses", weight = 0.9f)
-        HeaderCell("Bailouts", weight = 1f)
-        HeaderCell("Debt", weight = 0.8f)
+        HeaderCell("Rank", weight = 0.8f)
+        HeaderCell("Username", weight = 1.8f)
+        HeaderCell("Balance", weight = 1.2f)
+        HeaderCell("W-L", weight = 0.8f)
     }
 }
 
@@ -166,14 +162,10 @@ private fun LeaderboardDataRow(
             .padding(horizontal = 8.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        DataCell(text = item.rank.toString(), weight = 0.7f)
-        DataCell(text = item.username, weight = 1.3f)
-        DataCell(text = item.balance.toString(), weight = 1f)
-        DataCell(text = "${item.totalWins}-${item.totalLosses}", weight = 0.7f)
-        DataCell(text = item.totalEarnings.toString(), weight = 0.9f)
-        DataCell(text = item.totalLost.toString(), weight = 0.9f)
-        DataCell(text = item.bailoutCount.toString(), weight = 1f)
-        DataCell(text = item.totalDebt.toString(), weight = 0.8f)
+        DataCell(text = item.rank.toString(), weight = 0.8f)
+        DataCell(text = item.username, weight = 1.8f)
+        DataCell(text = item.balance.toString(), weight = 1.2f)
+        DataCell(text = "${item.totalWins}-${item.totalLosses}", weight = 0.8f)
     }
 }
 

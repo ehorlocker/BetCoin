@@ -121,6 +121,7 @@ fun NavGraph(
             val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
             PlayerDetailScreen(
                 userId = userId,
+                viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
                 },
