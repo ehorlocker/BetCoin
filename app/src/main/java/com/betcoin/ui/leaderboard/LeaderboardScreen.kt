@@ -71,8 +71,8 @@ internal fun LeaderboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onNavigateBack) { Text("Back") }
                 Text("Leaderboard", style = MaterialTheme.typography.headlineMedium)
+                TextButton(onClick = onNavigateBack) { Text("Back") }
             }
         },
     ) { padding ->
