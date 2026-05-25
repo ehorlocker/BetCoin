@@ -9,6 +9,7 @@ import com.betcoin.data.repository.local.LocalUserRepository
 import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import org.junit.Test
+import javax.inject.Singleton
 
 /**
  * Tests for [RepositoryModule] class structure.
@@ -67,5 +68,17 @@ class RepositoryModuleTest {
             it.name.startsWith("bind")
         }
         assertThat(bindsMethods).hasSize(3)
+    }
+
+    @Test
+    fun localUserRepository_isSingleton() {
+        val annotation = LocalUserRepository::class.java.getAnnotation(Singleton::class.java)
+        assertThat(annotation).isNotNull()
+    }
+
+    @Test
+    fun localBetRepository_isSingleton() {
+        val annotation = LocalBetRepository::class.java.getAnnotation(Singleton::class.java)
+        assertThat(annotation).isNotNull()
     }
 }

@@ -6,12 +6,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.betcoin.ui.bethistory.BetHistoryScreen
 import com.betcoin.ui.home.HomeScreen
 import com.betcoin.ui.leaderboard.LeaderboardScreen
 import com.betcoin.ui.newbet.NewBetScreen
 import com.betcoin.ui.onboarding.OnboardingScreen
 import com.betcoin.ui.players.ManagePlayersScreen
+import com.betcoin.ui.players.PlayerDetailScreen
 
 /**
  * Navigation routes used in the BetCoin app.
@@ -23,6 +25,7 @@ object Routes {
     const val LEADERBOARD = "leaderboard"
     const val BET_HISTORY = "bet_history"
     const val MANAGE_PLAYERS = "manage_players"
+    const val PLAYER_DETAIL = "player_detail/{userId}"
 }
 
 /**
@@ -83,8 +86,12 @@ fun NavGraph(
         }
         composable(Routes.LEADERBOARD) {
             LeaderboardScreen(
+                viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onPlayerClick = { userId ->
+                    navController.navigate(Routes.PLAYER_DETAIL.replace("{userId}", "$userId"))
                 },
             )
         }
@@ -97,6 +104,23 @@ fun NavGraph(
         }
         composable(Routes.MANAGE_PLAYERS) {
             ManagePlayersScreen(
+                viewModel = hiltViewModel(),
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(
+            route = Routes.PLAYER_DETAIL,
+            arguments = listOf(
+                navArgument("userId") {
+                    type = androidx.navigation.NavType.LongType
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+            PlayerDetailScreen(
+                userId = userId,
                 viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()

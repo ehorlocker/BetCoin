@@ -22,4 +22,9 @@ class RoutesTest {
     fun managePlayersRoute_isCorrectValue() {
         assertThat(Routes.MANAGE_PLAYERS).isEqualTo("manage_players")
     }
+
+    @Test
+    fun playerDetailRoute_isCorrectValue() {
+        assertThat(Routes.PLAYER_DETAIL).isEqualTo("player_detail/{userId}")
+    }
 }
