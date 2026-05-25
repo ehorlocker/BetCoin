@@ -28,8 +28,8 @@ interface UserDao {
   @Query("SELECT * FROM users")
   fun getAll(): Flow<List<User>>
 
-  /** Returns a [Flow] of all users sorted by balance descending (leaderboard). */
-  @Query("SELECT * FROM users ORDER BY balance DESC")
+  /** Returns a [Flow] of all users sorted by total earnings descending (leaderboard). */
+  @Query("SELECT * FROM users ORDER BY total_earnings DESC")
   fun getLeaderboard(): Flow<List<User>>
 
   /** Updates an existing user (matched by primary key). */

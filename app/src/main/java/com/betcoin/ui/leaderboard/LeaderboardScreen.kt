@@ -134,7 +134,7 @@ private fun LeaderboardHeaderRow() {
     ) {
         HeaderCell("Rank", weight = 0.8f)
         HeaderCell("Username", weight = 1.8f)
-        HeaderCell("Balance", weight = 1.2f)
+        HeaderCell("Earnings", weight = 1.2f)
         HeaderCell("W-L", weight = 0.8f)
     }
 }
@@ -164,7 +164,7 @@ private fun LeaderboardDataRow(
     ) {
         DataCell(text = item.rank.toString(), weight = 0.8f)
         DataCell(text = item.username, weight = 1.8f)
-        DataCell(text = item.balance.toString(), weight = 1.2f)
+        DataCell(text = item.totalEarnings.toString(), weight = 1.2f)
         DataCell(text = "${item.totalWins}-${item.totalLosses}", weight = 0.8f)
     }
 }

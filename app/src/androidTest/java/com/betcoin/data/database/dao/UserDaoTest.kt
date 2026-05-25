@@ -44,11 +44,13 @@ class UserDaoTest {
     username: String = "alice",
     pinHash: String = "hashed_pin",
     balance: Long = 1000L,
+    totalEarnings: Long = 0L,
     createdAt: Long = System.currentTimeMillis(),
   ): User = User(
     username = username,
     pinHash = pinHash,
     balance = balance,
+    totalEarnings = totalEarnings,
     createdAt = createdAt,
   )
 
@@ -127,10 +129,10 @@ class UserDaoTest {
   // --- getLeaderboard ---
 
   @Test
-  fun getLeaderboard_returnsSortedByBalanceDescending() = runTest {
-    userDao.insert(createUser(username = "poor", balance = 100L))
-    userDao.insert(createUser(username = "rich", balance = 5000L))
-    userDao.insert(createUser(username = "mid", balance = 1000L))
+  fun getLeaderboard_returnsSortedByTotalEarningsDescending() = runTest {
+    userDao.insert(createUser(username = "poor", totalEarnings = 100L))
+    userDao.insert(createUser(username = "rich", totalEarnings = 5000L))
+    userDao.insert(createUser(username = "mid", totalEarnings = 1000L))
 
     val leaderboard = userDao.getLeaderboard().first()
     assertThat(leaderboard).hasSize(3)

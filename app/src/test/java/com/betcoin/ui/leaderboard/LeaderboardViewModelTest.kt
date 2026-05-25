@@ -41,9 +41,9 @@ class LeaderboardViewModelTest {
     fun usersEmitted_computesRanksCorrectly() = runTest {
         fakeRepository.emitLeaderboard(
             listOf(
-                user(balance = 8000),
-                user(balance = 5000),
-                user(balance = 3000),
+                user(totalEarnings = 8000),
+                user(totalEarnings = 5000),
+                user(totalEarnings = 3000),
             )
         )
         viewModel = LeaderboardViewModel(fakeRepository)
@@ -52,11 +52,11 @@ class LeaderboardViewModelTest {
         val state = viewModel.uiState.value as LeaderboardUiState.Success
         assertThat(state.items).hasSize(3)
         assertThat(state.items[0].rank).isEqualTo(1)
-        assertThat(state.items[0].balance).isEqualTo(8000)
+        assertThat(state.items[0].totalEarnings).isEqualTo(8000)
         assertThat(state.items[1].rank).isEqualTo(2)
-        assertThat(state.items[1].balance).isEqualTo(5000)
+        assertThat(state.items[1].totalEarnings).isEqualTo(5000)
         assertThat(state.items[2].rank).isEqualTo(3)
-        assertThat(state.items[2].balance).isEqualTo(3000)
+        assertThat(state.items[2].totalEarnings).isEqualTo(3000)
     }
 
     @Test
@@ -68,11 +68,12 @@ class LeaderboardViewModelTest {
         assertThat(viewModel.uiState.value).isEqualTo(LeaderboardUiState.Empty)
     }
 
-    private fun user(balance: Long): User = User(
+    private fun user(totalEarnings: Long): User = User(
         id = 0,
         username = "User",
         pinHash = "hash",
-        balance = balance,
+        balance = 0,
+        totalEarnings = totalEarnings,
         createdAt = 0,
     )
 }

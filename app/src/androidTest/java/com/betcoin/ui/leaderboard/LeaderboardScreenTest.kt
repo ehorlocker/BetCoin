@@ -24,7 +24,7 @@ class LeaderboardScreenTest {
         }
         composeTestRule.onNodeWithText("Rank").assertIsDisplayed()
         composeTestRule.onNodeWithText("Username").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Balance").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Earnings").assertIsDisplayed()
         composeTestRule.onNodeWithText("W-L").assertIsDisplayed()
     }
 

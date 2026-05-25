@@ -21,7 +21,7 @@ class LocalUserRepository @Inject constructor() : UserRepository {
 
     override fun getAllUsers(): Flow<List<User>> = _users
     override fun getLeaderboard(): Flow<List<User>> = _users.map { list ->
-        list.sortedByDescending { it.balance }
+        list.sortedByDescending { it.totalEarnings }
     }
 
     override suspend fun createUser(username: String, pin: String): Long {
