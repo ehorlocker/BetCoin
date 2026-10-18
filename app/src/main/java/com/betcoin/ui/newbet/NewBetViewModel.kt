@@ -10,6 +10,7 @@ import com.betcoin.data.model.BetWithDetails
 import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.InvalidBetStateException
 import com.betcoin.data.model.ParticipantWithUser
+import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
@@ -31,17 +32,21 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 
-/** Steps of the New Bet flow (§4.2). Step C (Review & Lock) arrives with BET-23. */
-enum class NewBetStep { A, B }
+/** Steps of the New Bet flow (§4.2). */
+enum class NewBetStep { A, B, C }
 
 /**
- * ViewModel for the New Bet flow, Steps A and B (§4.2, §8).
+ * ViewModel for the New Bet flow, Steps A to C (§4.2, §8).
  *
  * Step A collects the prompt and outcomes and writes the pending bet with `createBet` on Next.
  * Step B adds participants one at a time: each is written with `addParticipant` as soon as their
  * PIN is accepted, so §11 Recovery can restore them. Leaving the flow after the bet exists (or
  * after text was entered in Step A) asks "Discard this bet?" and deletes it with
  * `discardPendingBet`.
+ *
+ * Step C reviews the bet and locks it: unless the picks are unanimous, every participant re-enters
+ * their PIN in list order (the screen drives that sequence), then `lockBet` runs. Back returns to
+ * Step B with the participants kept. A successful lock sets [UiState.lockedBetId].
  *
  * The pending bet's ID comes from the optional [Routes.NEW_BET_BET_ID_ARG] navigation argument
  * (Recovery and Repeat open Step B directly) or from `createBet`, and is kept in
@@ -77,14 +82,26 @@ class NewBetViewModel @Inject constructor(
         val wager: String = "",
         /** Non-null while the PIN dialog is asking [PendingJoin.user] to confirm. */
         val pendingJoin: PendingJoin? = null,
-        // Both steps
+        // Step C
+        /** True while Step C (Review & Lock) is showing. Not persisted: a restored process reopens Step B. */
+        val reviewing: Boolean = false,
+        /** True while the participants' PIN sequence is open. */
+        val confirmingLock: Boolean = false,
+        /** Set once `lockBet` succeeded; the screen navigates to this bet's detail. */
+        val lockedBetId: Long? = null,
+        // All steps
         val isBusy: Boolean = false,
         val errorMessage: String? = null,
         val showDiscardDialog: Boolean = false,
         /** True once the flow is finished and the screen should navigate back. */
         val exited: Boolean = false,
     ) {
-        val step: NewBetStep get() = if (betId == null) NewBetStep.A else NewBetStep.B
+        val step: NewBetStep
+            get() = when {
+                betId == null -> NewBetStep.A
+                reviewing -> NewBetStep.C
+                else -> NewBetStep.B
+            }
 
         val promptError: String?
             get() = if (prompt.trim().length > MAX_PROMPT_LENGTH) {
@@ -143,6 +160,35 @@ class NewBetViewModel @Inject constructor(
                 wager.isNotEmpty() && wagerError == null
 
         val canContinue: Boolean get() = !isBusy && participants.size >= MIN_PARTICIPANTS
+
+        /** All participants picked the same outcome (§5.2), so the bet can't be locked. */
+        val isUnanimous: Boolean
+            get() = participants.size >= MIN_PARTICIPANTS &&
+                participants.map { it.participant.outcomeId }.distinct().size == 1
+
+        /** Why Step C can't lock the bet right now, or null. Checked against current balances. */
+        val lockBlocker: String?
+            get() {
+                if (participants.size < MIN_PARTICIPANTS) {
+                    return "A bet needs at least $MIN_PARTICIPANTS participants"
+                }
+                if (isUnanimous) {
+                    return "Everyone picked the same outcome. Go back and change at least one pick."
+                }
+                participants.forEach { entry ->
+                    val user = entry.user
+                    if (user == null) {
+                        val name = entry.participant.deletedUsername ?: "A participant"
+                        return "$name no longer exists. Go back and remove them."
+                    }
+                    if (entry.participant.wagerAmount > user.balance) {
+                        return balanceChangedMessage(user.username, entry.participant.wagerAmount, user.balance)
+                    }
+                }
+                return null
+            }
+
+        val canLock: Boolean get() = !isBusy && !confirmingLock && lockBlocker == null
     }
 
     private val form = MutableStateFlow(
@@ -278,13 +324,73 @@ class NewBetViewModel @Inject constructor(
         }
     }
 
+    /** Step B → C. */
+    fun onContinue() {
+        val state = uiState.value
+        if (state.step != NewBetStep.B || !state.canContinue) return
+        form.update { it.copy(reviewing = true, errorMessage = null) }
+    }
+
+    // --- Step C ---
+
+    /** Starts the PIN sequence, unless the bet can't be locked. */
+    fun onLockRequested() {
+        val state = uiState.value
+        if (state.step != NewBetStep.C || !state.canLock) return
+        form.update { it.copy(confirmingLock = true, errorMessage = null) }
+    }
+
+    /** PIN check for one participant of the lock sequence. Never throws, as [PinEntryDialog] requires. */
+    suspend fun verifyParticipantPin(userId: Long, pin: String): Boolean =
+        try {
+            userRepository.verifyPin(userId, pin)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            false
+        }
+
+    /** A participant cancelled the PIN sequence: nothing is locked. */
+    fun onLockAborted() {
+        form.update { it.copy(confirmingLock = false) }
+    }
+
+    /** Every participant's PIN was accepted: locks the bet. */
+    fun onAllPinsConfirmed() {
+        val state = form.value
+        val betId = state.betId ?: return
+        if (!state.confirmingLock || state.isBusy) return
+        form.update { it.copy(isBusy = true) }
+        viewModelScope.launch {
+            try {
+                betRepository.lockBet(betId)
+                form.update { it.copy(isBusy = false, confirmingLock = false, lockedBetId = betId) }
+            } catch (e: BetCoinException) {
+                val message = e.toLockMessage(uiState.value.participants)
+                form.update { it.copy(isBusy = false, confirmingLock = false, errorMessage = message) }
+            }
+        }
+    }
+
     // --- Leaving the flow ---
 
-    /** System Back or the top-bar close button, on either step. */
+    /** System Back. From Step C it returns to Step B; otherwise it works like [onCloseRequested]. */
     fun onBackRequested() {
+        val state = form.value
+        if (state.step == NewBetStep.C) {
+            if (!state.isBusy && !state.confirmingLock && state.lockedBetId == null) {
+                form.update { it.copy(reviewing = false, errorMessage = null) }
+            }
+            return
+        }
+        onCloseRequested()
+    }
+
+    /** The top-bar close button, on any step: asks "Discard this bet?" unless Step A is empty. */
+    fun onCloseRequested() {
         form.update { state ->
             when {
-                state.exited || state.isBusy -> state
+                state.exited || state.isBusy || state.confirmingLock || state.lockedBetId != null -> state
                 state.step == NewBetStep.A && !state.hasEnteredText -> state.copy(exited = true)
                 else -> state.copy(showDiscardDialog = true)
             }
@@ -315,6 +421,17 @@ class NewBetViewModel @Inject constructor(
         }
     }
 
+    private fun BetCoinException.toLockMessage(participants: List<ParticipantWithUser>): String = when (this) {
+        is UnanimousPickException ->
+            "Everyone picked the same outcome. Go back and change at least one pick."
+        is InsufficientBalanceException -> {
+            val name = participants.find { it.participant.userId == userId }?.user?.username ?: "A participant"
+            balanceChangedMessage(name, required, available)
+        }
+        is InvalidBetStateException -> "This bet can't be locked any more"
+        else -> message ?: "Something went wrong"
+    }
+
     private fun BetCoinException.toMessage(): String = when (this) {
         is InsufficientBalanceException -> "Not enough BetCoin: needs $required, has $available"
         is InvalidBetStateException -> "This bet can't be changed any more"
@@ -322,6 +439,9 @@ class NewBetViewModel @Inject constructor(
     }
 
     companion object {
+        private fun balanceChangedMessage(name: String, wager: Long, balance: Long): String =
+            "$name's balance changed: wagered $wager but now has $balance. Go back and re-add them."
+
         const val MAX_PROMPT_LENGTH = 120
         const val MIN_OUTCOMES = 2
         const val MAX_OUTCOMES = 8

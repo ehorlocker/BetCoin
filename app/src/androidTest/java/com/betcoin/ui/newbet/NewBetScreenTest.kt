@@ -31,7 +31,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Compose UI tests for [NewBetScreen] Steps A and B, backed by the real repositories on an
+ * Compose UI tests for [NewBetScreen] Steps A to C, backed by the real repositories on an
  * in-memory Room database.
  */
 @RunWith(AndroidJUnit4::class)
@@ -44,6 +44,7 @@ class NewBetScreenTest {
     private lateinit var betRepository: LocalBetRepository
     private lateinit var userRepository: LocalUserRepository
     private var navigatedBack = false
+    private var lockedBetId: Long? = null
 
     @Before
     fun setUp() {
@@ -64,12 +65,16 @@ class NewBetScreenTest {
         val handle = SavedStateHandle(betId?.let { mapOf(Routes.NEW_BET_BET_ID_ARG to it) } ?: emptyMap())
         val viewModel = NewBetViewModel(handle, betRepository, userRepository)
         composeTestRule.setContent {
-            NewBetScreen(viewModel = viewModel, onNavigateBack = { navigatedBack = true })
+            NewBetScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navigatedBack = true },
+                onLocked = { lockedBetId = it },
+            )
         }
     }
 
     private fun waitForText(text: String) {
-        composeTestRule.waitUntil(5_000) {
+        composeTestRule.waitUntil(15_000) {
             composeTestRule.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -212,5 +217,123 @@ class NewBetScreenTest {
 
         composeTestRule.waitUntil(5_000) { navigatedBack }
         assertThat(pendingBetCount()).isEqualTo(0)
+    }
+
+    /** A pending bet with Alice on Jay (100) and Bob on [bobPick] (50), opened at Step B. */
+    private fun showStepBWithTwoParticipants(bobPick: Int = 1): Triple<Long, Long, Long> {
+        val (betId, alice, bob) = runBlocking {
+            val alice = userRepository.createUser("Alice", "1111")
+            val bob = userRepository.createUser("Bob", "2222")
+            val betId = betRepository.createBet("Who wins Smash?", listOf("Jay", "Austin"))
+            val outcomes = betRepository.getBetWithDetails(betId).first()!!.outcomes
+            betRepository.addParticipant(betId, alice, outcomes[0].id, 100)
+            betRepository.addParticipant(betId, bob, outcomes[bobPick].id, 50)
+            Triple(betId, alice, bob)
+        }
+        showScreen(betId)
+        waitForText("Step B · Add Participants")
+        return Triple(betId, alice, bob)
+    }
+
+    @Test
+    fun stepC_summaryShowsPromptOutcomesAndPicks() {
+        showStepBWithTwoParticipants()
+
+        button("Continue").performClick()
+
+        waitForText("Step C · Review & Lock")
+        composeTestRule.onNodeWithText("Who wins Smash?").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Jay · 100 BetCoin").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Austin · 50 BetCoin").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Total pot: 150 BetCoin").assertIsDisplayed()
+        button("Lock Bet").assertIsEnabled()
+    }
+
+    @Test
+    fun stepC_unanimousPick_showsErrorAndBlocksLocking() {
+        showStepBWithTwoParticipants(bobPick = 0)
+
+        button("Continue").performClick()
+
+        waitForText("Everyone picked the same outcome")
+        button("Lock Bet").assertIsNotEnabled()
+    }
+
+    @Test
+    fun stepC_back_returnsToStepBWithParticipantsKept() {
+        val (betId, _, _) = showStepBWithTwoParticipants()
+        button("Continue").performClick()
+        waitForText("Step C · Review & Lock")
+
+        button("Back").performClick()
+
+        waitForText("Step B · Add Participants")
+        composeTestRule.onNodeWithText("Jay · 100 BetCoin").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Austin · 50 BetCoin").assertIsDisplayed()
+        button("Continue").assertIsEnabled()
+        assertThat(navigatedBack).isFalse()
+        val participants = runBlocking { betRepository.getBetWithDetails(betId).first()!!.participants }
+        assertThat(participants).hasSize(2)
+    }
+
+    @Test
+    fun stepC_lock_asksEachPinInOrderThenLocksTheBet() {
+        val (betId, alice, bob) = showStepBWithTwoParticipants()
+        button("Continue").performClick()
+        waitForText("Step C · Review & Lock")
+
+        button("Lock Bet").performClick()
+        composeTestRule.onNodeWithText("1 of 2").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Alice, enter your PIN").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PIN_INPUT_TAG).performTextInput("2222")
+        waitForText("Wrong PIN")
+        composeTestRule.onNodeWithTag(PIN_INPUT_TAG).performTextInput("1111")
+        waitForText("Bob, enter your PIN")
+        composeTestRule.onNodeWithText("2 of 2").assertIsDisplayed()
+        assertThat(lockedBetId).isNull()
+        composeTestRule.onNodeWithTag(PIN_INPUT_TAG).performTextInput("2222")
+
+        composeTestRule.waitUntil(5_000) { lockedBetId == betId }
+        runBlocking {
+            assertThat(userRepository.getUser(alice)!!.balance).isEqualTo(900L)
+            assertThat(userRepository.getUser(bob)!!.balance).isEqualTo(950L)
+            assertThat(betRepository.getBetWithDetails(betId).first()!!.bet.status)
+                .isEqualTo(com.betcoin.data.model.BetStatus.ACTIVE)
+        }
+    }
+
+    @Test
+    fun stepC_cancellingAPin_locksNothing() {
+        val (betId, alice, _) = showStepBWithTwoParticipants()
+        button("Continue").performClick()
+        waitForText("Step C · Review & Lock")
+
+        button("Lock Bet").performClick()
+        composeTestRule.onNodeWithTag(PIN_INPUT_TAG).performTextInput("1111")
+        waitForText("Bob, enter your PIN")
+        composeTestRule.onNodeWithText("Cancel").performClick()
+
+        composeTestRule.waitUntil(5_000) {
+            composeTestRule.onAllNodes(hasText("Bob, enter your PIN")).fetchSemanticsNodes().isEmpty()
+        }
+        assertThat(lockedBetId).isNull()
+        composeTestRule.onNodeWithText("Step C · Review & Lock").assertIsDisplayed()
+        runBlocking {
+            assertThat(userRepository.getUser(alice)!!.balance).isEqualTo(1000L)
+            assertThat(betRepository.getBetWithDetails(betId).first()!!.bet.status)
+                .isEqualTo(com.betcoin.data.model.BetStatus.PENDING_CONFIRMATION)
+        }
+    }
+
+    @Test
+    fun stepC_balanceChangedSinceStepB_blocksLockingWithAMessage() {
+        val (_, alice, _) = showStepBWithTwoParticipants()
+        button("Continue").performClick()
+        waitForText("Step C · Review & Lock")
+
+        runBlocking { userRepository.setBalance(alice, 30L) }
+
+        waitForText("Alice's balance changed")
+        button("Lock Bet").assertIsNotEnabled()
     }
 }

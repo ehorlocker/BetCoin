@@ -1,6 +1,8 @@
 package com.betcoin.ui.newbet
 
 import androidx.lifecycle.SavedStateHandle
+import com.betcoin.data.model.InsufficientBalanceException
+import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.navigation.Routes
 import com.betcoin.testing.FakeUserRepository
 import com.google.common.truth.Truth.assertThat
@@ -430,5 +432,188 @@ class NewBetViewModelTest {
 
         assertThat(bets.discardedBetIds).containsExactly(betId)
         assertThat(state.exited).isTrue()
+    }
+
+    // --- Step C ---
+
+    /** Opens Step C with Alice on Jay (100) and Bob on Austin (50) unless [bobOutcome] says otherwise. */
+    private suspend fun TestScope.openStepC(bobOutcome: Int = 1): Pair<Long, Long> {
+        val (alice, bob) = openStepBWithPlayers()
+        join(alice, outcomeIndex = 0, wager = "100")
+        join(bob, outcomeIndex = bobOutcome, wager = "50")
+        viewModel.onContinue()
+        return alice to bob
+    }
+
+    @Test
+    fun continue_needsTwoParticipants() = runTest {
+        val (alice, _) = openStepBWithPlayers()
+        join(alice, outcomeIndex = 0, wager = "100")
+
+        viewModel.onContinue()
+
+        assertThat(state.step).isEqualTo(NewBetStep.B)
+    }
+
+    @Test
+    fun continue_opensStepCWithTheParticipantsSummary() = runTest {
+        openStepC()
+
+        assertThat(state.step).isEqualTo(NewBetStep.C)
+        assertThat(state.betPrompt).isEqualTo("Who wins Smash?")
+        assertThat(state.participants.map { it.user?.username }).containsExactly("Alice", "Bob").inOrder()
+        assertThat(state.lockBlocker).isNull()
+        assertThat(state.canLock).isTrue()
+    }
+
+    @Test
+    fun back_fromStepC_returnsToStepBKeepingParticipants() = runTest {
+        openStepC()
+
+        viewModel.onBackRequested()
+
+        assertThat(state.step).isEqualTo(NewBetStep.B)
+        assertThat(state.showDiscardDialog).isFalse()
+        assertThat(state.participants).hasSize(2)
+        assertThat(bets.participantsOf(state.betId!!)).hasSize(2)
+        assertThat(state.canContinue).isTrue()
+    }
+
+    @Test
+    fun close_fromStepC_asksToDiscard() = runTest {
+        openStepC()
+
+        viewModel.onCloseRequested()
+
+        assertThat(state.showDiscardDialog).isTrue()
+        assertThat(state.step).isEqualTo(NewBetStep.C)
+    }
+
+    @Test
+    fun unanimousPick_showsErrorAndBlocksLocking() = runTest {
+        openStepC(bobOutcome = 0)
+
+        assertThat(state.isUnanimous).isTrue()
+        assertThat(state.lockBlocker).contains("same outcome")
+        assertThat(state.canLock).isFalse()
+
+        viewModel.onLockRequested()
+
+        assertThat(state.confirmingLock).isFalse()
+        assertThat(bets.lockedBetIds).isEmpty()
+    }
+
+    @Test
+    fun changingAPick_clearsTheUnanimousError() = runTest {
+        val (_, bob) = openStepC(bobOutcome = 0)
+        viewModel.onBackRequested()
+        viewModel.onRemoveParticipant(state.participants.first { it.user?.id == bob }.participant.id)
+        advanceUntilIdle()
+        join(bob, outcomeIndex = 1, wager = "50")
+        viewModel.onContinue()
+
+        assertThat(state.lockBlocker).isNull()
+    }
+
+    @Test
+    fun balanceDroppedBelowWager_blocksLockingWithAMessage() = runTest {
+        val (alice, _) = openStepC()
+
+        users.setBalance(alice, 30L)
+
+        assertThat(state.lockBlocker).contains("Alice")
+        assertThat(state.lockBlocker).contains("100")
+        assertThat(state.lockBlocker).contains("30")
+        assertThat(state.canLock).isFalse()
+    }
+
+    @Test
+    fun verifyParticipantPin_checksThatParticipantsPin() = runTest {
+        val (alice, bob) = openStepC()
+
+        assertThat(viewModel.verifyParticipantPin(alice, "1111")).isTrue()
+        assertThat(viewModel.verifyParticipantPin(alice, "2222")).isFalse()
+        assertThat(viewModel.verifyParticipantPin(bob, "2222")).isTrue()
+    }
+
+    @Test
+    fun lockRequested_opensThePinSequenceWithoutLocking() = runTest {
+        openStepC()
+
+        viewModel.onLockRequested()
+
+        assertThat(state.confirmingLock).isTrue()
+        assertThat(bets.lockedBetIds).isEmpty()
+    }
+
+    @Test
+    fun abortingThePinSequence_locksNothing() = runTest {
+        val (alice, _) = openStepC()
+        viewModel.onLockRequested()
+
+        viewModel.onLockAborted()
+        advanceUntilIdle()
+
+        assertThat(state.confirmingLock).isFalse()
+        assertThat(state.step).isEqualTo(NewBetStep.C)
+        assertThat(bets.lockedBetIds).isEmpty()
+        assertThat(users.getUser(alice)!!.balance).isEqualTo(1000L)
+    }
+
+    @Test
+    fun allPinsConfirmed_locksTheBetAndDeductsWagers() = runTest {
+        val (alice, bob) = openStepC()
+        viewModel.onLockRequested()
+
+        viewModel.onAllPinsConfirmed()
+        advanceUntilIdle()
+
+        val betId = state.betId!!
+        assertThat(bets.lockedBetIds).containsExactly(betId)
+        assertThat(state.lockedBetId).isEqualTo(betId)
+        assertThat(state.confirmingLock).isFalse()
+        assertThat(users.getUser(alice)!!.balance).isEqualTo(900L)
+        assertThat(users.getUser(bob)!!.balance).isEqualTo(950L)
+    }
+
+    @Test
+    fun allPinsConfirmed_withoutARequest_doesNothing() = runTest {
+        openStepC()
+
+        viewModel.onAllPinsConfirmed()
+        advanceUntilIdle()
+
+        assertThat(bets.lockedBetIds).isEmpty()
+        assertThat(state.lockedBetId).isNull()
+    }
+
+    @Test
+    fun lockFailure_insufficientBalance_showsMessageAndStaysOnStepC() = runTest {
+        val (alice, _) = openStepC()
+        viewModel.onLockRequested()
+        bets.lockFailure = InsufficientBalanceException(alice, 100L, 30L)
+
+        viewModel.onAllPinsConfirmed()
+        advanceUntilIdle()
+
+        assertThat(state.step).isEqualTo(NewBetStep.C)
+        assertThat(state.lockedBetId).isNull()
+        assertThat(state.confirmingLock).isFalse()
+        assertThat(state.isBusy).isFalse()
+        assertThat(state.errorMessage).contains("Alice")
+        assertThat(state.errorMessage).contains("30")
+    }
+
+    @Test
+    fun lockFailure_unanimousPick_showsMessage() = runTest {
+        openStepC()
+        viewModel.onLockRequested()
+        bets.lockFailure = UnanimousPickException()
+
+        viewModel.onAllPinsConfirmed()
+        advanceUntilIdle()
+
+        assertThat(state.errorMessage).contains("same outcome")
+        assertThat(state.lockedBetId).isNull()
     }
 }
