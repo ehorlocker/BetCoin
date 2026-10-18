@@ -15,7 +15,9 @@ interface BetRepository {
      * Creates a new bet with the given [prompt] and [outcomes] (text labels).
      *
      * The bet starts in `PENDING_CONFIRMATION` status. Outcome rows are
-     * inserted alongside the bet.
+     * inserted alongside the bet. The prompt must be 1–120 characters and there
+     * must be 2–8 outcomes of 1–40 characters each, unique ignoring case (all
+     * measured after trimming); otherwise throws `InvalidInputException`.
      *
      * @return the new bet's row ID.
      */
@@ -23,11 +25,16 @@ interface BetRepository {
 
     /**
      * Adds a participant to [betId] who picks [outcomeId] with [wagerAmount].
+     *
+     * The bet must be `PENDING_CONFIRMATION`, the user can join it only once,
+     * and the wager must be at least 1 and at most the user's current balance.
+     * No balance changes until [lockBet].
      */
     suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long)
 
     /**
-     * Removes a participant before the bet is locked.
+     * Removes a participant before the bet is locked. Throws
+     * `InvalidBetStateException` if the bet isn't `PENDING_CONFIRMATION`.
      */
     suspend fun removeParticipant(participantId: Long)
 
@@ -42,13 +49,31 @@ interface BetRepository {
     fun getActiveBets(): Flow<List<BetWithDetails>>
 
     /**
-     * Observes all bets regardless of status.
+     * Observes all bets except `PENDING_CONFIRMATION` ones, newest first.
      */
     fun getAllBets(): Flow<List<BetWithDetails>>
 
     /**
+     * Observes the `PENDING_CONFIRMATION` bet left by an interrupted New Bet
+     * flow, or null if there is none. If there are several, emits the newest.
+     */
+    fun getPendingBet(): Flow<BetWithDetails?>
+
+    /**
+     * Deletes a `PENDING_CONFIRMATION` bet with its participants and outcomes.
+     * Throws `InvalidBetStateException` if the bet isn't pending.
+     *
+     * Implementation must run inside a transaction.
+     */
+    suspend fun discardPendingBet(betId: Long)
+
+    /**
      * Locks the bet: validates participants, deducts wagers from balances,
      * and transitions status to `ACTIVE`.
+     *
+     * Requires at least 2 participants not all on the same outcome
+     * (`UnanimousPickException`), and every wager must still be covered by the
+     * user's current balance (`InsufficientBalanceException`).
      *
      * Implementation must run inside a transaction.
      */

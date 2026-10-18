@@ -69,4 +69,20 @@ interface BetDao {
   @Transaction
   @Query("SELECT * FROM bets WHERE status = :status ORDER BY created_at DESC")
   fun getByStatusWithDetails(status: BetStatus): Flow<List<BetWithDetails>>
+
+  /**
+   * Returns a [Flow] of all bets with full details except those in [excludedStatus],
+   * newest first (ties broken by insertion order, newest first).
+   */
+  @Transaction
+  @Query("SELECT * FROM bets WHERE status != :excludedStatus ORDER BY created_at DESC, id DESC")
+  fun getAllExcludingStatusWithDetails(excludedStatus: BetStatus): Flow<List<BetWithDetails>>
+
+  /**
+   * Returns a [Flow] of the newest bet with full details in [status], or null if there is
+   * none.
+   */
+  @Transaction
+  @Query("SELECT * FROM bets WHERE status = :status ORDER BY created_at DESC, id DESC LIMIT 1")
+  fun getNewestByStatusWithDetails(status: BetStatus): Flow<BetWithDetails?>
 }
