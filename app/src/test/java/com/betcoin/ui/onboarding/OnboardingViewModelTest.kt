@@ -66,7 +66,7 @@ class OnboardingViewModelTest {
         viewModel.setAdminPin("1234")
         advanceUntilIdle()
 
-        assertThat(fakeSettingsRepository.storedPin).isEqualTo("1234")
+        assertThat(fakeSettingsRepository.verifyAdminPin("1234")).isTrue()
         assertThat(viewModel.onboardingComplete.value).isTrue()
     }
 

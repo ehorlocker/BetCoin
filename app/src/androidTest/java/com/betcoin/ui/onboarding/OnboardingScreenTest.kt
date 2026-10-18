@@ -76,6 +76,11 @@ class FakeOnboardingViewModel : OnboardingViewModel(
         override suspend fun setAdminPin(pin: String) {}
         override suspend fun verifyAdminPin(pin: String): Boolean = false
         override suspend fun isFirstLaunch(): Boolean = true
+        override suspend fun regenerateRecoveryCode(): String = ""
+        override suspend fun resetAdminPinWithRecoveryCode(code: String, newPin: String): String = ""
+        override fun getThemePreference() =
+            kotlinx.coroutines.flow.flowOf(com.betcoin.data.model.ThemePreference.SYSTEM)
+        override suspend fun setThemePreference(pref: com.betcoin.data.model.ThemePreference) {}
     }
 ) {
     var setAdminPinCalled = false

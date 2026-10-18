@@ -5,7 +5,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.AppSettings
+import com.betcoin.data.model.ThemePreference
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -107,5 +109,23 @@ class AppSettingsDaoTest {
     val updated = appSettingsDao.getSettings()!!
     assertThat(updated.id).isEqualTo(1)
     assertThat(updated.adminPinHash).isEqualTo("new_hash")
+  }
+
+  // --- observeSettings ---
+
+  @Test
+  fun observeSettings_noRow_emitsNull() = runTest {
+    assertThat(appSettingsDao.observeSettings().first()).isNull()
+  }
+
+  @Test
+  fun observeSettings_afterUpdate_emitsLatestRow() = runTest {
+    appSettingsDao.insert(AppSettings(adminPinHash = "hash", recoveryCodeHash = "recovery_hash"))
+    appSettingsDao.update(
+      appSettingsDao.getSettings()!!.copy(themePreference = ThemePreference.DARK),
+    )
+
+    val observed = appSettingsDao.observeSettings().first()
+    assertThat(observed!!.themePreference).isEqualTo(ThemePreference.DARK)
   }
 }
