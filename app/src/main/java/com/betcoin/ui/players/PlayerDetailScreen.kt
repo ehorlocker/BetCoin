@@ -39,9 +39,9 @@ import com.betcoin.ui.components.BetCoinAvatar
 import com.betcoin.ui.components.BetCoinButton
 import com.betcoin.ui.components.BetCoinCard
 import com.betcoin.ui.components.PinEntryDialog
+import com.betcoin.ui.components.formatCoins
 import com.betcoin.ui.players.PlayerDetailViewModel.PlayerStats
 import com.betcoin.ui.players.PlayerDetailViewModel.UiState
-import java.text.NumberFormat
 
 /**
  * Player Detail screen (§4.2): every stat for one player, and a Bailout button gated by that
@@ -175,8 +175,6 @@ internal fun statRows(stats: PlayerStats): List<Pair<String, String>> = listOf(
     "Total debt" to formatCoins(stats.totalDebt),
     "Locked in active bets" to formatCoins(stats.lockedBalance),
 )
-
-private fun formatCoins(amount: Long): String = NumberFormat.getIntegerInstance().format(amount)
 
 @Composable
 private fun StatRow(label: String, value: String) {

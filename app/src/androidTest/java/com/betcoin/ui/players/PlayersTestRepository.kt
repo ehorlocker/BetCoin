@@ -20,7 +20,14 @@ class PlayersTestRepository : UserRepository {
     val lockedBalances = MutableStateFlow<Map<Long, Long>>(emptyMap())
 
     /** Adds a player with [pin] and [balance] and returns their ID. */
-    fun addPlayer(username: String, pin: String = "1234", balance: Long = 1000L, totalDebt: Long = 0L): Long {
+    fun addPlayer(
+        username: String,
+        pin: String = "1234",
+        balance: Long = 1000L,
+        totalDebt: Long = 0L,
+        totalWins: Int = 0,
+        totalLosses: Int = 0,
+    ): Long {
         val id = (users.value.maxOfOrNull { it.id } ?: 0L) + 1
         users.value += User(
             id = id,
@@ -28,6 +35,8 @@ class PlayersTestRepository : UserRepository {
             pinHash = PinHasher.hashBlocking(pin),
             balance = balance,
             totalDebt = totalDebt,
+            totalWins = totalWins,
+            totalLosses = totalLosses,
             createdAt = 0L,
         )
         return id
@@ -50,7 +59,13 @@ class PlayersTestRepository : UserRepository {
 
     override fun getAllUsers(): Flow<List<User>> = users
 
-    override fun getLeaderboard(): Flow<List<User>> = users
+    override fun getLeaderboard(): Flow<List<User>> = users.map {
+        it.sortedWith(
+            compareByDescending<User> { user -> user.balance - user.totalDebt }
+                .thenByDescending { user -> user.balance }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { user -> user.username },
+        )
+    }
 
     override fun getLockedBalance(userId: Long): Flow<Long> = lockedBalances.map { it[userId] ?: 0L }
 
