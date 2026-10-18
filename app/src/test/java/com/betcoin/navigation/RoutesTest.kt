@@ -33,4 +33,16 @@ class RoutesTest {
         assertThat(Routes.newBet(42L)).isEqualTo("new_bet?betId=42")
         assertThat(Routes.NEW_BET_ROUTE).isEqualTo("new_bet?betId={betId}")
     }
+
+    @Test
+    fun playerDetailRoute_takesPlayerIdArgument() {
+        assertThat(Routes.PLAYER_DETAIL).isEqualTo("player_detail/{playerId}")
+        assertThat(Routes.playerDetail(42L)).isEqualTo("player_detail/42")
+    }
+
+    @Test
+    fun betDetailRoute_takesTheBetIdArgument() {
+        assertThat(Routes.BET_DETAIL).isEqualTo("bet_detail/{betId}")
+        assertThat(Routes.betDetail(42L)).isEqualTo("bet_detail/42")
+    }
 }

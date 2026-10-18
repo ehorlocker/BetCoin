@@ -39,9 +39,10 @@ interface BetRepository {
     suspend fun removeParticipant(participantId: Long)
 
     /**
-     * Observes a single bet with its outcomes and participants.
+     * Observes a single bet with its outcomes and participants. Emits null if
+     * the bet doesn't exist, including after it is deleted or discarded.
      */
-    fun getBetWithDetails(betId: Long): Flow<BetWithDetails>
+    fun getBetWithDetails(betId: Long): Flow<BetWithDetails?>
 
     /**
      * Observes all bets with `ACTIVE` status.
@@ -83,12 +84,21 @@ interface BetRepository {
      * Resolves the bet: calculates payouts, distributes winnings, updates
      * user stats, and transitions status to `RESOLVED`.
      *
+     * The bet must be `ACTIVE` (`InvalidBetStateException`) and
+     * [winningOutcomeId] must be one of its outcomes, picked or not. Each
+     * participant's `payout` is credited (winners' share of the pot, 0 for
+     * losers). If nobody picked [winningOutcomeId] it's a push: every wager is
+     * refunded and no W/L stats change. Sets `winningOutcomeId` and `resolvedAt`.
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun resolveBet(betId: Long, winningOutcomeId: Long)
 
     /**
      * Cancels the bet: refunds all wagers and transitions status to `CANCELLED`.
+     *
+     * The bet must be `ACTIVE` (`InvalidBetStateException`). Sets `resolvedAt`
+     * and changes no W/L stats.
      *
      * Implementation must run inside a transaction.
      */
@@ -104,6 +114,14 @@ interface BetRepository {
     /**
      * Reopens a resolved or cancelled bet: reverses payouts/refunds, clears
      * resolution data, and transitions status back to `ACTIVE`.
+     *
+     * From `RESOLVED`, deducts each participant's `payout` (losers' is 0),
+     * reverses the W/L stats the resolution applied, and nulls every `payout`,
+     * `winningOutcomeId` and `resolvedAt`. From `CANCELLED`, re-deducts every
+     * wager. Throws `InsufficientBalanceException` if a participant's balance
+     * can't cover their payout (or wager), `InvalidInputException` if a
+     * participant has been deleted, and `InvalidBetStateException` for any other
+     * status. Participant PINs must be verified beforehand.
      *
      * Implementation must run inside a transaction.
      */
@@ -145,7 +163,9 @@ interface BetRepository {
 
     /**
      * Creates a new bet with the same prompt and outcomes as [betId], but no
-     * participants.
+     * participants. The new bet is `PENDING_CONFIRMATION` and the original is
+     * unchanged. Throws `InvalidBetStateException` (naming the pending bet) if a
+     * `PENDING_CONFIRMATION` bet already exists.
      *
      * @return the new bet's row ID.
      */

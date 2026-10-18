@@ -5,15 +5,17 @@ import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.Bet
 import com.betcoin.data.database.entity.BetOutcome
 import com.betcoin.data.database.entity.BetParticipant
+import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.BetWithDetails
 import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.InvalidBetStateException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.UnanimousPickException
+import com.betcoin.data.payout.PayoutCalculator
+import com.betcoin.data.payout.PayoutEntry
 import com.betcoin.data.repository.BetRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filterNotNull
 import java.util.Locale
 import javax.inject.Inject
 
@@ -23,7 +25,7 @@ import javax.inject.Inject
  * Every mutation checks all of its rules inside a Room transaction before writing anything, so a
  * thrown [com.betcoin.data.model.BetCoinException] leaves the database unchanged.
  *
- * Resolve, cancel, reopen and repeat are implemented in BET-10, admin operations in BET-11.
+ * Admin operations are implemented in BET-11.
  */
 class LocalBetRepository @Inject constructor(
     private val database: BetCoinDatabase,
@@ -102,8 +104,8 @@ class LocalBetRepository @Inject constructor(
         }
     }
 
-    override fun getBetWithDetails(betId: Long): Flow<BetWithDetails> =
-        betDao.getByIdWithDetails(betId).filterNotNull()
+    override fun getBetWithDetails(betId: Long): Flow<BetWithDetails?> =
+        betDao.getByIdWithDetails(betId)
 
     override fun getActiveBets(): Flow<List<BetWithDetails>> =
         betDao.getByStatusWithDetails(BetStatus.ACTIVE)
@@ -152,24 +154,194 @@ class LocalBetRepository @Inject constructor(
     }
 
     /** Returns the bet, or throws unless it exists and is `PENDING_CONFIRMATION`. */
-    private suspend fun requirePendingBet(betId: Long): Bet {
+    private suspend fun requirePendingBet(betId: Long): Bet =
+        requireBetInStatus(betId, BetStatus.PENDING_CONFIRMATION)
+
+    override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {
+        database.withTransaction {
+            val bet = requireBetInStatus(betId, BetStatus.ACTIVE)
+            if (outcomeDao.getByBetId(betId).none { it.id == winningOutcomeId }) {
+                throw InvalidInputException("Outcome $winningOutcomeId doesn't belong to bet $betId")
+            }
+            val participants = participantDao.getByBetId(betId)
+            val users = requireParticipantUsers(participants)
+            val result = PayoutCalculator.calculate(
+                participants.map { PayoutEntry(it.id, it.outcomeId, it.wagerAmount) },
+                winningOutcomeId,
+            )
+
+            participants.forEach { participant ->
+                val payout = result.payouts.getValue(participant.id)
+                val user = users.getValue(participant.id)
+                val won = participant.outcomeId == winningOutcomeId
+                userDao.update(
+                    when {
+                        result.isPush -> user.copy(balance = user.balance + payout)
+                        won -> user.copy(
+                            balance = user.balance + payout,
+                            totalWins = user.totalWins + 1,
+                            totalEarnings = user.totalEarnings + payout - participant.wagerAmount,
+                        )
+                        else -> user.copy(
+                            totalLosses = user.totalLosses + 1,
+                            totalLost = user.totalLost + participant.wagerAmount,
+                        )
+                    }
+                )
+                participantDao.update(participant.copy(payout = payout))
+            }
+            betDao.update(
+                bet.copy(
+                    status = BetStatus.RESOLVED,
+                    winningOutcomeId = winningOutcomeId,
+                    resolvedAt = System.currentTimeMillis(),
+                )
+            )
+        }
+    }
+
+    override suspend fun cancelBet(betId: Long) {
+        database.withTransaction {
+            val bet = requireBetInStatus(betId, BetStatus.ACTIVE)
+            val participants = participantDao.getByBetId(betId)
+            val users = requireParticipantUsers(participants)
+
+            participants.forEach { participant ->
+                val user = users.getValue(participant.id)
+                userDao.updateBalance(user.id, user.balance + participant.wagerAmount)
+            }
+            betDao.update(
+                bet.copy(status = BetStatus.CANCELLED, resolvedAt = System.currentTimeMillis())
+            )
+        }
+    }
+
+    override suspend fun forceCancelBet(betId: Long): Unit = TODO()
+
+    override suspend fun reopenBet(betId: Long) {
+        database.withTransaction {
+            val bet = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
+            when (bet.status) {
+                BetStatus.RESOLVED -> reopenResolved(bet)
+                BetStatus.CANCELLED -> reopenCancelled(bet)
+                else -> throw InvalidBetStateException(betId, bet.status)
+            }
+        }
+    }
+
+    /**
+     * Takes back every payout (losers' is 0) and reverses the §5.8 stats that [resolveBet]
+     * applied, so the bet's coins are locked in the pot again. Must run inside a transaction.
+     */
+    private suspend fun reopenResolved(bet: Bet) {
+        val winningOutcomeId =
+            checkNotNull(bet.winningOutcomeId) { "Resolved bet ${bet.id} has no winner" }
+        val participants = participantDao.getByBetId(bet.id)
+        val users = requireParticipantUsers(participants)
+        val payouts = participants.associate { participant ->
+            participant.id to checkNotNull(participant.payout) {
+                "Participant ${participant.id} of resolved bet ${bet.id} has no payout"
+            }
+        }
+        // Check every balance before deducting any, so a failure writes nothing.
+        participants.forEach { participant ->
+            val user = users.getValue(participant.id)
+            val payout = payouts.getValue(participant.id)
+            if (user.balance < payout) {
+                throw InsufficientBalanceException(user.id, payout, user.balance)
+            }
+        }
+
+        val isPush = participants.none { it.outcomeId == winningOutcomeId }
+        participants.forEach { participant ->
+            val payout = payouts.getValue(participant.id)
+            val user = users.getValue(participant.id)
+            val won = participant.outcomeId == winningOutcomeId
+            userDao.update(
+                when {
+                    isPush -> user.copy(balance = user.balance - payout)
+                    won -> user.copy(
+                        balance = user.balance - payout,
+                        totalWins = user.totalWins - 1,
+                        totalEarnings = user.totalEarnings - (payout - participant.wagerAmount),
+                    )
+                    else -> user.copy(
+                        totalLosses = user.totalLosses - 1,
+                        totalLost = user.totalLost - participant.wagerAmount,
+                    )
+                }
+            )
+            participantDao.update(participant.copy(payout = null))
+        }
+        betDao.update(bet.copy(status = BetStatus.ACTIVE, winningOutcomeId = null, resolvedAt = null))
+    }
+
+    /** Re-deducts every wager refunded by [cancelBet]. Must run inside a transaction. */
+    private suspend fun reopenCancelled(bet: Bet) {
+        val participants = participantDao.getByBetId(bet.id)
+        val users = requireParticipantUsers(participants)
+        // Check every balance before deducting any, so a failure writes nothing.
+        participants.forEach { participant ->
+            val user = users.getValue(participant.id)
+            if (user.balance < participant.wagerAmount) {
+                throw InsufficientBalanceException(user.id, participant.wagerAmount, user.balance)
+            }
+        }
+
+        participants.forEach { participant ->
+            val user = users.getValue(participant.id)
+            userDao.updateBalance(user.id, user.balance - participant.wagerAmount)
+        }
+        betDao.update(bet.copy(status = BetStatus.ACTIVE, resolvedAt = null))
+    }
+
+    /** Returns the bet, or throws unless it exists and is in [status]. */
+    private suspend fun requireBetInStatus(betId: Long, status: BetStatus): Bet {
         val bet = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
-        if (bet.status != BetStatus.PENDING_CONFIRMATION) {
+        if (bet.status != status) {
             throw InvalidBetStateException(betId, bet.status)
         }
         return bet
     }
 
-    override suspend fun resolveBet(betId: Long, winningOutcomeId: Long): Unit = TODO()
-    override suspend fun cancelBet(betId: Long): Unit = TODO()
-    override suspend fun forceCancelBet(betId: Long): Unit = TODO()
-    override suspend fun reopenBet(betId: Long): Unit = TODO()
+    /**
+     * Returns each participant's user keyed by participant id, or throws if any of them has been
+     * deleted (their PIN can't be entered, so only the admin can act on the bet).
+     */
+    private suspend fun requireParticipantUsers(
+        participants: List<BetParticipant>,
+    ): Map<Long, User> = participants.associate { participant ->
+        val userId = participant.userId
+            ?: throw InvalidInputException("Participant ${participant.id} no longer exists")
+        val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
+        participant.id to user
+    }
+
     override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long): Unit = TODO()
     override suspend fun updateBetPrompt(betId: Long, newPrompt: String): Unit = TODO()
     override suspend fun adminRemoveParticipant(betId: Long, participantId: Long): Unit = TODO()
     override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long): Unit = TODO()
     override suspend fun deleteBet(betId: Long): Unit = TODO()
-    override suspend fun repeatBet(betId: Long): Long = TODO()
+
+    override suspend fun repeatBet(betId: Long): Long = database.withTransaction {
+        val original = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
+        betDao.getPendingBets().firstOrNull()?.let { pending ->
+            throw InvalidBetStateException(pending.id, pending.status)
+        }
+        val newBetId = betDao.insert(
+            Bet(
+                prompt = original.prompt,
+                status = BetStatus.PENDING_CONFIRMATION,
+                createdAt = System.currentTimeMillis(),
+            )
+        )
+        outcomeDao.insertAll(
+            outcomeDao.getByBetId(betId)
+                .sortedBy { it.id }
+                .map { BetOutcome(betId = newBetId, outcomeText = it.outcomeText) }
+        )
+        newBetId
+    }
 
     private companion object {
         val PROMPT_LENGTH = 1..120

@@ -35,7 +35,14 @@ class DevBuildBannerTest {
         if (composeTestRule.onAllNodes(hasText("Welcome to BetCoin")).fetchSemanticsNodes().isNotEmpty()) {
             assertBannerShown()
             composeTestRule.onNodeWithText("4-digit PIN").performTextInput("1234")
-            composeTestRule.onNodeWithText("Confirm").performClick()
+            composeTestRule.onNodeWithText("Confirm PIN").performTextInput("1234")
+            composeTestRule.onNodeWithText("Set PIN").performClick()
+            composeTestRule.waitUntil(timeoutMillis = 10_000) {
+                composeTestRule.onAllNodes(hasText("I've written this down")).fetchSemanticsNodes().isNotEmpty()
+            }
+            assertBannerShown()
+            composeTestRule.onNodeWithText("I've written this down").performClick()
+            composeTestRule.onNodeWithText("Continue").performClick()
             composeTestRule.waitUntil(timeoutMillis = 5_000) {
                 composeTestRule.onAllNodes(hasText("New Bet")).fetchSemanticsNodes().isNotEmpty()
             }
