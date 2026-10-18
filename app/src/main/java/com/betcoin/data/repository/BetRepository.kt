@@ -154,6 +154,11 @@ interface BetRepository {
      * Admin operation: removes a participant from an ACTIVE bet and refunds
      * their wager.
      *
+     * Throws [InvalidInputException] if the bet, participant or user is missing, the
+     * participant belongs to another bet, or fewer than 2 participants would remain;
+     * [InvalidBetStateException] if the bet is not ACTIVE; and [UnanimousPickException]
+     * if everyone left would be on the same outcome.
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun adminRemoveParticipant(betId: Long, participantId: Long)
@@ -161,6 +166,10 @@ interface BetRepository {
     /**
      * Admin operation: adjusts a participant's wager to [newWagerAmount], refunding
      * or deducting the balance difference.
+     *
+     * Throws [InvalidInputException] if the participant or user is missing or the
+     * wager is below 1, [InvalidBetStateException] if the bet is not ACTIVE, and
+     * [InsufficientBalanceException] if an increase exceeds the user's balance.
      *
      * Implementation must run inside a transaction.
      */

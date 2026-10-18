@@ -331,8 +331,48 @@ class LocalBetRepository @Inject constructor(
         }
     }
 
-    override suspend fun adminRemoveParticipant(betId: Long, participantId: Long): Unit = TODO()
-    override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long): Unit = TODO()
+    override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {
+        database.withTransaction {
+            requireBetInStatus(betId, BetStatus.ACTIVE)
+            val participant = participantDao.getById(participantId)
+            if (participant == null || participant.betId != betId) {
+                throw InvalidInputException("Participant $participantId not found in bet $betId")
+            }
+            val remaining = participantDao.getByBetId(betId).filter { it.id != participantId }
+            if (remaining.size < MIN_PARTICIPANTS) {
+                throw InvalidInputException("A bet needs at least 2 participants; force cancel it instead")
+            }
+            if (remaining.distinctBy { it.outcomeId }.size == 1) {
+                throw UnanimousPickException()
+            }
+            val userId = participant.userId
+                ?: throw InvalidInputException("Participant $participantId no longer exists")
+            val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
+            userDao.updateBalance(user.id, user.balance + participant.wagerAmount)
+            participantDao.delete(participant)
+        }
+    }
+
+    override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {
+        database.withTransaction {
+            val participant = participantDao.getById(participantId)
+                ?: throw InvalidInputException("Participant $participantId not found")
+            requireBetInStatus(participant.betId, BetStatus.ACTIVE)
+            if (newWagerAmount < 1) {
+                throw InvalidInputException("Wager must be at least 1")
+            }
+            val userId = participant.userId
+                ?: throw InvalidInputException("Participant $participantId no longer exists")
+            val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
+            val diff = newWagerAmount - participant.wagerAmount
+            // Only increases can be unaffordable; a decrease is always allowed.
+            if (diff > 0 && diff > user.balance) {
+                throw InsufficientBalanceException(user.id, diff, user.balance)
+            }
+            userDao.updateBalance(user.id, user.balance - diff)
+            participantDao.update(participant.copy(wagerAmount = newWagerAmount))
+        }
+    }
 
     override suspend fun deleteBet(betId: Long) {
         database.withTransaction {
