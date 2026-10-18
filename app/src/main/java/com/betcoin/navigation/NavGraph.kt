@@ -123,9 +123,9 @@ fun NavGraph(
         }
         composable(Routes.LEADERBOARD) {
             LeaderboardScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
+                viewModel = hiltViewModel(),
+                onNavigateBack = { navController.popBackStack() },
+                onPlayerClick = { playerId -> navController.navigate(Routes.playerDetail(playerId)) },
             )
         }
         composable(Routes.BET_HISTORY) {
