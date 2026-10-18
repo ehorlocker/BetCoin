@@ -2,10 +2,19 @@ package com.betcoin.data.database
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.betcoin.data.database.entity.AppSettings
+import com.betcoin.data.database.entity.Bet
+import com.betcoin.data.database.entity.BetOutcome
+import com.betcoin.data.database.entity.BetParticipant
+import com.betcoin.data.database.entity.User
+import com.betcoin.data.model.BetStatus
+import com.betcoin.data.model.ThemePreference
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -53,7 +62,7 @@ class BetCoinDatabaseInstrumentedTest {
 
     assertThat(columnNames).containsExactly(
       "id", "username", "pin_hash", "balance", "total_wins", "total_losses",
-      "total_earnings", "total_lost", "bailout_count", "total_debt", "created_at",
+      "total_earnings", "total_lost", "bailout_count", "total_debt", "avatar_ref", "created_at",
     )
   }
 
@@ -106,7 +115,7 @@ class BetCoinDatabaseInstrumentedTest {
     cursor.close()
 
     assertThat(columnNames).containsExactly(
-      "id", "admin_pin_hash",
+      "id", "admin_pin_hash", "recovery_code_hash", "theme_preference",
     )
   }
 
@@ -159,6 +168,7 @@ class BetCoinDatabaseInstrumentedTest {
     val values = ContentValues().apply {
       put("id", 1)
       put("admin_pin_hash", "admin_hash")
+      put("recovery_code_hash", "recovery_hash")
     }
     val rowId = db.insert("app_settings", SQLiteDatabase.CONFLICT_ABORT, values)
     assertThat(rowId).isEqualTo(1L)
@@ -190,9 +200,87 @@ class BetCoinDatabaseInstrumentedTest {
       db.insert("users", SQLiteDatabase.CONFLICT_ABORT, duplicateValues)
       // If we get here, the constraint was not enforced.
       throw AssertionError("Expected UNIQUE constraint violation for duplicate username")
-    } catch (e: android.database.sqlite.SQLiteConstraintException) {
+    } catch (e: SQLiteConstraintException) {
       // Expected: unique constraint violation.
     }
+  }
+
+  @Test
+  fun usersTable_usernameIsUniqueIgnoringCase() = runTest {
+    val userDao = database.userDao()
+    userDao.insert(User(username = "Jay", pinHash = "hash1", createdAt = 0L))
+
+    val duplicate = runCatching {
+      userDao.insert(User(username = "jay", pinHash = "hash2", createdAt = 0L))
+    }
+
+    assertThat(duplicate.exceptionOrNull()).isInstanceOf(SQLiteConstraintException::class.java)
+    assertThat(userDao.getByUsername("JAY")?.username).isEqualTo("Jay")
+  }
+
+  @Test
+  fun usersTable_avatarRefDefaultsToNull() {
+    val db = database.openHelper.writableDatabase
+    val values = ContentValues().apply {
+      put("username", "alice")
+      put("pin_hash", "hash")
+      put("created_at", 0L)
+    }
+    val rowId = db.insert("users", SQLiteDatabase.CONFLICT_ABORT, values)
+
+    val cursor = db.query("SELECT avatar_ref FROM users WHERE id = ?", arrayOf(rowId))
+    assertThat(cursor.moveToFirst()).isTrue()
+    assertThat(cursor.isNull(0)).isTrue()
+    cursor.close()
+  }
+
+  @Test
+  fun appSettingsTable_themePreferenceDefaultsToSystem() = runTest {
+    val db = database.openHelper.writableDatabase
+    val values = ContentValues().apply {
+      put("id", 1)
+      put("admin_pin_hash", "admin_hash")
+      put("recovery_code_hash", "recovery_hash")
+    }
+    db.insert("app_settings", SQLiteDatabase.CONFLICT_ABORT, values)
+
+    val settings = database.appSettingsDao().getSettings()
+    assertThat(settings?.themePreference).isEqualTo(ThemePreference.SYSTEM)
+  }
+
+  @Test
+  fun appSettingsTable_themePreferenceRoundTrips() = runTest {
+    val dao = database.appSettingsDao()
+    dao.insert(
+      AppSettings(
+        adminPinHash = "admin_hash",
+        recoveryCodeHash = "recovery_hash",
+        themePreference = ThemePreference.DARK,
+      ),
+    )
+
+    val settings = dao.getSettings()
+    assertThat(settings?.recoveryCodeHash).isEqualTo("recovery_hash")
+    assertThat(settings?.themePreference).isEqualTo(ThemePreference.DARK)
+  }
+
+  @Test
+  fun betParticipantsTable_userDeleteSetsUserIdToNull() = runTest {
+    val userId = database.userDao()
+      .insert(User(username = "alice", pinHash = "hash", createdAt = 0L))
+    val betId = database.betDao()
+      .insert(Bet(prompt = "Who wins?", status = BetStatus.RESOLVED, createdAt = 0L))
+    val outcomeId = database.betOutcomeDao().insert(BetOutcome(betId = betId, outcomeText = "Us"))
+    val participantId = database.betParticipantDao().insert(
+      BetParticipant(betId = betId, userId = userId, outcomeId = outcomeId, wagerAmount = 100L),
+    )
+
+    database.userDao().delete(database.userDao().getById(userId)!!)
+
+    val participants = database.betParticipantDao().getByBetId(betId)
+    assertThat(participants).hasSize(1)
+    assertThat(participants.single().id).isEqualTo(participantId)
+    assertThat(participants.single().userId).isNull()
   }
 
   @Test

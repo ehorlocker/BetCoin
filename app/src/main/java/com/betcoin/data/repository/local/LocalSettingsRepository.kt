@@ -25,7 +25,8 @@ class LocalSettingsRepository @Inject constructor(
         val hashed = BCrypt.hashpw(pin, BCrypt.gensalt())
         val existing = appSettingsDao.getSettings()
         if (existing == null) {
-            appSettingsDao.insert(AppSettings(adminPinHash = hashed))
+            // TODO(BET-12): store the real recovery code hash once onboarding generates one.
+            appSettingsDao.insert(AppSettings(adminPinHash = hashed, recoveryCodeHash = ""))
         } else {
             appSettingsDao.update(existing.copy(adminPinHash = hashed))
         }

@@ -55,6 +55,11 @@ android {
     }
 }
 
+ksp {
+    // Exported Room schemas are checked in (spec §3 Schema Versioning).
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

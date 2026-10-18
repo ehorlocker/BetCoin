@@ -9,6 +9,8 @@ import androidx.room.PrimaryKey
  * Represents a registered player in the BetCoin app.
  *
  * All currency values are stored as [Long] (integer BetCoin) to avoid floating-point rounding.
+ * [username] uses `COLLATE NOCASE`, so the unique index rejects names that differ only in case
+ * ("Jay" and "jay") and username lookups ignore case.
  */
 @Entity(
   tableName = "users",
@@ -18,7 +20,7 @@ data class User(
   @PrimaryKey(autoGenerate = true)
   val id: Long = 0L,
 
-  @ColumnInfo(name = "username")
+  @ColumnInfo(name = "username", collate = ColumnInfo.NOCASE)
   val username: String,
 
   @ColumnInfo(name = "pin_hash")
@@ -44,6 +46,10 @@ data class User(
 
   @ColumnInfo(name = "total_debt", defaultValue = "0")
   val totalDebt: Long = 0L,
+
+  /** Opaque key returned by the avatar store, or null until an avatar is set. */
+  @ColumnInfo(name = "avatar_ref")
+  val avatarRef: String? = null,
 
   @ColumnInfo(name = "created_at")
   val createdAt: Long,
