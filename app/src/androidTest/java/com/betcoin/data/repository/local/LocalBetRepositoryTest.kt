@@ -427,12 +427,25 @@ class LocalBetRepositoryTest {
   fun getBetWithDetails_emitsBetWithOutcomesAndParticipants() = runTest {
     val (betId, alice, bob) = pendingBetWithTwoPlayers()
 
-    val bet = repository.getBetWithDetails(betId).first()
+    val bet = repository.getBetWithDetails(betId).first()!!
 
     assertThat(bet.bet.id).isEqualTo(betId)
     assertThat(bet.outcomes).hasSize(2)
     assertThat(bet.participants.map { it.user?.id }).containsExactly(alice, bob)
     assertThat(bet.participants.map { it.outcome.id }).containsExactlyElementsIn(outcomeIds(betId))
+  }
+
+  @Test
+  fun getBetWithDetails_emitsNullForUnknownBet() = runTest {
+    assertThat(repository.getBetWithDetails(999L).first()).isNull()
+  }
+
+  @Test
+  fun getBetWithDetails_emitsNullAfterBetIsDiscarded() = runTest {
+    val (betId, _, _) = pendingBetWithTwoPlayers()
+    repository.discardPendingBet(betId)
+
+    assertThat(repository.getBetWithDetails(betId).first()).isNull()
   }
 
   @Test

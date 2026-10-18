@@ -39,9 +39,10 @@ interface BetRepository {
     suspend fun removeParticipant(participantId: Long)
 
     /**
-     * Observes a single bet with its outcomes and participants.
+     * Observes a single bet with its outcomes and participants. Emits null if
+     * the bet doesn't exist, including after it is deleted or discarded.
      */
-    fun getBetWithDetails(betId: Long): Flow<BetWithDetails>
+    fun getBetWithDetails(betId: Long): Flow<BetWithDetails?>
 
     /**
      * Observes all bets with `ACTIVE` status.

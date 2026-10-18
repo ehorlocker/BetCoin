@@ -5,7 +5,10 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.betcoin.ui.betdetail.BetDetailScreen
 import com.betcoin.ui.bethistory.BetHistoryScreen
 import com.betcoin.ui.home.HomeScreen
 import com.betcoin.ui.leaderboard.LeaderboardScreen
@@ -23,6 +26,13 @@ object Routes {
     const val LEADERBOARD = "leaderboard"
     const val BET_HISTORY = "bet_history"
     const val MANAGE_PLAYERS = "manage_players"
+
+    /** Navigation argument holding the bet's ID on [BET_DETAIL]. */
+    const val BET_ID_ARG = "betId"
+    const val BET_DETAIL = "bet_detail/{$BET_ID_ARG}"
+
+    /** The [BET_DETAIL] route for [betId]. */
+    fun betDetail(betId: Long): String = "bet_detail/$betId"
 }
 
 /**
@@ -97,6 +107,17 @@ fun NavGraph(
         }
         composable(Routes.MANAGE_PLAYERS) {
             ManagePlayersScreen(
+                viewModel = hiltViewModel(),
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(
+            route = Routes.BET_DETAIL,
+            arguments = listOf(navArgument(Routes.BET_ID_ARG) { type = NavType.LongType }),
+        ) {
+            BetDetailScreen(
                 viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
