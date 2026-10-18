@@ -34,7 +34,11 @@ object DatabaseModule {
             context,
             BetCoinDatabase::class.java,
             BuildConfig.DB_NAME
-        ).build()
+        )
+            // Pre-v1.0 only: no real data needs keeping yet, so schema changes wipe the
+            // database. From v1.0 on, ship a Migration instead (spec §3 Schema Versioning).
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
     }
 
     @Provides

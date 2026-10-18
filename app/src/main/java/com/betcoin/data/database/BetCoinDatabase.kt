@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.betcoin.data.database.converter.BetStatusConverter
+import com.betcoin.data.database.converter.ThemePreferenceConverter
 import com.betcoin.data.database.dao.AppSettingsDao
 import com.betcoin.data.database.dao.BetDao
 import com.betcoin.data.database.dao.BetOutcomeDao
@@ -19,8 +20,11 @@ import com.betcoin.data.database.entity.User
  * The Room database for the BetCoin application.
  *
  * Contains all five entities and provides abstract DAO accessors for each. The
- * [BetStatusConverter] handles serialization of [com.betcoin.data.model.BetStatus] enum
- * values to and from their string representation.
+ * [BetStatusConverter] and [ThemePreferenceConverter] store the
+ * [com.betcoin.data.model.BetStatus] and [com.betcoin.data.model.ThemePreference] enums by name.
+ *
+ * Schemas are exported to `app/schemas/`. See spec §3 "Schema Versioning" for the migration
+ * policy.
  */
 @Database(
   entities = [
@@ -30,10 +34,10 @@ import com.betcoin.data.database.entity.User
     BetParticipant::class,
     AppSettings::class,
   ],
-  version = 1,
-  exportSchema = false,
+  version = 2,
+  exportSchema = true,
 )
-@TypeConverters(BetStatusConverter::class)
+@TypeConverters(BetStatusConverter::class, ThemePreferenceConverter::class)
 abstract class BetCoinDatabase : RoomDatabase() {
 
   /** Returns the [UserDao] for user operations. */
