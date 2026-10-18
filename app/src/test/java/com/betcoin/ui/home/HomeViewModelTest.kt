@@ -2,6 +2,7 @@ package com.betcoin.ui.home
 
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
+import com.betcoin.testing.FakeUserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

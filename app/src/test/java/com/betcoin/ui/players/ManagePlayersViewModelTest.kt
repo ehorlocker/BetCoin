@@ -1,6 +1,7 @@
 package com.betcoin.ui.players
 
 import com.betcoin.data.database.entity.User
+import com.betcoin.testing.FakeUserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -415,7 +416,7 @@ class ManagePlayersViewModelTest {
                 id = 1L,
                 username = "Alice",
                 pinHash = "hash",
-                balance = 1000,
+                balance = 50,
                 totalWins = 0,
                 totalLosses = 0,
                 totalEarnings = 0,

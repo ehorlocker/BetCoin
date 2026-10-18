@@ -58,4 +58,13 @@ interface BetParticipantDao {
   /** Deletes all participants for the given [betId]. */
   @Query("DELETE FROM bet_participants WHERE bet_id = :betId")
   suspend fun deleteByBetId(betId: Long)
+
+  /**
+   * Detaches every participation of [userId] before the user is deleted: snapshots [username]
+   * into `deleted_username` and nulls `user_id`.
+   */
+  @Query(
+    "UPDATE bet_participants SET deleted_username = :username, user_id = NULL WHERE user_id = :userId"
+  )
+  suspend fun detachUser(userId: Long, username: String)
 }
