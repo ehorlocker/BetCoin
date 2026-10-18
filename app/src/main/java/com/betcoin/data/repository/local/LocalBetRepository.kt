@@ -16,7 +16,6 @@ import com.betcoin.data.payout.PayoutCalculator
 import com.betcoin.data.payout.PayoutEntry
 import com.betcoin.data.repository.BetRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filterNotNull
 import java.util.Locale
 import javax.inject.Inject
 
@@ -105,8 +104,8 @@ class LocalBetRepository @Inject constructor(
         }
     }
 
-    override fun getBetWithDetails(betId: Long): Flow<BetWithDetails> =
-        betDao.getByIdWithDetails(betId).filterNotNull()
+    override fun getBetWithDetails(betId: Long): Flow<BetWithDetails?> =
+        betDao.getByIdWithDetails(betId)
 
     override fun getActiveBets(): Flow<List<BetWithDetails>> =
         betDao.getByStatusWithDetails(BetStatus.ACTIVE)
