@@ -1,26 +1,30 @@
 package com.betcoin.ui.players
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -28,7 +32,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,18 +44,28 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.betcoin.data.database.entity.User
+import com.betcoin.ui.components.BetCoinAvatar
 import com.betcoin.ui.components.BetCoinButton
+import com.betcoin.ui.components.BetCoinCard
 
 /**
- * Manage Players screen — lists all players and provides management actions.
+ * Manage Players screen (§4.2): lists players, adds new ones, and leads to Player Detail.
+ *
+ * It has no destructive or balance actions: delete and rename live in the Admin Panel, bailout on
+ * Player Detail.
  *
  * @param viewModel the [ManagePlayersViewModel] that manages state
- * @param onNavigateBack callback invoked when the user wants to go back
+ * @param onNavigateBack called when the user wants to go back
+ * @param onPlayerClick called with a player's ID when their row is tapped
+ * @param onAdminPanel called when the gear icon is tapped (Admin Panel, BET-29)
  */
 @Composable
 fun ManagePlayersScreen(
     viewModel: ManagePlayersViewModel,
     onNavigateBack: () -> Unit = {},
+    onPlayerClick: (Long) -> Unit = {},
+    onAdminPanel: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -81,13 +94,16 @@ fun ManagePlayersScreen(
                         WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                     )
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Manage Players",
                     style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f),
                 )
+                IconButton(onClick = onAdminPanel) {
+                    Icon(imageVector = Icons.Filled.Settings, contentDescription = "Admin Panel")
+                }
                 TextButton(onClick = onNavigateBack) {
                     Text("Back")
                 }
@@ -100,30 +116,22 @@ fun ManagePlayersScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
+            when {
+                uiState.isLoading -> Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
-            } else if (uiState.players.isEmpty()) {
-                EmptyState(modifier = Modifier.weight(1f))
-            } else {
-                LazyColumn(
+                uiState.players.isEmpty() -> EmptyState(modifier = Modifier.weight(1f))
+                else -> LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(uiState.players, key = { it.id }) { player ->
-                        PlayerCard(
-                            username = player.username,
-                            balance = player.balance,
-                            wins = player.totalWins,
-                            losses = player.totalLosses,
-                            onDelete = { viewModel.onDeletePlayerClicked(player.id) },
-                            onRename = { viewModel.onRenamePlayerClicked(player.id) },
-                            onBailout = { viewModel.onBailoutPlayer(player.id) },
-                        )
+                        PlayerRow(player = player, onClick = { onPlayerClick(player.id) })
                     }
                 }
             }
@@ -131,50 +139,21 @@ fun ManagePlayersScreen(
             Spacer(modifier = Modifier.height(16.dp))
             BetCoinButton(
                 text = "Add Player",
-                onClick = { viewModel.onAddPlayerClicked() },
+                onClick = viewModel::onAddPlayerClicked,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    if (uiState.showAddPlayerDialog) {
+    uiState.addPlayerForm?.let { form ->
         AddPlayerDialog(
-            username = uiState.newUsername,
-            pin = uiState.newPin,
-            error = uiState.addPlayerError,
+            form = form,
             onUsernameChange = viewModel::onUsernameChanged,
             onPinChange = viewModel::onPinChanged,
+            onConfirmPinChange = viewModel::onConfirmPinChanged,
             onConfirm = viewModel::onConfirmAddPlayer,
-            onDismiss = { viewModel.onDismissAddPlayerDialog() },
-        )
-    }
-
-    if (uiState.showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onDismissDeleteConfirmation() },
-            title = { Text("Delete Player") },
-            text = { Text("Are you sure you want to delete ${uiState.selectedPlayerName}?") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.onConfirmDeletePlayer() }) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onDismissDeleteConfirmation() }) {
-                    Text("Cancel")
-                }
-            },
-        )
-    }
-
-    if (uiState.showRenameDialog) {
-        RenamePlayerDialog(
-            username = uiState.renameUsername,
-            error = uiState.renameError,
-            onUsernameChange = viewModel::onRenameUsernameChanged,
-            onConfirm = viewModel::onConfirmRenamePlayer,
-            onDismiss = { viewModel.onDismissRenameDialog() },
+            onDismiss = viewModel::onDismissAddPlayerDialog,
         )
     }
 }
@@ -182,8 +161,7 @@ fun ManagePlayersScreen(
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -194,61 +172,28 @@ private fun EmptyState(modifier: Modifier = Modifier) {
     }
 }
 
+/** A player's avatar and username. Tapping opens Player Detail. */
 @Composable
-private fun PlayerCard(
-    username: String,
-    balance: Long,
-    wins: Int,
-    losses: Int,
-    onDelete: () -> Unit,
-    onRename: () -> Unit,
-    onBailout: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
+private fun PlayerRow(player: User, onClick: () -> Unit) {
+    BetCoinCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Default avatar until profile pictures land (BET-20).
+            BetCoinAvatar(initials = initialsOf(player.username))
+            Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = username,
+                text = player.username,
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Balance: $balance  |  Wins: $wins  |  Losses: $losses",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TextButton(onClick = onRename, modifier = Modifier.weight(1f)) {
-                    Text("Rename")
-                }
-                TextButton(onClick = onBailout, modifier = Modifier.weight(1f)) {
-                    Text("Bailout")
-                }
-                TextButton(onClick = onDelete, modifier = Modifier.weight(1f)) {
-                    Text("Delete")
-                }
-            }
         }
     }
 }
 
 @Composable
 private fun AddPlayerDialog(
-    username: String,
-    pin: String,
-    error: String?,
+    form: ManagePlayersViewModel.AddPlayerForm,
     onUsernameChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
+    onConfirmPinChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -258,26 +203,20 @@ private fun AddPlayerDialog(
         text = {
             Column {
                 OutlinedTextField(
-                    value = username,
+                    value = form.username,
                     onValueChange = onUsernameChange,
                     label = { Text("Username") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = onPinChange,
-                    label = { Text("PIN (4 digits)") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (error != null) {
+                PinTextField(value = form.pin, onValueChange = onPinChange, label = "PIN (4 digits)")
+                Spacer(modifier = Modifier.height(8.dp))
+                PinTextField(value = form.confirmPin, onValueChange = onConfirmPinChange, label = "Confirm PIN")
+                if (form.error != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = error,
+                        text = form.error,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -285,7 +224,7 @@ private fun AddPlayerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = onConfirm, enabled = !form.isSaving) {
                 Text("Create")
             }
         },
@@ -298,44 +237,22 @@ private fun AddPlayerDialog(
 }
 
 @Composable
-private fun RenamePlayerDialog(
-    username: String,
-    error: String?,
-    onUsernameChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Rename Player") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = onUsernameChange,
-                    label = { Text("New Username") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (error != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Rename")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
+private fun PinTextField(value: String, onValueChange: (String) -> Unit, label: String) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        modifier = Modifier.fillMaxWidth(),
     )
 }
+
+/** Up to two initials for the default avatar: "Jay" → "J", "Mary Jane" → "MJ". */
+internal fun initialsOf(username: String): String =
+    username.trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotEmpty() }
+        .take(2)
+        .joinToString("") { it.first().uppercase() }
