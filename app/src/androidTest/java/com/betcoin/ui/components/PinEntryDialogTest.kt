@@ -1,9 +1,13 @@
 package com.betcoin.ui.components
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
@@ -113,6 +117,15 @@ class PinEntryDialogTest {
     }
 
     @Test
+    fun pinField_hasPasswordSemantics() {
+        showDialog()
+
+        // Password semantics stop TalkBack from reading the digits aloud (§5.5).
+        composeTestRule.onNodeWithTag(PIN_INPUT_TAG)
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Password))
+    }
+
+    @Test
     fun cancel_callsOnDismissWithoutVerifying() {
         var dismissed = 0
         var verified = 0
@@ -216,6 +229,44 @@ class PinEntryDialogTest {
         assertThat(aborted).isEqualTo(1)
         assertThat(confirmed).isEqualTo(0)
         composeTestRule.onNodeWithTag(PIN_INPUT_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun sequence_stepsRebuiltOnRecomposition_keepProgressAndConfirmOnce() {
+        var confirmed = 0
+        var recompose by mutableIntStateOf(0)
+        composeTestRule.setContent {
+            BetCoinTheme {
+                // Built inline like a real caller, so every recomposition gets new lambdas and a
+                // list that isn't equal to the previous one.
+                val steps = recompose.let {
+                    listOf(
+                        ConsentStep("Jay", bcryptVerifier(JAY_HASH)),
+                        ConsentStep("Sam", bcryptVerifier(SAM_HASH)),
+                    )
+                }
+                ConsentSequence(
+                    steps = steps,
+                    onAllConfirmed = { confirmed++ },
+                    onAbort = {},
+                )
+            }
+        }
+
+        enterPin("1234", nextPrompt = "Sam, enter your PIN")
+        recompose++
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("2 of 2").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Sam, enter your PIN").assertIsDisplayed()
+
+        enterPin("5678", nextPrompt = null)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { confirmed == 1 }
+        // The caller recomposes before it stops rendering the sequence.
+        recompose++
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(PIN_INPUT_TAG).assertDoesNotExist()
+        assertThat(confirmed).isEqualTo(1)
     }
 
     private fun onAllNodesWithTextCount(text: String): Int =
