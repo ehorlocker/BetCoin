@@ -22,7 +22,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Instrumented tests for [LocalBetRepository] (create, participants, lock, discard, queries).
+ * Instrumented tests for [LocalBetRepository] (create, participants, lock, discard, queries,
+ * resolve, cancel, reopen, repeat).
  *
  * Uses an in-memory Room database. Every failure case checks that the database is unchanged.
  */
@@ -95,6 +96,47 @@ class LocalBetRepositoryTest {
     repository.addParticipant(betId, alice, first, aliceWager)
     repository.addParticipant(betId, bob, second, bobWager)
     return Triple(betId, alice, bob)
+  }
+
+  private suspend fun userOf(userId: Long): User = database.userDao().getById(userId)!!
+
+  private suspend fun totalBalance(): Long = database.userDao().getAll().first().sumOf { it.balance }
+
+  private suspend fun payoutOf(betId: Long, userId: Long): Long? =
+    details(betId).participants.first { it.participant.userId == userId }.participant.payout
+
+  /**
+   * An ACTIVE bet with three outcomes (A, B, C): Alice 100 and Carol 300 on A, Bob 200 on B.
+   * Nobody picked C. Resolving to A pays Alice 150 and Carol 450 from the 600 pot.
+   */
+  private suspend fun activeBetWithThreePlayers(): ActiveBet {
+    val alice = insertUser("Alice")
+    val bob = insertUser("Bob")
+    val carol = insertUser("Carol")
+    val betId = repository.createBet("Who wins?", listOf("A", "B", "C"))
+    val (a, b, c) = outcomeIds(betId)
+    repository.addParticipant(betId, alice, a, 100L)
+    repository.addParticipant(betId, bob, b, 200L)
+    repository.addParticipant(betId, carol, a, 300L)
+    repository.lockBet(betId)
+    return ActiveBet(betId, alice, bob, carol, a, b, c)
+  }
+
+  private data class ActiveBet(
+    val betId: Long,
+    val alice: Long,
+    val bob: Long,
+    val carol: Long,
+    val outcomeA: Long,
+    val outcomeB: Long,
+    val outcomeC: Long,
+  )
+
+  /** Deletes [userId] the way user deletion does: snapshot the name, null the FK, drop the row. */
+  private suspend fun deleteUser(userId: Long) {
+    val user = userOf(userId)
+    database.betParticipantDao().detachUser(userId, user.username)
+    database.userDao().delete(user)
   }
 
   private suspend fun setStatus(betId: Long, status: BetStatus) {
@@ -489,5 +531,381 @@ class LocalBetRepositoryTest {
     repository.discardPendingBet(betId)
 
     assertThat(repository.getPendingBet().first()).isNull()
+  }
+
+  // --- resolveBet ---
+
+  @Test
+  fun resolveBet_paysWinnersRecordsStatsAndSetsResolved() = runTest {
+    val bet = activeBetWithThreePlayers()
+
+    repository.resolveBet(bet.betId, bet.outcomeA)
+
+    val resolved = details(bet.betId).bet
+    assertThat(resolved.status).isEqualTo(BetStatus.RESOLVED)
+    assertThat(resolved.winningOutcomeId).isEqualTo(bet.outcomeA)
+    assertThat(resolved.resolvedAt).isNotNull()
+    assertThat(payoutOf(bet.betId, bet.alice)).isEqualTo(150L)
+    assertThat(payoutOf(bet.betId, bet.carol)).isEqualTo(450L)
+    assertThat(payoutOf(bet.betId, bet.bob)).isEqualTo(0L)
+
+    val alice = userOf(bet.alice)
+    assertThat(alice.balance).isEqualTo(1050L)
+    assertThat(alice.totalWins).isEqualTo(1)
+    assertThat(alice.totalEarnings).isEqualTo(50L)
+    assertThat(alice.totalLosses).isEqualTo(0)
+    val carol = userOf(bet.carol)
+    assertThat(carol.balance).isEqualTo(1150L)
+    assertThat(carol.totalWins).isEqualTo(1)
+    assertThat(carol.totalEarnings).isEqualTo(150L)
+    val bob = userOf(bet.bob)
+    assertThat(bob.balance).isEqualTo(800L)
+    assertThat(bob.totalLosses).isEqualTo(1)
+    assertThat(bob.totalLost).isEqualTo(200L)
+    assertThat(bob.totalWins).isEqualTo(0)
+    assertThat(totalBalance()).isEqualTo(3000L)
+  }
+
+  @Test
+  fun resolveBet_givesRoundingRemainderToLargestWager() = runTest {
+    val alice = insertUser("Alice")
+    val bob = insertUser("Bob")
+    val carol = insertUser("Carol")
+    val betId = repository.createBet("Who?", listOf("a", "b"))
+    val (a, b) = outcomeIds(betId)
+    repository.addParticipant(betId, alice, a, 1L)
+    repository.addParticipant(betId, bob, a, 2L)
+    repository.addParticipant(betId, carol, b, 4L)
+    repository.lockBet(betId)
+
+    repository.resolveBet(betId, a)
+
+    // Pot 7 over winning wagers 3: Alice 7/3 = 2, Bob 14/3 = 4, remainder 1 to Bob.
+    assertThat(payoutOf(betId, alice)).isEqualTo(2L)
+    assertThat(payoutOf(betId, bob)).isEqualTo(5L)
+    assertThat(totalBalance()).isEqualTo(3000L)
+  }
+
+  @Test
+  fun resolveBet_toOutcomeNobodyPickedIsPushWithNoStats() = runTest {
+    val bet = activeBetWithThreePlayers()
+
+    repository.resolveBet(bet.betId, bet.outcomeC)
+
+    val resolved = details(bet.betId)
+    assertThat(resolved.bet.status).isEqualTo(BetStatus.RESOLVED)
+    assertThat(resolved.bet.winningOutcomeId).isEqualTo(bet.outcomeC)
+    assertThat(resolved.participants.map { it.participant.payout })
+      .containsExactlyElementsIn(resolved.participants.map { it.participant.wagerAmount })
+    for (userId in listOf(bet.alice, bet.bob, bet.carol)) {
+      val user = userOf(userId)
+      assertThat(user.balance).isEqualTo(1000L)
+      assertThat(user.totalWins).isEqualTo(0)
+      assertThat(user.totalLosses).isEqualTo(0)
+      assertThat(user.totalEarnings).isEqualTo(0L)
+      assertThat(user.totalLost).isEqualTo(0L)
+    }
+  }
+
+  @Test
+  fun resolveBet_rejectsBetThatIsNotActive() = runTest {
+    val (betId, _, _) = pendingBetWithTwoPlayers()
+    val outcome = outcomeIds(betId).first()
+    assertRejected<InvalidBetStateException> { repository.resolveBet(betId, outcome) }
+
+    repository.lockBet(betId)
+    repository.resolveBet(betId, outcome)
+    assertRejected<InvalidBetStateException> { repository.resolveBet(betId, outcome) }
+
+    repository.reopenBet(betId)
+    repository.cancelBet(betId)
+    assertRejected<InvalidBetStateException> { repository.resolveBet(betId, outcome) }
+  }
+
+  @Test
+  fun resolveBet_rejectsOutcomeFromAnotherBetOrUnknown() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val otherOutcome = outcomeIds(repository.createBet("Other?", listOf("c", "d"))).first()
+
+    assertRejected<InvalidInputException> { repository.resolveBet(bet.betId, otherOutcome) }
+    assertRejected<InvalidInputException> { repository.resolveBet(bet.betId, 999L) }
+  }
+
+  @Test
+  fun resolveBet_rejectsUnknownBet() = runTest {
+    assertRejected<InvalidInputException> { repository.resolveBet(999L, 1L) }
+  }
+
+  // --- cancelBet ---
+
+  @Test
+  fun cancelBet_refundsAllWagersWithoutStatsAndSetsCancelled() = runTest {
+    val bet = activeBetWithThreePlayers()
+
+    repository.cancelBet(bet.betId)
+
+    val cancelled = details(bet.betId)
+    assertThat(cancelled.bet.status).isEqualTo(BetStatus.CANCELLED)
+    assertThat(cancelled.bet.resolvedAt).isNotNull()
+    assertThat(cancelled.bet.winningOutcomeId).isNull()
+    assertThat(cancelled.participants.map { it.participant.payout }).containsExactly(null, null, null)
+    for (userId in listOf(bet.alice, bet.bob, bet.carol)) {
+      val user = userOf(userId)
+      assertThat(user.balance).isEqualTo(1000L)
+      assertThat(user.totalWins).isEqualTo(0)
+      assertThat(user.totalLosses).isEqualTo(0)
+      assertThat(user.totalEarnings).isEqualTo(0L)
+      assertThat(user.totalLost).isEqualTo(0L)
+    }
+  }
+
+  @Test
+  fun cancelBet_rejectsBetThatIsNotActive() = runTest {
+    val (betId, _, _) = pendingBetWithTwoPlayers()
+    assertRejected<InvalidBetStateException> { repository.cancelBet(betId) }
+
+    repository.lockBet(betId)
+    repository.cancelBet(betId)
+    assertRejected<InvalidBetStateException> { repository.cancelBet(betId) }
+
+    repository.reopenBet(betId)
+    repository.resolveBet(betId, outcomeIds(betId).first())
+    assertRejected<InvalidBetStateException> { repository.cancelBet(betId) }
+  }
+
+  @Test
+  fun cancelBet_rejectsUnknownBet() = runTest {
+    assertRejected<InvalidInputException> { repository.cancelBet(999L) }
+  }
+
+  // --- reopenBet (RESOLVED) ---
+
+  @Test
+  fun reopenBet_fromResolvedTakesBackPayoutsAndRevertsStatsExactly() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val afterLock = snapshot()
+    repository.resolveBet(bet.betId, bet.outcomeA)
+
+    repository.reopenBet(bet.betId)
+
+    // Balances, stats, payouts, winningOutcomeId, resolvedAt and status all match the
+    // freshly locked bet: winners gave back their share, Bob's loss stayed in the pot.
+    assertThat(snapshot()).isEqualTo(afterLock)
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.ACTIVE)
+    assertThat(balanceOf(bet.alice)).isEqualTo(900L)
+    assertThat(balanceOf(bet.bob)).isEqualTo(800L)
+    assertThat(balanceOf(bet.carol)).isEqualTo(700L)
+  }
+
+  @Test
+  fun reopenBet_fromResolvedPushLocksWagersAgainWithoutStats() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val afterLock = snapshot()
+    repository.resolveBet(bet.betId, bet.outcomeC)
+
+    repository.reopenBet(bet.betId)
+
+    assertThat(snapshot()).isEqualTo(afterLock)
+  }
+
+  @Test
+  fun reopenBet_fromResolvedKeepsOtherStatsAndBalanceChanges() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    // Alice earned more elsewhere after the resolution.
+    val alice = userOf(bet.alice)
+    database.userDao().update(
+      alice.copy(balance = alice.balance + 500L, totalWins = 4, totalEarnings = 1_000L)
+    )
+
+    repository.reopenBet(bet.betId)
+
+    val reopened = userOf(bet.alice)
+    assertThat(reopened.balance).isEqualTo(1050L + 500L - 150L)
+    assertThat(reopened.totalWins).isEqualTo(3)
+    assertThat(reopened.totalEarnings).isEqualTo(950L)
+  }
+
+  @Test
+  fun reopenBet_fromResolvedRejectsWinnerWhoSpentWinnings() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    // Carol's payout is 450 but she has spent down to 449.
+    database.userDao().updateBalance(bet.carol, 449L)
+
+    val error = assertRejected<InsufficientBalanceException> { repository.reopenBet(bet.betId) }
+    assertThat(error.userId).isEqualTo(bet.carol)
+    assertThat(error.required).isEqualTo(450L)
+    assertThat(error.available).isEqualTo(449L)
+  }
+
+  @Test
+  fun reopenBet_fromResolvedAllowsBrokeLoserSinceTheirPayoutIsZero() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    database.userDao().updateBalance(bet.bob, 0L)
+
+    repository.reopenBet(bet.betId)
+
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.ACTIVE)
+    assertThat(balanceOf(bet.bob)).isEqualTo(0L)
+    assertThat(userOf(bet.bob).totalLosses).isEqualTo(0)
+  }
+
+  @Test
+  fun reopenBet_fromResolvedPushRejectsParticipantWhoCantCoverRefund() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.resolveBet(bet.betId, bet.outcomeC)
+    database.userDao().updateBalance(bet.bob, 199L)
+
+    val error = assertRejected<InsufficientBalanceException> { repository.reopenBet(bet.betId) }
+    assertThat(error.userId).isEqualTo(bet.bob)
+    assertThat(error.required).isEqualTo(200L)
+  }
+
+  @Test
+  fun reopenBet_fromResolvedRejectsDeletedParticipant() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    deleteUser(bet.bob)
+
+    assertRejected<InvalidInputException> { repository.reopenBet(bet.betId) }
+  }
+
+  @Test
+  fun resolveThenReopenThenResolve_leavesTotalCoinsUnchanged() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val pot = 600L
+    assertThat(totalBalance()).isEqualTo(3000L - pot)
+
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    assertThat(totalBalance()).isEqualTo(3000L)
+    val afterFirstResolve = snapshot()
+
+    repository.reopenBet(bet.betId)
+    assertThat(totalBalance()).isEqualTo(3000L - pot)
+
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    assertThat(totalBalance()).isEqualTo(3000L)
+    // Same winner again: balances, stats and payouts match the first resolution (only the
+    // resolvedAt timestamp may differ).
+    val users = database.userDao().getAll().first().sortedBy { it.id }
+    assertThat(users).isEqualTo((afterFirstResolve as List<*>)[0])
+
+    // Re-resolving to a different winner still moves coins without creating any.
+    repository.reopenBet(bet.betId)
+    repository.resolveBet(bet.betId, bet.outcomeB)
+    assertThat(totalBalance()).isEqualTo(3000L)
+    assertThat(balanceOf(bet.bob)).isEqualTo(1400L)
+    assertThat(userOf(bet.bob).totalWins).isEqualTo(1)
+    assertThat(userOf(bet.bob).totalLosses).isEqualTo(0)
+    assertThat(userOf(bet.alice).totalWins).isEqualTo(0)
+    assertThat(userOf(bet.alice).totalLosses).isEqualTo(1)
+  }
+
+  // --- reopenBet (CANCELLED) ---
+
+  @Test
+  fun reopenBet_fromCancelledReDeductsWagersAndSetsActive() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val afterLock = snapshot()
+    repository.cancelBet(bet.betId)
+
+    repository.reopenBet(bet.betId)
+
+    assertThat(snapshot()).isEqualTo(afterLock)
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.ACTIVE)
+    assertThat(details(bet.betId).bet.resolvedAt).isNull()
+  }
+
+  @Test
+  fun reopenBet_fromCancelledRejectsParticipantWhoCantCoverWager() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.cancelBet(bet.betId)
+    database.userDao().updateBalance(bet.carol, 299L)
+
+    val error = assertRejected<InsufficientBalanceException> { repository.reopenBet(bet.betId) }
+    assertThat(error.userId).isEqualTo(bet.carol)
+    assertThat(error.required).isEqualTo(300L)
+    assertThat(error.available).isEqualTo(299L)
+  }
+
+  @Test
+  fun reopenBet_fromCancelledRejectsDeletedParticipant() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.cancelBet(bet.betId)
+    deleteUser(bet.alice)
+
+    assertRejected<InvalidInputException> { repository.reopenBet(bet.betId) }
+  }
+
+  // --- reopenBet (other states) ---
+
+  @Test
+  fun reopenBet_rejectsPendingAndActiveBets() = runTest {
+    val (betId, _, _) = pendingBetWithTwoPlayers()
+    assertRejected<InvalidBetStateException> { repository.reopenBet(betId) }
+
+    repository.lockBet(betId)
+    assertRejected<InvalidBetStateException> { repository.reopenBet(betId) }
+  }
+
+  @Test
+  fun reopenBet_rejectsUnknownBet() = runTest {
+    assertRejected<InvalidInputException> { repository.reopenBet(999L) }
+  }
+
+  // --- repeatBet ---
+
+  @Test
+  fun repeatBet_createsPendingCopyWithoutParticipantsAndLeavesOriginal() = runTest {
+    val bet = activeBetWithThreePlayers()
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    val original = details(bet.betId)
+    val usersBefore = database.userDao().getAll().first()
+
+    val newBetId = repository.repeatBet(bet.betId)
+
+    assertThat(newBetId).isNotEqualTo(bet.betId)
+    val repeated = details(newBetId)
+    assertThat(repeated.bet.prompt).isEqualTo("Who wins?")
+    assertThat(repeated.bet.status).isEqualTo(BetStatus.PENDING_CONFIRMATION)
+    assertThat(repeated.bet.winningOutcomeId).isNull()
+    assertThat(repeated.bet.resolvedAt).isNull()
+    assertThat(repeated.outcomes.sortedBy { it.id }.map { it.outcomeText })
+      .containsExactly("A", "B", "C")
+      .inOrder()
+    assertThat(repeated.outcomes.map { it.id }).containsNoneIn(original.outcomes.map { it.id })
+    assertThat(repeated.participants).isEmpty()
+    assertThat(details(bet.betId)).isEqualTo(original)
+    assertThat(database.userDao().getAll().first()).isEqualTo(usersBefore)
+  }
+
+  @Test
+  fun repeatBet_worksForActiveAndCancelledBets() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val repeatedFromActive = repository.repeatBet(bet.betId)
+    repository.discardPendingBet(repeatedFromActive)
+
+    repository.cancelBet(bet.betId)
+    val repeatedFromCancelled = repository.repeatBet(bet.betId)
+
+    assertThat(details(repeatedFromCancelled).outcomes).hasSize(3)
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.CANCELLED)
+  }
+
+  @Test
+  fun repeatBet_rejectsWhenAPendingBetAlreadyExists() = runTest {
+    val bet = activeBetWithThreePlayers()
+    val pendingId = repository.createBet("Pending?", listOf("a", "b"))
+
+    val error = assertRejected<InvalidBetStateException> { repository.repeatBet(bet.betId) }
+    assertThat(error.betId).isEqualTo(pendingId)
+    assertThat(error.status).isEqualTo(BetStatus.PENDING_CONFIRMATION)
+  }
+
+  @Test
+  fun repeatBet_rejectsUnknownBet() = runTest {
+    assertRejected<InvalidInputException> { repository.repeatBet(999L) }
   }
 }
