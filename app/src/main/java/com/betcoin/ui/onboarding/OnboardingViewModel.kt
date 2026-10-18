@@ -4,67 +4,129 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.betcoin.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
+ * UI state for the onboarding (first-launch) flow (spec §12).
+ */
+sealed interface OnboardingUiState {
+
+    /**
+     * The admin PIN is being entered twice.
+     *
+     * @property pin digits typed in the first field (at most 4)
+     * @property confirmPin digits typed in the confirmation field (at most 4)
+     * @property error validation or save error, or `null`
+     * @property isSaving `true` while the PIN is hashed and stored
+     */
+    data class EnterPin(
+        val pin: String = "",
+        val confirmPin: String = "",
+        val error: String? = null,
+        val isSaving: Boolean = false,
+    ) : OnboardingUiState
+
+    /**
+     * The PIN is saved and the recovery code is shown once (spec §5.6).
+     *
+     * @property recoveryCode the plain code, formatted `XXXX-XXXX-XXXX`
+     * @property acknowledged whether "I've written this down" is ticked
+     */
+    data class ShowRecoveryCode(
+        val recoveryCode: String,
+        val acknowledged: Boolean = false,
+    ) : OnboardingUiState
+}
+
+/**
  * ViewModel for the onboarding (first-launch) screen.
  *
- * Checks whether the app is being launched for the first time and handles
- * admin PIN setup.
+ * Takes the master admin PIN twice, stores it, then generates the recovery code and shows
+ * it once. [onboardingComplete] turns `true` when the user continues after ticking
+ * "I've written this down".
  */
 @HiltViewModel
-open class OnboardingViewModel @Inject constructor(
+class OnboardingViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
-    protected val _isFirstLaunch = MutableStateFlow(false)
-    val isFirstLaunch: StateFlow<Boolean> = _isFirstLaunch
+    private val _uiState = MutableStateFlow<OnboardingUiState>(OnboardingUiState.EnterPin())
+    val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
-    protected val _onboardingComplete = MutableStateFlow(false)
-    val onboardingComplete: StateFlow<Boolean> = _onboardingComplete
+    private val _onboardingComplete = MutableStateFlow(false)
+    val onboardingComplete: StateFlow<Boolean> = _onboardingComplete.asStateFlow()
 
-    protected val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    /** Updates the first PIN field, keeping only digits and at most [PIN_LENGTH] of them. */
+    fun onPinChanged(value: String) = updateEnterPin { it.copy(pin = sanitize(value), error = null) }
 
-    init {
-        viewModelScope.launch {
-            _isFirstLaunch.value = settingsRepository.isFirstLaunch()
-        }
-    }
+    /** Updates the confirmation PIN field, keeping only digits and at most [PIN_LENGTH] of them. */
+    fun onConfirmPinChanged(value: String) =
+        updateEnterPin { it.copy(confirmPin = sanitize(value), error = null) }
 
     /**
-     * Validates and stores the admin [pin].
-     *
-     * Emits an error via [errorMessage] if the PIN is invalid.
-     * Emits [onboardingComplete] when the PIN is successfully stored.
+     * Validates the two PIN entries and, if they're 4 digits and match, stores the PIN and
+     * generates the recovery code.
      */
-    open fun setAdminPin(pin: String) {
-        when {
-            pin.length < 4 -> {
-                _errorMessage.value = "PIN must be at least 4 digits"
-                return
-            }
-            !pin.all { it.isDigit() } -> {
-                _errorMessage.value = "PIN must be numeric"
-                return
-            }
+    fun onSavePin() {
+        val state = _uiState.value as? OnboardingUiState.EnterPin ?: return
+        if (state.isSaving) return
+
+        val error = when {
+            state.pin.length != PIN_LENGTH -> ERROR_PIN_LENGTH
+            state.confirmPin != state.pin -> ERROR_PIN_MISMATCH
+            else -> null
+        }
+        if (error != null) {
+            _uiState.value = state.copy(error = error)
+            return
         }
 
+        _uiState.value = state.copy(error = null, isSaving = true)
         viewModelScope.launch {
-            try {
-                settingsRepository.setAdminPin(pin)
-                _onboardingComplete.value = true
+            _uiState.value = try {
+                settingsRepository.setAdminPin(state.pin)
+                OnboardingUiState.ShowRecoveryCode(settingsRepository.regenerateRecoveryCode())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _errorMessage.value = "Failed to save PIN: ${e.message}"
+                state.copy(error = ERROR_SAVE_FAILED, isSaving = false)
             }
         }
     }
 
-    /** Clears any active error message. */
-    fun clearError() {
-        _errorMessage.value = null
+    /** Ticks or unticks "I've written this down". */
+    fun onAcknowledgedChanged(acknowledged: Boolean) {
+        _uiState.update { state ->
+            if (state is OnboardingUiState.ShowRecoveryCode) state.copy(acknowledged = acknowledged) else state
+        }
+    }
+
+    /** Finishes onboarding, but only once the recovery code has been acknowledged. */
+    fun onContinue() {
+        val state = _uiState.value
+        if (state is OnboardingUiState.ShowRecoveryCode && state.acknowledged) {
+            _onboardingComplete.value = true
+        }
+    }
+
+    private fun updateEnterPin(transform: (OnboardingUiState.EnterPin) -> OnboardingUiState.EnterPin) {
+        _uiState.update { state ->
+            if (state is OnboardingUiState.EnterPin && !state.isSaving) transform(state) else state
+        }
+    }
+
+    private fun sanitize(value: String): String = value.filter { it.isDigit() }.take(PIN_LENGTH)
+
+    companion object {
+        const val PIN_LENGTH = 4
+        const val ERROR_PIN_LENGTH = "PIN must be exactly 4 digits"
+        const val ERROR_PIN_MISMATCH = "PINs don't match"
+        const val ERROR_SAVE_FAILED = "Couldn't save the PIN. Try again."
     }
 }
