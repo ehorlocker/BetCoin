@@ -1,3 +1,10 @@
+<!-- PR title: [BET-<n>] <Jira ticket title> -->
+
+## Ticket
+
+- Jira: [BET-](https://ericisboring.atlassian.net/browse/BET-)
+- Closes #
+
 ## Type of Change
 
 - [ ] Feature
@@ -6,10 +13,6 @@
 - [ ] Test
 - [ ] Documentation
 - [ ] Chore/config
-
-## Related Issue
-
-Closes #
 
 ## Description
 
@@ -20,6 +23,23 @@ Closes #
 <!-- List the specific changes made in this PR -->
 
 -
+
+## Bug Fix Details
+
+<!-- Bug fixes only; delete this section for other PRs. -->
+
+- **Root cause:**
+- **Steps to reproduce (before fix):**
+- **How the fix addresses it:**
+- [ ] Regression test added that fails without this fix
+
+## Feature Details
+
+<!-- Features only; delete this section for other PRs. -->
+
+- **Spec reference:** <!-- e.g. Section 5.3 — Bet Resolution -->
+- **Acceptance criteria met:**
+  - [ ]
 
 ## Architecture Layers Modified
 
@@ -34,7 +54,7 @@ Closes #
 
 - [ ] Unit tests pass (`./gradlew test`)
 - [ ] Instrumented tests pass (`./gradlew connectedAndroidTest`)
-- [ ] Tested on dev flavor (`./gradlew installDevDebug`)
+- [ ] Verified on the `BetCoin_Test` emulator (`./gradlew installDevDebug`)
 - [ ] New tests added for new functionality
 - [ ] Manual testing performed (describe below)
 
