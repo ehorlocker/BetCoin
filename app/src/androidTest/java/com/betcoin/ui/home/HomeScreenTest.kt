@@ -57,7 +57,9 @@ class HomeScreenTest {
             override suspend fun createUser(username: String, pin: String) = 0L
             override suspend fun verifyPin(userId: Long, pin: String) = false
             override suspend fun getUser(userId: Long) = null
+            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
             override suspend fun bailout(userId: Long) {}
+            override suspend fun forceBailout(userId: Long) {}
             override suspend fun deleteUser(userId: Long) {}
             override suspend fun resetPin(userId: Long, newPin: String) {}
             override suspend fun updateBalance(userId: Long, delta: Long) {}
@@ -105,7 +107,9 @@ class HomeScreenTest {
             override suspend fun createUser(username: String, pin: String) = 0L
             override suspend fun verifyPin(userId: Long, pin: String) = false
             override suspend fun getUser(userId: Long) = null
+            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
             override suspend fun bailout(userId: Long) {}
+            override suspend fun forceBailout(userId: Long) {}
             override suspend fun deleteUser(userId: Long) {}
             override suspend fun resetPin(userId: Long, newPin: String) {}
             override suspend fun updateBalance(userId: Long, delta: Long) {}
@@ -156,7 +160,9 @@ class HomeScreenTest {
             override suspend fun createUser(username: String, pin: String) = 0L
             override suspend fun verifyPin(userId: Long, pin: String) = false
             override suspend fun getUser(userId: Long) = null
+            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
             override suspend fun bailout(userId: Long) {}
+            override suspend fun forceBailout(userId: Long) {}
             override suspend fun deleteUser(userId: Long) {}
             override suspend fun resetPin(userId: Long, newPin: String) {}
             override suspend fun updateBalance(userId: Long, delta: Long) {}
@@ -207,7 +213,9 @@ class HomeScreenTest {
             override suspend fun createUser(username: String, pin: String) = 0L
             override suspend fun verifyPin(userId: Long, pin: String) = false
             override suspend fun getUser(userId: Long) = null
+            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
             override suspend fun bailout(userId: Long) {}
+            override suspend fun forceBailout(userId: Long) {}
             override suspend fun deleteUser(userId: Long) {}
             override suspend fun resetPin(userId: Long, newPin: String) {}
             override suspend fun updateBalance(userId: Long, delta: Long) {}

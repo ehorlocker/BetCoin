@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.betcoin.data.database.entity.User
+import com.betcoin.data.model.BetStatus
 import kotlinx.coroutines.flow.Flow
 
 /** Data access object for [User] operations. */
@@ -28,8 +29,16 @@ interface UserDao {
   @Query("SELECT * FROM users")
   fun getAll(): Flow<List<User>>
 
-  /** Returns a [Flow] of all users sorted by balance descending (leaderboard). */
-  @Query("SELECT * FROM users ORDER BY balance DESC")
+  /**
+   * Returns a [Flow] of all users ranked for the leaderboard: net worth (`balance - total_debt`)
+   * descending, then balance descending, then username A–Z ignoring case.
+   */
+  @Query(
+    """
+    SELECT * FROM users
+    ORDER BY (balance - total_debt) DESC, balance DESC, username COLLATE NOCASE ASC
+    """
+  )
   fun getLeaderboard(): Flow<List<User>>
 
   /** Updates an existing user (matched by primary key). */
@@ -43,4 +52,61 @@ interface UserDao {
   /** Sets the balance for the user with the given [userId] to [newBalance]. */
   @Query("UPDATE users SET balance = :newBalance WHERE id = :userId")
   suspend fun updateBalance(userId: Long, newBalance: Long)
+
+  /**
+   * Adds signed [delta] to the balance of the user with [userId].
+   *
+   * @return the number of rows updated (0 if the user doesn't exist).
+   */
+  @Query("UPDATE users SET balance = balance + :delta WHERE id = :userId")
+  suspend fun addToBalance(userId: Long, delta: Long): Int
+
+  /**
+   * Grants a bailout of [amount]: adds it to balance and total debt and increments the bailout
+   * count.
+   *
+   * @return the number of rows updated (0 if the user doesn't exist).
+   */
+  @Query(
+    """
+    UPDATE users
+    SET balance = balance + :amount, total_debt = total_debt + :amount,
+        bailout_count = bailout_count + 1
+    WHERE id = :userId
+    """
+  )
+  suspend fun applyBailout(userId: Long, amount: Long): Int
+
+  /**
+   * Returns a [Flow] of the sum of the user's wagers in bets with [status] (ACTIVE by default),
+   * or 0 if there are none.
+   */
+  @Query(
+    """
+    SELECT COALESCE(SUM(p.wager_amount), 0) FROM bet_participants p
+    INNER JOIN bets b ON b.id = p.bet_id
+    WHERE p.user_id = :userId AND b.status = :status
+    """
+  )
+  fun observeLockedBalance(userId: Long, status: BetStatus = BetStatus.ACTIVE): Flow<Long>
+
+  /** One-shot version of [observeLockedBalance], for checks inside a transaction. */
+  @Query(
+    """
+    SELECT COALESCE(SUM(p.wager_amount), 0) FROM bet_participants p
+    INNER JOIN bets b ON b.id = p.bet_id
+    WHERE p.user_id = :userId AND b.status = :status
+    """
+  )
+  suspend fun getLockedBalance(userId: Long, status: BetStatus = BetStatus.ACTIVE): Long
+
+  /** Returns how many bets with [status] (ACTIVE by default) the user is a participant in. */
+  @Query(
+    """
+    SELECT COUNT(DISTINCT p.bet_id) FROM bet_participants p
+    INNER JOIN bets b ON b.id = p.bet_id
+    WHERE p.user_id = :userId AND b.status = :status
+    """
+  )
+  suspend fun countBetsWithStatus(userId: Long, status: BetStatus = BetStatus.ACTIVE): Int
 }
