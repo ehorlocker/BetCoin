@@ -1,12 +1,8 @@
 # BetCoin App — Design Specification
 
-> **Status:** Approved (revised 2026-10-17)  
+> **Status:** Approved  
 > **Platform:** Android (Native Kotlin)  
 > **Architecture:** MVVM + Jetpack Compose + Room + Hilt  
-> **Design system:** [`dark-mode-design.md`](dark-mode-design.md) (Pastel Playroom Dark)  
-
-### Revision Log
-- **2026-10-17** — Resolved open questions: Step B participants persisted to Room; exiting New Bet discards the pending bet; resolving to an unpicked outcome refunds everyone; bailout eligibility counts locked wagers; leaderboard ranks by net worth (4 columns); delete/rename moved behind Admin Panel; admin PIN recovery code; profile pictures via an `AvatarStore` abstraction; Settings screen with theme picker; system insets; input limits; destructive migrations until v1.0. Fixed the RESOLVED→ACTIVE reopen reversal (it previously refunded losers, creating coins). The dev build indicator is now one app-wide banner instead of a Home-only one. Added a dev-only Dev Tools screen (seed sample data, wipe database, reset admin PIN) and backup rules (prod backed up, dev excluded). Spelled out why there's no in-app database switch.
 
 ---
 
@@ -37,8 +33,6 @@ Every new user begins with **1,000 BetCoin**.
 | DI | Dagger-Hilt |
 | Database | Room |
 | Async | Kotlin Coroutines + Flow |
-| PIN hashing | jBCrypt (`org.mindrot:jbcrypt`) |
-| Image loading | Coil 3 (`coil-compose`), new dependency for avatars |
 
 ### Reactive Data Flow
 ```
@@ -65,7 +59,7 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 | Column | Type | Constraints |
 |--------|------|-------------|
 | id | Long | PK, auto-generate |
-| username | String | UNIQUE (case-insensitive, `COLLATE NOCASE`), NOT NULL, 1–20 chars, trimmed |
+| username | String | UNIQUE, NOT NULL |
 | pinHash | String | NOT NULL |
 | balance | Long | NOT NULL, default 1000 |
 | totalWins | Int | NOT NULL, default 0 |
@@ -74,7 +68,7 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 | totalLost | Long | NOT NULL, default 0 |
 | bailoutCount | Int | NOT NULL, default 0 |
 | totalDebt | Long | NOT NULL, default 0 |
-| avatarRef | String? | NULL until set. Opaque key returned by `AvatarStore` (see §6.4) — not a file path or URI |
+| profilePictureUri | String? | NULL until set (local file URI) |
 | createdAt | Long | NOT NULL (epoch millis) |
 
 ### 3.2 Bet
@@ -102,7 +96,7 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 | userId | Long? | FK → User.id, nullable (null after user deletion) |
 | outcomeId | Long | FK → BetOutcome.id, NOT NULL |
 | wagerAmount | Long | NOT NULL |
-| payout | Long? | NULL until resolved. Gross amount credited at resolution: winners' share of the pot, `0` for losers, `wagerAmount` for everyone when no one picked the winning outcome (§5.3) |
+| payout | Long? | NULL until resolved |
 | deletedUsername | String? | Snapshot of username, set when user is deleted |
 
 ### 3.5 AppSettings
@@ -110,17 +104,10 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 |--------|------|-------------|
 | id | Int | PK, always 1 (single-row table) |
 | adminPinHash | String | NOT NULL |
-| recoveryCodeHash | String | NOT NULL. Hash of the admin recovery code (§5.6) |
-| themePreference | String | NOT NULL, default `SYSTEM` (enum: SYSTEM, LIGHT, DARK) |
 
 ### Data Classes (non-entity)
 - **BetWithDetails** — `bet: Bet`, `outcomes: List<BetOutcome>`, `participants: List<ParticipantWithUser>`
 - **ParticipantWithUser** — `participant: BetParticipant`, `user: User?`, `deletedUsername: String?`, `outcome: BetOutcome`
-
-### Schema Versioning
-- `exportSchema = true`, with schemas checked in under `app/schemas/`.
-- **Until the first tagged release (v1.0):** bump the version on every schema change and use `fallbackToDestructiveMigration()`. No real data needs to be kept yet.
-- **From v1.0 on:** every schema change ships with a Room `Migration` and a `MigrationTestHelper` test, and the destructive fallback is removed.
 
 ---
 
@@ -128,12 +115,10 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 
 ### 4.1 Navigation Graph
 ```
-App Launch ── Admin PIN set?
-               ├── NO  → Onboarding (admin PIN + recovery code) → Home
-               └── YES → PENDING bet exists?
-                          ├── YES → Recovery Screen ──┬── Return to Bet → New Bet Step B
-                          │                           └── Discard Bet → Home
-                          └── NO  → Home
+App Launch ── Check for PENDING bets?
+               ├── YES → Recovery Screen ──┬── Return to Bet → New Bet Step B/C
+               │                           └── Discard Bet → Home
+               └── NO → First Launch / Home
 
 Home ──┬── New Bet ── Step A ── Step B ── Step C (Review & Lock)
        ├── Leaderboard ── Player Detail
@@ -141,62 +126,46 @@ Home ──┬── New Bet ── Step A ── Step B ── Step C (Review &
        │                               ├── Cancel Flow
        │                               ├── Reopen Flow (RESOLVED/CANCELLED → ACTIVE)
        │                               └── Repeat Bet → New Bet Step B (pre-filled)
-       ├── Manage Players ── Add Player
-       │                   ├── Player Detail ── Bailout / Change Picture
-       │                   └── Admin Panel (PIN-gated) ── Player / Bet / App Settings
-       └── Settings (gear icon) ──┬── Theme
-                                  └── Dev Tools (dev flavor only, §14)
+       └── Manage Players ── Add Player
+                           ├── Player Detail ── Bailout
+                           └── Admin Panel (PIN-gated) ── Delete/Reset/PIN Reset
 ```
-
-### 4.1.1 System Insets
-The app runs edge-to-edge (`enableEdgeToEdge()`). Every screen applies `WindowInsets.safeDrawing` (via `Scaffold` content padding or `windowInsetsPadding`) so the status bar, navigation bar and display cutouts never cover interactive elements such as the top-bar Back button. Bottom sheets and dialogs respect `navigationBars` insets.
 
 ### 4.2 Screen Descriptions
 
 #### Home Screen
 - Hub with navigation buttons: **New Bet**, **Leaderboard**, **Bet History**, **Manage Players**
-- Gear icon in the top bar → **Settings**
-- Summary stats: active bet count and player count
-- **New Bet** is disabled (with a hint) when fewer than 2 players exist
-- **Dev flavor indicator**: shown here like on every other screen (see §14 "Dev Build Indicator")
+- May show summary stats (active bet count, etc.)
+- **Dev flavor indicator**: When running the `dev` build flavor, display a persistent banner/badge on the Home Screen (e.g., "DEV MODE" in a warning color) so it's immediately obvious this is the test version. Check `BuildConfig.FLAVOR == "dev"` to toggle visibility.
 
 #### Manage Players
 - Lists all registered users with their profile picture (or default avatar) and username
-- **Add Player** button → player creation form (username + 4-digit PIN entered twice to confirm)
+- **Add Player** button → navigates to player creation form
 - Tap a player → Player Detail screen
 - Gear icon → Admin Panel (requires master admin PIN)
-- **No destructive or balance actions here.** Delete and rename live only in the Admin Panel; bailout lives only on Player Detail.
 
 #### New Bet Flow (3 steps)
 
 **Step A — Create Bet**
 - Text field for bet prompt (e.g., "Who wins the next game of Smash?")
-- Dynamic list to add 2–8 outcomes (e.g., "Jay", "Austin", "Mike")
-- Must have at least 2 outcomes to proceed (validation rules in §10)
-- On **Next**: `createBet(prompt, outcomes)` writes the Bet (status `PENDING_CONFIRMATION`) and its outcomes to Room. Prompt and outcomes are fixed from then on; to change them, discard and start over.
+- Dynamic list to add 2+ outcomes (e.g., "Jay", "Austin", "Mike")
+- Must have at least 2 outcomes to proceed
 
 **Step B — Add Participants**
 - For each participant:
-  - Select user from dropdown (users already in this bet are excluded)
+  - Select user from dropdown
   - Pick an outcome
-  - Enter wager amount (1 up to the user's current balance)
+  - Enter wager amount (cannot exceed user's current balance)
   - Enter PIN to confirm
-- When the PIN is accepted, the participant is written to Room right away with `addParticipant`. This is what lets §11 Recovery restore them after a crash. No balance changes yet.
-- Participant list shows all added participants with an **X button** that removes them (`removeParticipant`) before locking
-- Minimum 2 participants required to continue to Step C
+- Participant list shows all added participants with an **X button** to remove before locking
+- All participant data is local ViewModel state until Step C
+- Minimum 2 participants required
 
 **Step C — Review & Lock**
 - Summary: bet prompt, outcomes, all participants with their picks and wagers
 - **Unanimous pick check**: if all participants picked the same outcome, show error and block confirmation
-- Each participant re-enters their PIN to confirm, one after another in list order
-- Wagers are re-checked against current balances when locking
+- Each participant re-enters their PIN to confirm
 - On confirmation: wagers deducted from balances atomically, bet status → ACTIVE
-- **Back** from Step C returns to Step B (participants kept)
-
-**Leaving the flow**
-- Back from Step A or B, or the top-bar close button, shows a **"Discard this bet?"** dialog. Confirming deletes the pending bet and its outcomes and participants (`discardPendingBet`). No money has moved, so this is always safe.
-- Before the bet row is written (Step A, before Next), leaving needs no confirmation unless text has been entered.
-- So there is at most one `PENDING_CONFIRMATION` bet at a time. It survives only a crash or force-close, which is what §11 handles.
 
 #### Active Bets (accessible from Bet History filtered to Active)
 - List of all ACTIVE bets
@@ -212,39 +181,30 @@ Accessed by tapping any bet in Bet History (or Active Bets). Displays the full b
   - Outcome they picked
   - Wager amount
   - Result indicator: WIN / LOSS / PENDING (based on bet status)
-  - Payout amount (if resolved): shows net gain/loss (`payout − wagerAmount`), e.g. `+150` / `−200` / `±0` for a push
+  - Payout amount (if resolved; shows net gain/loss)
 - **Pot Summary**: Total pot size, number of participants
-- **Resolution Info** (if RESOLVED): Winning outcome name, resolved date. If no one picked the winning outcome, also shows "No winners — all wagers refunded"
+- **Resolution Info** (if RESOLVED): Winning outcome name, resolved date
 - **Actions** (if ACTIVE): **Resolve** and **Cancel** buttons
 - **Actions** (if RESOLVED or CANCELLED): **Reopen Bet** and **Repeat Bet** buttons
 - **Cancelled Info** (if CANCELLED): Shows "Cancelled — all wagers refunded"
 
-#### Unanimous Consent (Resolve, Cancel, Reopen)
-These flows all need **every participant** to confirm. The shared sequence is:
-1. Show the action summary (e.g. "Resolve: *Jay* wins").
-2. Prompt each participant's PIN in list order, showing whose turn it is.
-3. A wrong PIN shows "Wrong PIN" and that participant can retry. Dismissing the dialog aborts the whole action with nothing changed. PINs already entered are not saved.
-4. Once the last PIN is accepted, the repository transaction runs.
-
-If a participant won't confirm, the fallback is the Admin Panel's **Admin Resolve** or **Force Cancel**. Participants deleted from the app can't confirm, so actions on bets that include them go through the admin.
-
 #### Resolve Flow
-- Select winning outcome from the bet's outcomes (any outcome, including ones nobody picked)
-- Unanimous consent (above)
-- Payouts calculated and distributed per §5.3, bet status → RESOLVED
+- Select winning outcome from the bet's outcomes
+- Each participant enters PIN to confirm resolution
+- Payouts calculated and distributed, bet status → RESOLVED
 
 #### Cancel Flow
-- Unanimous consent (above)
+- Any participant can propose cancellation
+- Requires **all participants** to enter their PIN (unanimous consent)
 - All wagers refunded, bet status → CANCELLED
 
 #### Reopen Flow
 - Available on **RESOLVED** or **CANCELLED** bets from the Bet Detail screen
-- Unanimous consent (above)
+- Requires **all participants** to enter their PIN (unanimous consent)
 - If reopening a **RESOLVED** bet:
-  - Every participant's `payout` is deducted from their balance. Winners give back their share of the pot. Losers have `payout = 0`, so nothing changes for them: their wager stays locked in the reopened pot. In a push, everyone's refunded wager is locked again.
-  - Each participant must have balance ≥ their `payout`, otherwise the reopen is blocked
-  - W/L stats are reverted using §5.8 in reverse (winners: `totalWins −= 1`, `totalEarnings −= payout − wager`; losers: `totalLosses −= 1`, `totalLost −= wager`; a push changes no stats)
-  - `payout` is reset to NULL on every participant; `winningOutcomeId` and `resolvedAt` are cleared
+  - All payouts are reversed (winnings deducted from winners, wagers returned to losers)
+  - W/L stats are reverted (winners lose a win, losers lose a loss, earnings/losses adjusted)
+  - `winningOutcomeId` is cleared, `resolvedAt` is cleared
   - Bet status → ACTIVE
 - If reopening a **CANCELLED** bet:
   - All wagers are re-deducted from participants' balances
@@ -260,36 +220,29 @@ If a participant won't confirm, the fallback is the Admin Panel's **Admin Resolv
   - Same outcomes
   - No participants (fresh start)
 - Navigates to New Bet flow at **Step B** (Add Participants) with prompt and outcomes already set
-- The new bet is a normal `PENDING_CONFIRMATION` bet, so the "Leaving the flow" discard rules apply
-- Blocked if another `PENDING_CONFIRMATION` bet exists (only reachable after a crash; Recovery handles that first)
 - The original bet is unaffected
 
 #### Leaderboard
-- Ranked by **net worth** = `balance − totalDebt`, descending, so bailouts count against you. Ties: higher balance first, then username A–Z.
-- Coins locked in ACTIVE bets are not counted. Net worth can be negative.
-- Columns (4): **Rank, Username, Net Worth, W-L**. Full stats are on Player Detail.
+- Table sorted by balance (descending)
+- Columns: Rank, Username, Balance, W-L, Earnings, Losses, Bailouts, Debt
 - Tap a row → Player Detail
 
 #### Bet History
-- Lists all bets except `PENDING_CONFIRMATION`, with filter tabs: **All / Active / Resolved / Cancelled**
-- Sorted newest first (`createdAt` desc)
-- Each entry shows: prompt, status, date, participant count, pot size
-- Empty state per tab (e.g. "No active bets")
+- Lists all bets with filter tabs: **All / Active / Resolved / Cancelled**
+- Each entry shows: prompt, status, date, participant count
 - Tap → Bet Detail
 
 #### Player Detail
-- Shows all user stats: balance, net worth, W-L, total earnings, total lost, bailouts, total debt, coins locked in active bets
+- Shows all user stats
 - **Profile Picture**: displays the player's profile picture (if set) or a default avatar placeholder
-- **Change Profile Picture** button (requires that player's PIN) opens a bottom sheet with these options:
-  - **Select from Gallery** — Android Photo Picker (`PickVisualMedia`, no storage permission needed)
-  - **Take Photo** — `TakePicture` contract into a `FileProvider` cache file (no `CAMERA` permission declared, so none is requested)
-  - **Remove Photo** (shown only when one is set) — clears the profile picture and reverts to the default avatar
-- **Bailout** button (requires that player's PIN), shown only when the player is eligible per §5.4
+- **Change Profile Picture** button — opens a bottom sheet or dialog with two options:
+  - **Select from Gallery** — pick an image from the device photo gallery
+  - **Take Photo** — capture a new image with the device camera
+  - **Remove Photo** — clear the profile picture and revert to the default avatar
+- **Bailout** button (visible only when balance < 100)
 
 #### Admin Panel (PIN-gated)
-- Requires master admin PIN to access, every time it's opened (no remembered session)
-- "Forgot admin PIN?" on the PIN dialog → enter the recovery code (§5.6)
-- Destructive actions (delete player, delete bet, force cancel) show a confirmation dialog
+- Requires master admin PIN to access
 - **Design principle:** The admin should be able to fix any data issue without ever needing to wipe app data.
 - Actions:
 
@@ -304,20 +257,12 @@ If a participant won't confirm, the fallback is the Admin Panel's **Admin Resolv
   - **Force Cancel Bet** — cancel any ACTIVE bet, refunding all wagers. No participant consent required.
   - **Admin Resolve Bet** — admin picks the winning outcome on any ACTIVE bet without participant PINs. Payouts calculated and distributed normally.
   - **Edit Bet Prompt** — fix typos or rename any bet (any status)
-  - **Remove Participant from ACTIVE Bet** — refunds that participant's wager, removes them from the bet. Blocked if it would leave fewer than 2 participants, or if everyone remaining picked the same outcome (force cancel instead).
+  - **Remove Participant from ACTIVE Bet** — refunds that participant's wager, removes them from the bet. Blocked if it would leave fewer than 2 participants (force cancel instead).
   - **Edit Participant Wager** — change a participant's wager amount on an ACTIVE bet. Adjusts user balance accordingly (refund difference or deduct additional).
   - **Delete Bet** — permanently remove a bet and all associated outcomes/participants from history. Only allowed on RESOLVED or CANCELLED bets.
 
   **App Settings:**
-  - **Change Admin PIN** — enter the new PIN twice (already authenticated by opening the panel)
-  - **Regenerate Recovery Code** — show a new recovery code once; the old one stops working
-
-#### Settings (ungated)
-- Reached from the gear icon on Home. No PIN needed, since nothing here touches players or bets.
-- **Theme**: System default / Light / Dark. Stored in `AppSettings.themePreference` and applied immediately, without a restart. System default follows `isSystemInDarkTheme()`.
-- Light palette: a light counterpart of [`dark-mode-design.md`](dark-mode-design.md), using the same color roles.
-- App version, plus the build flavor on dev builds.
-- **Dev Tools** row, shown on the dev flavor only (§14 "Dev Tools Screen")
+  - **Change Admin PIN** — change the master admin PIN
 
 ---
 
@@ -331,7 +276,7 @@ PENDING_CONFIRMATION → ACTIVE → RESOLVED
 RESOLVED  → ACTIVE  (via Reopen — unanimous PIN consent, payouts reversed)
 CANCELLED → ACTIVE  (via Reopen — unanimous PIN consent, wagers re-deducted)
 ```
-- **PENDING_CONFIRMATION**: Bet created at the end of Step A, participants being added (Step B). Leaving the flow deletes it (`discardPendingBet`); there's no CANCELLED transition from here.
+- **PENDING_CONFIRMATION**: Bet created, participants being added (Step B)
 - **ACTIVE**: All participants confirmed, wagers deducted
 - **RESOLVED**: Winning outcome selected, payouts distributed
 - **CANCELLED**: Unanimously cancelled, wagers refunded
@@ -351,49 +296,32 @@ winningWagers = sum of wagerAmount for participants who picked the winning outco
 For each winner:
   payout = (theirWager / winningWagers) * totalPot
 ```
-- Integer division: compute `theirWager * totalPot / winningWagers` with `Long` math, multiplying before dividing
-- The rounding remainder (`totalPot − sum of payouts`) goes to the winner with the largest wager
-- Tiebreaker for the remainder: the participant added first (lowest `BetParticipant.id`)
-- Losers: `payout = 0`
-- **No one picked the winning outcome** (`winningWagers == 0`): the bet still resolves to that outcome, but it's a **push**. Every participant gets `payout = wagerAmount`, so all wagers are refunded, and no W/L stats change.
-- Implement as a pure function (`PayoutCalculator`) so it can be unit-tested directly
+- Integer division — rounding remainder goes to the winner with the largest wager
+- Tiebreaker for rounding remainder: first participant added to the bet
 
 ### 5.4 Bailout System
-- Available when a user's **balance + coins locked in ACTIVE bets is less than 100**. Counting locked wagers stops someone from going all-in on a bet and then taking a bailout while the wager is still in play.
-- Requires that player's PIN
+- Available when a user's balance is **less than 100**
 - Adds **1,000 BetCoin** to balance
 - Increments `bailoutCount` by 1
 - Adds 1,000 to `totalDebt`
-- Bailout count and total debt are shown on Player Detail (shame stats), and debt pulls down the leaderboard's net worth ranking
-- Admin **Reset Player Balance** is a forced bailout that skips the eligibility check
+- Bailout count and total debt are visible on the leaderboard (shame stats)
 
 ### 5.5 PIN System
 - **4-digit numeric PIN**
-- Stored as a bcrypt hash (jBCrypt, cost 10). PINs are never stored or logged in plain text, including in fakes used for tests. A 4-digit PIN can be brute-forced offline, so hashing only keeps PINs from being read casually off the database. That's acceptable for a party game.
-- PINs don't need to be unique across players
+- Stored as hash (bcrypt or Argon2)
 - No lockout on failed attempts — just displays "Wrong PIN" error
 - Required at:
   - Participant joining a bet (Step B)
   - Bet confirmation (Step C — each participant re-enters)
   - Outcome resolution (each participant confirms)
   - Cancellation (each participant confirms)
-  - Reopen (each participant confirms)
-  - Bailout and Change Profile Picture (that player)
-- **PIN entry UI**: reusable modal dialog composable (not a navigation destination). It shows whose PIN is being asked for, a masked 4-digit input that auto-submits on the 4th digit, inline "Wrong PIN", and Cancel.
-- Hashing runs off the main thread (`Dispatchers.Default`)
+- **PIN entry UI**: reusable modal dialog composable (not a navigation destination)
 
 ### 5.6 Master Admin PIN
 - Set on **first app launch** (onboarding prompt)
 - Stored hashed in `AppSettings` table (single-row, id=1)
 - Required to access the Admin Panel
-- Can be changed from within the Admin Panel
-
-#### Recovery Code
-- During onboarding, once the admin PIN is set, the app generates a **12-character recovery code**. It's uppercase letters and digits with ambiguous characters left out (no 0/O/1/I), shown as `XXXX-XXXX-XXXX`, using `SecureRandom`.
-- It's shown **once**, with a "I've written this down" checkbox that has to be ticked before continuing. Only its bcrypt hash is stored (`AppSettings.recoveryCodeHash`).
-- "Forgot admin PIN?" → enter the recovery code (case-insensitive, dashes optional) → set a new admin PIN → a **new** recovery code is generated and shown once. The old code stops working.
-- The code can also be regenerated from the Admin Panel.
-- If both the PIN and the code are lost, clearing app data is the only way out. That's a documented, accepted risk.
+- Can be changed from within the Admin Panel (requires current admin PIN)
 
 ### 5.7 User Deletion
 - **Blocked** if user has any ACTIVE bets
@@ -401,17 +329,12 @@ For each winner:
   - `BetParticipant` rows are preserved
   - `deletedUsername` field is populated with the user's username (snapshot)
   - `userId` FK is set to `null`
-- The user's avatar is deleted through `AvatarStore.delete(avatarRef)`
 - This preserves bet history integrity while removing the user account
-- Bets that include a deleted participant can't be reopened (their PIN can't be entered). They can still be repeated, and they can still be viewed, edited and deleted by the admin.
 
 ### 5.8 Win/Loss Tracking
 - On bet resolution:
   - Winners: `totalWins += 1`, `totalEarnings += payout - wager` (net profit)
   - Losers: `totalLosses += 1`, `totalLost += wagerAmount`
-  - Push (no one picked the winning outcome): no stats change
-- Admin Resolve updates stats the same way. Cancel and Force Cancel never touch stats.
-- Reopen reverses exactly what resolution applied (§4.2 Reopen Flow)
 
 ---
 
@@ -435,11 +358,6 @@ ViewModel → Repository Interface → LocalRepository (Room DAOs)
 - Queries returning live data use `Flow<T>` (reactive observation).
 - One-shot mutations return `Unit` or a result type (e.g., `Long` for new IDs).
 - All suspend functions where Room would require coroutine scope.
-- Rule violations (insufficient balance, unanimous pick, ACTIVE-bet conflicts, duplicate username, and so on) throw a typed `BetCoinException` subclass (e.g. `InsufficientBalanceException(userId, required, available)`). ViewModels map these to user-facing messages. Nothing is written when a check fails.
-- **Nothing outside `data/` touches Room, DAOs, `Context.filesDir`, or file paths directly.** That includes the avatar storage below, so the whole persistence layer can be swapped at once.
-
-### Current Implementation Gap
-At this revision, `LocalUserRepository` is an in-memory placeholder. It stores PINs in plain text, `verifyPin` always returns `false`, and it isn't backed by Room. `LocalBetRepository` is entirely `TODO()`. Both must be implemented against the DAOs before any PIN-gated or bet flow can work.
 
 ### 6.1 UserRepository (interface)
 | Method | Description |
@@ -448,17 +366,15 @@ At this revision, `LocalUserRepository` is an in-memory placeholder. It stores P
 | `verifyPin(userId, pin)` | Verify PIN against stored hash, return Boolean |
 | `getUser(userId)` | Get user by ID |
 | `getAllUsers()` | Flow of all users |
-| `getLeaderboard()` | Flow of users sorted by net worth (`balance − totalDebt`) desc, then balance desc, then username |
-| `getLockedBalance(userId)` | Flow of the sum of the user's wagers in ACTIVE bets |
-| `bailout(userId)` | Throws if not eligible (§5.4). Otherwise adds 1000, increments bailoutCount, adds 1000 to totalDebt |
-| `forceBailout(userId)` | Admin: same as bailout without the eligibility check |
-| `deleteUser(userId)` | Cascade logic: block if ACTIVE bets, snapshot username, null FK, delete avatar |
+| `getLeaderboard()` | Flow of users sorted by balance desc |
+| `bailout(userId)` | Add 1000, increment bailoutCount, add 1000 to totalDebt |
+| `deleteUser(userId)` | Cascade logic: block if ACTIVE bets, snapshot username, null FK |
 | `resetPin(userId, newPin)` | Admin resets PIN (no old PIN needed) |
 | `updateBalance(userId, amount)` | Adjust balance by delta |
 | `setBalance(userId, newBalance)` | Admin sets balance to arbitrary value |
 | `updateUsername(userId, newUsername)` | Admin renames user (must remain unique) |
-| `updateProfilePicture(userId, imageUri)` | Reads the picked or captured image, saves it through `AvatarStore.save`, stores the returned `avatarRef`, and deletes the previous avatar |
-| `clearProfilePicture(userId)` | `AvatarStore.delete(avatarRef)`, then sets `avatarRef` to NULL |
+| `updateProfilePicture(userId, uri)` | Set or update the user's profile picture URI |
+| `clearProfilePicture(userId)` | Remove the user's profile picture |
 
 ### 6.2 BetRepository (interface)
 | Method | Description |
@@ -468,11 +384,9 @@ At this revision, `LocalUserRepository` is an in-memory placeholder. It stores P
 | `removeParticipant(participantId)` | Remove participant before lock |
 | `getBetWithDetails(betId)` | Flow of BetWithDetails |
 | `getActiveBets()` | Flow of ACTIVE bets |
-| `getAllBets()` | Flow of all non-pending bets, newest first |
-| `getPendingBet()` | Flow of the single `PENDING_CONFIRMATION` bet, or null (used by Recovery) |
-| `discardPendingBet(betId)` | Delete a `PENDING_CONFIRMATION` bet + outcomes + participants. Throws if the bet isn't pending. |
+| `getAllBets()` | Flow of all bets |
 | `lockBet(betId)` | @Transaction: validate, deduct wagers, set ACTIVE |
-| `resolveBet(betId, winningOutcomeId)` | @Transaction: calculate payouts (`PayoutCalculator`, including the push case), distribute, update stats, set RESOLVED |
+| `resolveBet(betId, winningOutcomeId)` | @Transaction: calculate payouts, distribute, update stats, set RESOLVED |
 | `cancelBet(betId)` | @Transaction: refund all wagers, set CANCELLED |
 | `forceCancelBet(betId)` | @Transaction: same as cancelBet but callable without participant consent (admin-only) |
 | `adminResolveBet(betId, winningOutcomeId)` | @Transaction: same as resolveBet but without participant PINs (admin-only) |
@@ -490,22 +404,6 @@ At this revision, `LocalUserRepository` is an in-memory placeholder. It stores P
 | `setAdminPin(pin)` | Set/update admin PIN (hashed) |
 | `verifyAdminPin(pin)` | Verify admin PIN against stored hash |
 | `isFirstLaunch()` | Check if admin PIN has been set |
-| `regenerateRecoveryCode()` | Generate a new code, store its hash, return the plain code once for display |
-| `resetAdminPinWithRecoveryCode(code, newPin)` | Verify the code; if it matches, set the new PIN and return a freshly generated recovery code. Otherwise throw. |
-| `getThemePreference()` | Flow of `ThemePreference` (SYSTEM / LIGHT / DARK) |
-| `setThemePreference(pref)` | Persist the theme choice |
-
-### 6.4 AvatarStore (interface)
-Keeps image storage behind the same swappable boundary as the repositories, so profile pictures can later move to a database or cloud storage without touching the UI or `User` rows. The UI never sees file paths, only `avatarRef`s and a loadable model.
-
-| Method | Description |
-|--------|-------------|
-| `save(source: Uri): String` | Decode, downscale to at most 512×512 (keeping the aspect ratio, EXIF orientation applied), encode as JPEG at quality 85, store it, and return an opaque `avatarRef` |
-| `delete(avatarRef)` | Remove the stored image. A missing image is fine (no-op). |
-| `load(avatarRef): Any?` | Returns a model the image loader can display (Coil `ImageRequest` data, e.g. a `File` or URL), or null if the image is missing. The UI falls back to the default avatar. |
-
-- **`LocalAvatarStore`** (current) stores files in `filesDir/avatars/<uuid>.jpg`, and the `avatarRef` is the file name. Using a UUID rather than the user id means an update never shows a stale cached image.
-- **Future:** `RemoteAvatarStore` uploads to cloud storage and returns its key/URL, or a `RoomAvatarStore` keeps the bytes in a blob table. Either is swapped in with `@Binds` in `RepositoryModule`.
 
 ---
 
@@ -515,18 +413,17 @@ These operations must be atomic (`@Transaction`):
 
 | Operation | What's Atomic |
 |-----------|---------------|
-| `lockBet` | Validate ≥ 2 participants, not unanimous, every wager ≤ current balance → deduct all wagers → set status ACTIVE |
-| `resolveBet` | Calculate payouts → credit each participant's `payout` (winners, or everyone in a push) → update W/L stats (none for a push) → set status RESOLVED |
-| `discardPendingBet` | Delete participant rows → outcome rows → bet row (PENDING_CONFIRMATION only) |
+| `lockBet` | Validate unanimous check → deduct all wagers → set status ACTIVE |
+| `resolveBet` | Calculate payouts → credit winners → update W/L stats → set status RESOLVED |
 | `cancelBet` | Refund all wagers → set status CANCELLED |
 | `forceCancelBet` | Same as cancelBet — admin override, no participant PINs required |
 | `adminResolveBet` | Same as resolveBet — admin override, no participant PINs required |
-| `adminRemoveParticipant` | Validate ≥ 2 remain and the rest are not all on one outcome → refund participant wager → remove participant row |
+| `adminRemoveParticipant` | Refund participant wager → remove participant row → validate ≥ 2 remain |
 | `adminEditWager` | Calculate difference → refund/deduct from user balance → update wager amount |
 | `deleteBet` | Delete all BetParticipant rows → delete all BetOutcome rows → delete Bet row |
-| `reopenBet` (from RESOLVED) | Validate every participant still exists and has balance ≥ their `payout` → deduct each participant's `payout` (losers' is 0, so they're unchanged) → revert W/L stats → null all payouts → clear winningOutcomeId/resolvedAt → set ACTIVE |
+| `reopenBet` (from RESOLVED) | Deduct payouts from winners → return wagers to losers → revert W/L stats → clear winningOutcomeId/resolvedAt → set ACTIVE |
 | `reopenBet` (from CANCELLED) | Re-deduct all wagers from participants → set ACTIVE |
-| `deleteUser` | Validate no ACTIVE bets → snapshot username → null out FK → delete user row. The avatar file is deleted after the transaction commits. |
+| `deleteUser` | Snapshot username → null out FK → delete user row |
 
 ---
 
@@ -534,15 +431,12 @@ These operations must be atomic (`@Transaction`):
 
 | ViewModel | Screen | Key State |
 |-----------|--------|-----------|
-| OnboardingViewModel | First Launch | Admin PIN entry/confirm, recovery code display |
-| RecoveryViewModel | Recovery Screen | Pending bet (prompt, participant count), resume/discard |
 | HomeViewModel | Home Screen | Active bet count, user count |
-| ManagePlayersViewModel | Manage Players | User list (Flow), add-player form. No delete, rename or bailout. |
-| PlayerDetailViewModel | Player Detail | User stats, locked balance, bailout eligibility, avatar actions |
-| AdminViewModel | Admin Panel | User list, bet list, admin actions, recovery code |
-| SettingsViewModel | Settings | Theme preference |
-| NewBetViewModel | New Bet (Steps A-C) | Current step, pending betId, prompt/outcomes form, participants (Flow from Room), add/remove, lock, discard |
-| BetDetailViewModel | Bet Detail | BetWithDetails (Flow), resolve/cancel/reopen/repeat actions, PIN consent sequence |
+| ManagePlayersViewModel | Manage Players | User list (Flow) |
+| PlayerDetailViewModel | Player Detail | User stats, bailout eligibility |
+| AdminViewModel | Admin Panel | User list, admin actions |
+| CreateBetViewModel | New Bet (Steps A-C) | Prompt, outcomes, mutable participants list (add/remove) |
+| BetDetailViewModel | Bet Detail | BetWithDetails (Flow), resolve/cancel actions |
 | LeaderboardViewModel | Leaderboard | Sorted user list (Flow) |
 | BetHistoryViewModel | Bet History | All bets (Flow), filter state |
 
@@ -576,9 +470,6 @@ abstract class RepositoryModule {
     
     @Binds @Singleton
     abstract fun bindSettingsRepository(impl: LocalSettingsRepository): SettingsRepository
-
-    @Binds @Singleton
-    abstract fun bindAvatarStore(impl: LocalAvatarStore): AvatarStore
 }
 ```
 
@@ -590,64 +481,48 @@ abstract class RepositoryModule {
 
 | Scenario | Behavior |
 |----------|----------|
-| Wager exceeds balance | Block — show error, cannot exceed current balance (checked at Step B and again at lock) |
-| Wager is 0, negative, or not a whole number | Block — wager must be an integer ≥ 1 |
-| User's balance is ≤ 0 (e.g. admin set it negative) | Can't join bets until bailed out or adjusted |
+| Wager exceeds balance | Block — show error, cannot exceed current balance |
 | All participants pick same outcome | Block at lock — error message, no wagers deducted |
-| Resolved to an outcome nobody picked | Push — everyone refunded (`payout = wager`), no W/L stats change |
-| User tries to bailout when balance + locked wagers ≥ 100 | Block — Bailout button hidden; repository throws if called anyway |
-| Fewer than 2 players exist | New Bet disabled on Home with a hint to add players |
+| User tries to bailout with balance >= 100 | Block — bailout only available when balance < 100 |
 | Delete user with ACTIVE bets | Block — must resolve/cancel bets first |
 | Same user tries to join bet twice | Block — one participation per user per bet |
 | Bet with < 2 participants at lock | Block — minimum 2 participants required |
 | Bet with < 2 outcomes | Block — minimum 2 outcomes required |
-| Bet with > 8 outcomes | Block — Add Outcome disabled at 8 |
-| Blank or duplicate outcome text | Block — each outcome 1–40 chars after trimming, unique ignoring case |
-| Blank or overlong prompt | Block — 1–120 chars after trimming |
-| Username blank, > 20 chars, or differs from an existing one only in case | Block — 1–20 chars after trimming, unique ignoring case |
-| PIN not exactly 4 digits | Block — digits only, exactly 4 |
-| User leaves New Bet flow | "Discard this bet?" → deletes the pending bet (§4.2) |
 | Rounding remainder in payouts | Goes to largest-wager winner (tiebreaker: first added) |
 | Wrong PIN entered | "Wrong PIN" message, no lockout, can retry |
-| App force-closed during bet creation | On relaunch, show Recovery Screen with Return to Bet / Discard Bet (see Section 11) |
-| Participant dismisses a PIN prompt during a consent sequence | Whole action aborted, nothing changed |
+| App force-closed during bet creation | On relaunch, show Recovery Screen with only option to return to the incomplete bet (see Section 11) |
 | Admin sets negative balance | Allow — balance is a Long, admin has full control |
 | Admin renames to existing username | Block — username must remain unique |
 | Admin removes participant leaving < 2 | Block — must force cancel the bet instead |
-| Admin removes participant leaving everyone on one outcome | Block — must force cancel the bet instead |
-| Admin PIN forgotten | "Forgot admin PIN?" → recovery code (§5.6) |
 | Admin edits wager, user can't cover increase | Block — user must have sufficient balance for the additional amount |
 | Admin deletes ACTIVE bet | Block — must cancel or resolve first, then delete |
 | Admin edits wager on RESOLVED bet | Block — wager edits only on ACTIVE bets |
 | Reopen cancelled bet, participant can't cover wager | Block — all participants must have sufficient balance |
-| Reopen resolved bet, winner spent their winnings | Block — every participant must have balance ≥ their `payout` |
+| Reopen resolved bet, winner spent their winnings | Block — winner must have enough balance to return payouts |
 | Reopen bet with deleted participant | Block — all original participants must still exist |
 | Repeat bet | Creates new independent bet, original unaffected |
-| Stored avatar missing or unreadable | Gracefully fall back to default avatar placeholder |
-| Picked/captured image can't be decoded | Show "Couldn't use that image"; existing avatar unchanged |
-| User cancels picker or camera | No change |
-| No camera app on the device | Hide **Take Photo** |
-| Large image selected for profile picture | `AvatarStore.save` downsamples while decoding (never loads the full bitmap), then saves at ≤ 512px |
+| Profile picture file deleted externally | Gracefully fall back to default avatar placeholder |
+| Profile picture URI is invalid/unreadable | Gracefully fall back to default avatar placeholder |
+| Camera/gallery permission denied | Show permission rationale dialog; if permanently denied, guide user to app settings |
+| Large image selected for profile picture | Resize/compress before saving to avoid memory issues |
 
 ---
 
 ## 11. Interrupted Bet Recovery
 
-If the app is force-closed (or crashes) while a bet is in PENDING_CONFIRMATION status, there will be an incomplete bet in Room with its outcomes and any participants who already confirmed in Step B. A normal exit from the flow discards the bet (§4.2), so a pending bet at launch always means the app was interrupted.
+If the app is force-closed (or crashes) while a bet is in PENDING_CONFIRMATION status, there may be an incomplete bet saved in Room with partial participant data.
 
 ### On App Launch
-1. If `isFirstLaunch()` → Onboarding (§12). Otherwise:
-2. Query `getPendingBet()`
-3. If **found**: show a **Recovery Screen** instead of the normal Home Screen
-4. The Recovery Screen displays:
+1. Query Room for any bets with status = `PENDING_CONFIRMATION`
+2. If **one or more found**: show a **Recovery Screen** instead of the normal Home Screen
+3. The Recovery Screen displays:
    - Message: "You have an unfinished bet"
    - The bet prompt
    - Number of participants added so far
-   - **"Return to Bet"** button — always opens **Step B** with the saved participants loaded. Step C confirmations are never saved, so there's nothing to resume there; the group taps Continue again from Step B.
-   - **"Discard Bet"** button — `discardPendingBet`, then navigates to Home
-5. No other navigation is available from this screen. Back exits the app, and the user must either resume or discard.
-6. If **more than one** pending bet is found (shouldn't happen; legacy or corrupt data), discard all but the newest before showing the screen
-7. If **no pending bet is found**: go to Home
+   - **"Return to Bet"** button — navigates directly to the New Bet flow (Step B or Step C depending on state)
+   - **"Discard Bet"** button — deletes the PENDING_CONFIRMATION bet and all its participants/outcomes, then navigates to Home
+4. No other navigation is available from this screen — the user must either resume or discard
+5. If **no PENDING_CONFIRMATION bets found**: launch normally (First Launch or Home Screen)
 
 ### Why This Matters
 - Participants in Step B have already entered PINs to join — their intent is recorded
@@ -660,81 +535,77 @@ If the app is force-closed (or crashes) while a bet is in PENDING_CONFIRMATION s
 ## 12. First Launch Flow
 
 1. App detects no admin PIN set (`isFirstLaunch()` returns true)
-2. Prompt user to create a master admin PIN (4-digit, entered twice)
+2. Prompt user to create a master admin PIN (4-digit)
 3. Store hashed PIN in `AppSettings` table
-4. Generate and show the **recovery code** once (§5.6); continue only after "I've written this down" is ticked
-5. Navigate to Home Screen (Onboarding is popped off the back stack)
-6. User creates their first player(s) via Manage Players. Home's New Bet stays disabled until there are 2 players.
+4. Navigate to Home Screen
+5. User creates their first player(s) via Manage Players
 
 ---
 
-## 13. Project Structure
-
-✅ = exists today (may still be a placeholder; see §6 "Current Implementation Gap"), 🆕 = still to create.
+## 13. Project Structure (Planned)
 
 ```
 app/src/main/java/com/betcoin/
 ├── di/
-│   ├── DatabaseModule.kt                 ✅
-│   └── RepositoryModule.kt               ✅ (+ AvatarStore binding 🆕)
+│   ├── DatabaseModule.kt
+│   └── RepositoryModule.kt
 ├── data/
 │   ├── database/
-│   │   ├── BetCoinDatabase.kt            ✅
-│   │   ├── converter/BetStatusConverter.kt ✅
-│   │   ├── dao/                          ✅ User, Bet, BetOutcome, BetParticipant, AppSettings
-│   │   └── entity/                       ✅ User, Bet, BetOutcome, BetParticipant, AppSettings
+│   │   ├── BetCoinDatabase.kt
+│   │   ├── dao/
+│   │   │   ├── UserDao.kt
+│   │   │   ├── BetDao.kt
+│   │   │   ├── BetOutcomeDao.kt
+│   │   │   ├── BetParticipantDao.kt
+│   │   │   └── AppSettingsDao.kt
+│   │   └── entity/
+│   │       ├── User.kt
+│   │       ├── Bet.kt
+│   │       ├── BetOutcome.kt
+│   │       ├── BetParticipant.kt
+│   │       └── AppSettings.kt
 │   ├── model/
-│   │   ├── BetStatus.kt                  ✅
-│   │   ├── BetWithDetails.kt             ✅
-│   │   ├── ParticipantWithUser.kt        ✅
-│   │   ├── ThemePreference.kt            🆕
-│   │   └── BetCoinException.kt           🆕 typed rule violations
-│   ├── payout/PayoutCalculator.kt        🆕 pure function, unit-tested
-│   ├── avatar/
-│   │   ├── AvatarStore.kt                🆕 interface
-│   │   └── LocalAvatarStore.kt           🆕 filesDir/avatars
+│   │   ├── BetStatus.kt
+│   │   ├── BetWithDetails.kt
+│   │   └── ParticipantWithUser.kt
 │   └── repository/
-│       ├── UserRepository.kt             ✅ interface
-│       ├── BetRepository.kt              ✅ interface
-│       ├── SettingsRepository.kt         ✅ interface
+│       ├── UserRepository.kt          # Interface
+│       ├── BetRepository.kt           # Interface
+│       ├── SettingsRepository.kt      # Interface
 │       └── local/
-│           ├── LocalUserRepository.kt    ✅ in-memory placeholder → Room
-│           ├── LocalBetRepository.kt     ✅ all TODO() → Room
-│           └── LocalSettingsRepository.kt ✅ Room + jBCrypt
+│           ├── LocalUserRepository.kt      # Room implementation
+│           ├── LocalBetRepository.kt       # Room implementation
+│           └── LocalSettingsRepository.kt  # Room implementation
 ├── ui/
-│   ├── theme/                            ✅ Color, Shape, Theme, Type (light palette 🆕)
-│   ├── components/                       ✅ BetCoinAvatar/Button/Card/Chip/Input, DevModeIndicator (moves to the app root, see §14)
-│   │   └── PinEntryDialog.kt             🆕
-│   ├── onboarding/                       ✅ OnboardingScreen/ViewModel (+ recovery code 🆕)
-│   ├── recovery/                         🆕 RecoveryScreen/ViewModel
-│   ├── home/                             ✅ HomeScreen/ViewModel
-│   ├── players/                          ✅ ManagePlayers, PlayerDetail
-│   ├── admin/                            🆕 AdminScreen/ViewModel
-│   ├── newbet/                           ✅ NewBetScreen (placeholder) + NewBetViewModel 🆕
-│   ├── betdetail/                        🆕 BetDetailScreen/ViewModel
-│   ├── leaderboard/                      ✅ LeaderboardScreen/ViewModel
-│   ├── bethistory/                       ✅ BetHistoryScreen (placeholder) + ViewModel 🆕
-│   └── settings/                         🆕 SettingsScreen/ViewModel
-├── navigation/NavGraph.kt                ✅ (Routes object inside)
-├── MainActivity.kt                       ✅
-└── BetCoinApp.kt                         ✅ Application class, @HiltAndroidApp
+│   ├── theme/
+│   │   └── Theme.kt
+│   ├── components/
+│   │   └── PinEntryDialog.kt
+│   ├── home/
+│   │   ├── HomeScreen.kt
+│   │   └── HomeViewModel.kt
+│   ├── players/
+│   │   ├── ManagePlayersScreen.kt
+│   │   ├── ManagePlayersViewModel.kt
+│   │   ├── PlayerDetailScreen.kt
+│   │   ├── PlayerDetailViewModel.kt
+│   │   ├── AdminScreen.kt
+│   │   └── AdminViewModel.kt
+│   ├── bet/
+│   │   ├── CreateBetScreen.kt
+│   │   ├── CreateBetViewModel.kt
+│   │   ├── BetDetailScreen.kt
+│   │   └── BetDetailViewModel.kt
+│   ├── leaderboard/
+│   │   ├── LeaderboardScreen.kt
+│   │   └── LeaderboardViewModel.kt
+│   └── history/
+│       ├── BetHistoryScreen.kt
+│       └── BetHistoryViewModel.kt
+├── navigation/
+│   └── NavGraph.kt
+└── BetCoinApp.kt (Application class, @HiltAndroidApp)
 ```
-
-Flavor-specific source sets:
-```
-app/src/dev/
-├── AndroidManifest.xml                   🆕 allowBackup=false override
-├── java/com/betcoin/devtools/            🆕 DevToolsEntry impl, DevToolsScreen/ViewModel, SampleDataSeeder
-└── res/                                  ✅ app_name "BetCoin DEV"; 🆕 DEV launcher icon, no-backup rules
-app/src/prod/
-└── java/com/betcoin/devtools/            🆕 no-op DevToolsEntry
-```
-
-### Testing Expectations
-- **Unit tests (JVM):** `PayoutCalculator`, covering proportional split, remainder, tie on largest wager, and push. Also every ViewModel, using fake repositories. Fakes must hash or compare PINs the same way the real implementation does and never keep plain-text PINs in shared state.
-- **Instrumented (in-memory Room):** every `@Transaction` operation in §7, including its failure cases, which must leave the database unchanged. Also the uniqueness and FK behavior from §3.
-- **Compose UI tests:** each screen's states (loading, empty, error) and its main interactions.
-- **Emulator check:** verify UI changes on the `BetCoin_Test` emulator per AGENTS.md before marking a ticket done.
 
 ---
 
@@ -745,78 +616,39 @@ Two product flavors ensure testing never touches the production database.
 ### Gradle Configuration
 ```kotlin
 android {
-    buildFeatures { buildConfig = true }
     flavorDimensions += "environment"
     productFlavors {
         create("prod") {
             dimension = "environment"
-            applicationId = "com.betcoin"
-            buildConfigField("String", "DB_NAME", "\"betcoin.db\"")
+            applicationIdSuffix = ""     // com.betcoin
+            resValue("string", "app_name", "BetCoin")
         }
         create("dev") {
             dimension = "environment"
-            applicationId = "com.betcoin.dev"
-            buildConfigField("String", "DB_NAME", "\"betcoin_dev.db\"")
+            applicationIdSuffix = ".dev" // com.betcoin.dev
+            resValue("string", "app_name", "BetCoin DEV")
         }
     }
 }
 ```
-The app name comes from resources: `src/main/res/values/strings.xml` → "BetCoin", overridden by `src/dev/res/values/strings.xml` → "BetCoin DEV".
 
 ### How It Works
-- **Different `applicationId`**: both flavors install side by side on the same device
-- **Different database name**: `DatabaseModule` reads `BuildConfig.DB_NAME`, so `prod` uses `"betcoin.db"` and `dev` uses `"betcoin_dev.db"`
-- **Same DAOs, same schema**: the flavors share all code; only the database file differs. Avatars live in each app's own `filesDir`, so they're isolated too.
-- **Visual distinction**: the dev flavor is named "BetCoin DEV" in the launcher
-- **In-app indicator**: every screen shows the dev banner described below
+- **Different `applicationId`** — both flavors install side-by-side on the same device
+- **Different database name** — `DatabaseModule` uses `BuildConfig.FLAVOR` to name the Room database:
+  - `prod` → `"betcoin.db"`
+  - `dev`  → `"betcoin_dev.db"`
+- **Same DAOs, same schema** — the flavors share all code; only the database file differs
+- **Visual distinction** — dev flavor gets `"BetCoin DEV"` as the app name so you can tell them apart in the launcher
+- **In-app indicator** — Home Screen shows a persistent "DEV MODE" banner when `BuildConfig.FLAVOR == "dev"`, so you always know which version you're using
 
-### Dev Build Indicator
-On the `dev` flavor, **every screen, dialog and bottom sheet** must make it obvious this isn't the real app:
-- **One banner at the app root, not per screen.** `MainActivity` wraps the `NavGraph` in a root layout. When `BuildConfig.FLAVOR == "dev"`, that layout draws a full-width strip directly under the status bar (inside `WindowInsets.statusBars`) and pushes the content below it. New screens inherit it automatically, and individual screens never place `DevModeIndicator` themselves. The current per-screen calls on Home, Onboarding and Manage Players are removed.
-- **Content:** `DEV BUILD · betcoin_dev.db` in `labelSmall`, `onErrorContainer` on `errorContainer`, about 24dp tall. It's visible even when the app is in light theme, and it isn't clickable.
-- **Dialogs and sheets** (PIN entry, confirmations, avatar picker) sit above the root layout, so the banner stays visible under the 60% scrim, still readable through it. Full-screen dialogs aren't used.
-- **Theme accent:** on dev, the status bar area behind the banner uses the error container color too, so screenshots and the recent-apps view also show it's a dev build.
-- **Launcher:** the dev flavor gets "BetCoin DEV" as its name, plus a distinct adaptive icon (same artwork with a coral "DEV" badge), from `src/dev/res`.
-- **Prod builds:** nothing is drawn and no space is reserved.
-- **Test:** a Compose UI test runs on the dev flavor, goes through each top-level destination, and checks the banner is shown. A JVM test checks the prod flavor's root layout draws nothing.
-
-### DatabaseModule
+### DatabaseModule Change
 ```kotlin
 @Provides @Singleton
-fun provideDatabase(@ApplicationContext ctx: Context): BetCoinDatabase =
-    Room.databaseBuilder(ctx, BetCoinDatabase::class.java, BuildConfig.DB_NAME)
-        .fallbackToDestructiveMigration(dropAllTables = true) // pre-v1.0 only, see §3 Schema Versioning
-        .build()
+fun provideDatabase(@ApplicationContext ctx: Context): BetCoinDatabase {
+    val dbName = if (BuildConfig.FLAVOR == "dev") "betcoin_dev.db" else "betcoin.db"
+    return Room.databaseBuilder(ctx, BetCoinDatabase::class.java, dbName).build()
+}
 ```
-
-### Why Two Apps (and no in-app database switch)
-Separate flavors with separate databases are deliberate. There's **no** in-app way to switch databases:
-- An in-app switch would ship test tooling and a way to reach test data inside the real app. One wrong tap during game night would mix fake balances into real standings.
-- With two apps, it's always obvious which one is open (launcher name and icon, plus the app-wide banner), and each has its own data.
-- Anything that should behave differently on dev (tools, backup, migrations) belongs in the `dev` source set or in flavor-specific resources, never behind a runtime toggle in `main`.
-
-### Dev Tools Screen (dev flavor only)
-A screen for setting up and resetting test states quickly. **It isn't compiled into prod.**
-- **Where:** a **Dev Tools** row at the bottom of Settings, shown only on dev. It isn't PIN-gated, since the whole app is a test build.
-- **How it's kept out of prod:** `main` declares a small `DevToolsEntry` interface (a `NavGraphBuilder` extension plus a Settings row composable). `src/dev` provides the real implementation; `src/prod` provides a no-op that registers no route and draws no row. All Dev Tools code, including the sample-data seeder, lives in `src/dev/java/com/betcoin/devtools/`.
-- Every action shows a confirmation dialog first, and a snackbar when it's done.
-
-| Action | What it does |
-|--------|--------------|
-| **Seed sample data** | Replaces the dev database with a fixed sample set. Admin PIN `0000` (recovery code shown once, as usual). Five players: Austin, Sam, Jay, Eric, Mike, with PINs `1111` `2222` `3333` `4444` `5555`. Mike has 2 bailouts and a balance under 100, so he's eligible for another. There's at least one ACTIVE bet with 3 outcomes where one outcome nobody picked (so the push can be tested), one RESOLVED, one CANCELLED, and one RESOLVED bet that includes a deleted player. Starts a fresh dev database each time, so the result is always the same. |
-| **Seed pending bet** | Adds one `PENDING_CONFIRMATION` bet with 2 participants and then closes the app, so the next launch shows the Recovery screen |
-| **Wipe dev database** | `clearAllTables()`, deletes `filesDir/avatars/`, then restarts at Onboarding (first launch) |
-| **Reset admin PIN** | Clears the admin PIN and recovery code but keeps players and bets. Next launch goes to Onboarding to set a new PIN. |
-| **Info** | Database file name, schema version, row counts per table, app version/build |
-
-- The seeder writes through the repositories (not raw DAO inserts), so sample data follows the same rules and hashing as real data. Bets are created with `createBet` → `addParticipant` → `lockBet` → `resolveBet` / `cancelBet`.
-- These sample PINs exist only in the dev seeder. Prod never contains them.
-
-### Backup Rules
-- **Prod:** Android Auto Backup is on. `data_extraction_rules.xml` (API 31+) and `backup_rules.xml` (API 24–30) include the Room database (`betcoin.db` plus its `-wal`/`-shm` files) and `filesDir/avatars/` for both `cloud-backup` and `device-transfer`. Then switching phones keeps players, balances, bet history and pictures.
-- **Dev:** no backup. `src/dev/AndroidManifest.xml` overrides `android:allowBackup="false"` (with `tools:replace`), and dev-flavor copies of both rule files exclude everything, in case the manifest override is ever dropped.
-- A restored prod database can come from an older app version. Before v1.0, the destructive migration fallback would wipe it on restore. That's accepted, since there's no real data yet. After v1.0, real migrations handle it.
-- **Test:** check the prod rules with `adb shell bmgr backupnow com.betcoin` on the emulator, then uninstall, reinstall and restore. A JVM or lint check confirms the dev merged manifest has `allowBackup=false`.
 
 ### Usage
 - **`./gradlew installProdDebug`** — install production flavor (debug build)
