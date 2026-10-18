@@ -107,6 +107,10 @@ interface BetRepository {
     /**
      * Admin-only cancel: same as [cancelBet] but requires no participant consent.
      *
+     * Only `ACTIVE` bets can be cancelled; any other status throws
+     * [com.betcoin.data.model.InvalidBetStateException]. An unknown bet or a deleted participant
+     * throws [com.betcoin.data.model.InvalidInputException].
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun forceCancelBet(betId: Long)
@@ -130,18 +134,30 @@ interface BetRepository {
     /**
      * Admin-only resolve: same as [resolveBet] but requires no participant PINs.
      *
+     * Only `ACTIVE` bets can be resolved ([com.betcoin.data.model.InvalidBetStateException]
+     * otherwise). An unknown bet, or an outcome that belongs to another bet, throws
+     * [com.betcoin.data.model.InvalidInputException].
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long)
 
     /**
-     * Admin operation: edits the bet's prompt text.
+     * Admin operation: edits the bet's prompt text. Allowed in any status.
+     *
+     * The prompt is trimmed and must be 1-120 characters, and the bet must exist; otherwise
+     * [com.betcoin.data.model.InvalidInputException] is thrown.
      */
     suspend fun updateBetPrompt(betId: Long, newPrompt: String)
 
     /**
      * Admin operation: removes a participant from an ACTIVE bet and refunds
      * their wager.
+     *
+     * Throws [com.betcoin.data.model.InvalidInputException] if the bet, participant or user is missing, the
+     * participant belongs to another bet, or fewer than 2 participants would remain;
+     * [com.betcoin.data.model.InvalidBetStateException] if the bet is not ACTIVE; and [com.betcoin.data.model.UnanimousPickException]
+     * if everyone left would be on the same outcome.
      *
      * Implementation must run inside a transaction.
      */
@@ -151,13 +167,19 @@ interface BetRepository {
      * Admin operation: adjusts a participant's wager to [newWagerAmount], refunding
      * or deducting the balance difference.
      *
+     * Throws [com.betcoin.data.model.InvalidInputException] if the participant or user is missing or the
+     * wager is below 1, [com.betcoin.data.model.InvalidBetStateException] if the bet is not ACTIVE, and
+     * [com.betcoin.data.model.InsufficientBalanceException] if an increase exceeds the user's balance.
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun adminEditWager(participantId: Long, newWagerAmount: Long)
 
     /**
      * Deletes a bet and its outcomes and participants. Only allowed for
-     * `RESOLVED` or `CANCELLED` bets.
+     * `RESOLVED` or `CANCELLED` bets; any other status throws
+     * [com.betcoin.data.model.InvalidBetStateException]. An unknown bet throws
+     * [com.betcoin.data.model.InvalidInputException]. User balances and stats are untouched.
      */
     suspend fun deleteBet(betId: Long)
 
