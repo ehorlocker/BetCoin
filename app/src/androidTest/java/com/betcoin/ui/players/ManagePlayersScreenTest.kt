@@ -1,14 +1,18 @@
 package com.betcoin.ui.players
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.betcoin.data.database.entity.User
-import com.betcoin.data.repository.UserRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import com.betcoin.ui.theme.BetCoinTheme
+import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,83 +26,119 @@ class ManagePlayersScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    @Test
-    fun managePlayersScreen_showsTitleAndPlayer() {
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(listOf(
-                User(id = 1, username = "Alice", pinHash = "hash", balance = 1500, totalWins = 5, totalLosses = 2, totalEarnings = 2000, totalLost = 500, totalDebt = 0, bailoutCount = 0, createdAt = 0),
-            ))
-            override fun getLeaderboard(): Flow<List<User>> = flowOf(emptyList())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-        }
+    private val repository = PlayersTestRepository()
 
+    private fun showScreen(
+        onPlayerClick: (Long) -> Unit = {},
+        onAdminPanel: () -> Unit = {},
+    ) {
+        val viewModel = ManagePlayersViewModel(repository)
         composeTestRule.setContent {
-            ManagePlayersScreen(viewModel = ManagePlayersViewModel(fakeUserRepo))
+            BetCoinTheme {
+                ManagePlayersScreen(
+                    viewModel = viewModel,
+                    onPlayerClick = onPlayerClick,
+                    onAdminPanel = onAdminPanel,
+                )
+            }
         }
+    }
 
-        composeTestRule.onNodeWithText("Manage Players").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Balance: 1500").assertIsDisplayed()
+    private fun typeInto(label: String, text: String) {
+        composeTestRule.onNode(hasSetTextAction() and hasText(label)).performTextInput(text)
     }
 
     @Test
-    fun managePlayersScreen_emptyState_showsMessage() {
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(emptyList<User>())
-            override fun getLeaderboard(): Flow<List<User>> = flowOf(emptyList())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-        }
+    fun showsTitleAndPlayersWithAvatarAndUsername() {
+        repository.addPlayer("Alice")
+        repository.addPlayer("Bob")
+        showScreen()
 
-        composeTestRule.setContent {
-            ManagePlayersScreen(viewModel = ManagePlayersViewModel(fakeUserRepo))
-        }
+        composeTestRule.onNodeWithText("Manage Players").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
+        composeTestRule.onNodeWithText("A").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Bob").assertIsDisplayed()
+        composeTestRule.onNodeWithText("B").assertIsDisplayed()
+    }
+
+    @Test
+    fun hasNoDeleteRenameOrBailoutActions() {
+        repository.addPlayer("Alice", balance = 0)
+        showScreen()
+
+        composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Delete", ignoreCase = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Rename", ignoreCase = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("Bailout", ignoreCase = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun emptyState_showsMessage() {
+        showScreen()
 
         composeTestRule.onNodeWithText("No players yet. Add one to get started!").assertIsDisplayed()
     }
 
     @Test
-    fun managePlayersScreen_clickAddPlayer_showsDialog() {
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(emptyList<User>())
-            override fun getLeaderboard(): Flow<List<User>> = flowOf(emptyList())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-        }
+    fun tapPlayer_opensPlayerDetailForThatPlayer() {
+        repository.addPlayer("Alice")
+        val bobId = repository.addPlayer("Bob")
+        var clicked: Long? = null
+        showScreen(onPlayerClick = { clicked = it })
 
-        composeTestRule.setContent {
-            ManagePlayersScreen(viewModel = ManagePlayersViewModel(fakeUserRepo))
-        }
+        composeTestRule.onNodeWithText("Bob").performClick()
+
+        assertThat(clicked).isEqualTo(bobId)
+    }
+
+    @Test
+    fun gearIcon_callsAdminPanelHook() {
+        var adminClicks = 0
+        showScreen(onAdminPanel = { adminClicks++ })
+
+        composeTestRule.onNodeWithContentDescription("Admin Panel").performClick()
+
+        assertThat(adminClicks).isEqualTo(1)
+    }
+
+    @Test
+    fun addPlayer_asksForPinTwice() {
+        showScreen()
 
         composeTestRule.onNodeWithText("Add Player").performClick()
+
         composeTestRule.onNodeWithText("Create New Player").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Username").assertIsDisplayed()
+        composeTestRule.onNodeWithText("PIN (4 digits)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Confirm PIN").assertIsDisplayed()
+    }
+
+    @Test
+    fun addPlayer_mismatchedPins_showsErrorAndCreatesNothing() {
+        showScreen()
+        composeTestRule.onNodeWithText("Add Player").performClick()
+
+        typeInto("Username", "Carol")
+        typeInto("PIN (4 digits)", "1234")
+        typeInto("Confirm PIN", "4321")
+        composeTestRule.onNodeWithText("Create").performClick()
+
+        composeTestRule.onNodeWithText("PINs don't match").assertIsDisplayed()
+        assertThat(repository.users.value).isEmpty()
+    }
+
+    @Test
+    fun addPlayer_matchingPins_addsPlayerToList() {
+        showScreen()
+        composeTestRule.onNodeWithText("Add Player").performClick()
+
+        typeInto("Username", "Carol")
+        typeInto("PIN (4 digits)", "1234")
+        typeInto("Confirm PIN", "1234")
+        composeTestRule.onNodeWithText("Create").performClick()
+
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { repository.users.value.isNotEmpty() }
+        composeTestRule.onNodeWithText("Create New Player").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Carol").assertIsDisplayed()
     }
 }

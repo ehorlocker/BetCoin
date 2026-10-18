@@ -1,12 +1,14 @@
 package com.betcoin.ui.players
 
 import com.betcoin.data.database.entity.User
+import com.betcoin.data.model.InvalidInputException
 import com.betcoin.testing.FakeUserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -21,7 +23,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ManagePlayersViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakeUserRepository: FakeUserRepository
     private lateinit var viewModel: ManagePlayersViewModel
 
@@ -36,439 +38,239 @@ class ManagePlayersViewModelTest {
         Dispatchers.resetMain()
     }
 
-    @Test
-    fun initialState_isLoading() = runTest {
+    /** Creates the ViewModel and keeps its WhileSubscribed state collected for the test. */
+    private fun TestScope.createViewModel() {
         viewModel = ManagePlayersViewModel(fakeUserRepository)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+    }
 
-        assertThat(viewModel.uiState.value.isLoading).isTrue()
+    private val state get() = viewModel.uiState.value
+    private val form get() = checkNotNull(state.addPlayerForm)
+
+    private fun user(id: Long, username: String) = User(
+        id = id,
+        username = username,
+        pinHash = FakeUserRepository.PLACEHOLDER_HASH,
+        createdAt = 0L,
+    )
+
+    private fun fillForm(username: String, pin: String, confirmPin: String = pin) {
+        viewModel.onAddPlayerClicked()
+        viewModel.onUsernameChanged(username)
+        viewModel.onPinChanged(pin)
+        viewModel.onConfirmPinChanged(confirmPin)
     }
 
     @Test
-    fun players_emitsCorrectList() = runTest {
-        val user = User(
-            id = 1L,
-            username = "Alice",
-            pinHash = "hash",
-            balance = 1500,
-            totalWins = 5,
-            totalLosses = 2,
-            totalEarnings = 2000,
-            totalLost = 500,
-            totalDebt = 0,
-            bailoutCount = 0,
-            createdAt = System.currentTimeMillis(),
-        )
-        fakeUserRepository.users = listOf(user)
+    fun initialState_isLoading() {
         viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.isLoading).isFalse()
-        assertThat(viewModel.uiState.value.players).hasSize(1)
-        assertThat(viewModel.uiState.value.players[0].username).isEqualTo("Alice")
+        assertThat(state.isLoading).isTrue()
     }
 
     @Test
-    fun players_emptyList_showsEmptyState() = runTest {
-        fakeUserRepository.users = emptyList()
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
+    fun players_emitsRepositoryList() = runTest {
+        fakeUserRepository.users = listOf(user(1L, "Alice"), user(2L, "Bob"))
+        createViewModel()
+
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.players.map { it.username }).containsExactly("Alice", "Bob").inOrder()
+    }
+
+    @Test
+    fun players_emptyList() = runTest {
+        createViewModel()
+
+        assertThat(state.isLoading).isFalse()
+        assertThat(state.players).isEmpty()
+    }
+
+    @Test
+    fun players_followRepositoryUpdates() = runTest {
+        createViewModel()
+
+        fakeUserRepository.users = listOf(user(1L, "Alice"))
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.isLoading).isFalse()
-        assertThat(viewModel.uiState.value.players).isEmpty()
+        assertThat(state.players.map { it.username }).containsExactly("Alice")
+    }
+
+    @Test
+    fun addPlayerClicked_opensEmptyForm() = runTest {
+        createViewModel()
+
+        viewModel.onAddPlayerClicked()
+
+        assertThat(state.addPlayerForm).isEqualTo(ManagePlayersViewModel.AddPlayerForm())
     }
 
     @Test
     fun addPlayer_emptyUsername_showsError() = runTest {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+        createViewModel()
 
-        viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("")
-        viewModel.onPinChanged("1234")
+        fillForm("   ", "1234")
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Username cannot be empty")
+        assertThat(form.error).isEqualTo("Username cannot be empty")
+        assertThat(fakeUserRepository.users).isEmpty()
+    }
+
+    @Test
+    fun addPlayer_usernameOver20Chars_showsError() = runTest {
+        createViewModel()
+
+        fillForm("A".repeat(21), "1234")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(form.error).isEqualTo("Username must be at most 20 characters")
+        assertThat(fakeUserRepository.users).isEmpty()
+    }
+
+    @Test
+    fun addPlayer_usernameOf20CharsAfterTrimming_isAccepted() = runTest {
+        createViewModel()
+
+        fillForm("  ${"A".repeat(20)}  ", "1234")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(state.addPlayerForm).isNull()
+        assertThat(fakeUserRepository.users.single().username).isEqualTo("A".repeat(20))
     }
 
     @Test
     fun addPlayer_shortPin_showsError() = runTest {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+        createViewModel()
 
-        viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("Alice")
-        viewModel.onPinChanged("123")
+        fillForm("Alice", "123")
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("PIN must be exactly 4 digits")
+        assertThat(form.error).isEqualTo("PIN must be exactly 4 digits")
+        assertThat(fakeUserRepository.users).isEmpty()
     }
 
     @Test
-    fun addPlayer_nonDigitPin_showsError() = runTest {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
+    fun pinFields_keepOnlyFourDigits() = runTest {
+        createViewModel()
         viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("Alice")
-        viewModel.onPinChanged("abcd")
+
+        viewModel.onPinChanged("1a2b3c4d5")
+        viewModel.onConfirmPinChanged("98-765")
+
+        assertThat(form.pin).isEqualTo("1234")
+        assertThat(form.confirmPin).isEqualTo("9876")
+    }
+
+    @Test
+    fun addPlayer_mismatchedPins_showsErrorAndCreatesNothing() = runTest {
+        createViewModel()
+
+        fillForm("Alice", "1234", confirmPin = "4321")
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("PIN must be exactly 4 digits")
+        assertThat(form.error).isEqualTo("PINs don't match")
+        assertThat(fakeUserRepository.users).isEmpty()
     }
 
     @Test
-    fun addPlayer_duplicateUsername_showsError() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+    fun addPlayer_missingConfirmation_showsMismatchError() = runTest {
+        createViewModel()
 
-        viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("Alice")
-        viewModel.onPinChanged("1234")
+        fillForm("Alice", "1234", confirmPin = "")
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Username already exists")
+        assertThat(form.error).isEqualTo("PINs don't match")
     }
 
     @Test
-    fun addPlayer_valid_createsPlayerAndDismissesDialog() = runTest {
+    fun addPlayer_duplicateUsernameIgnoringCase_showsError() = runTest {
+        fakeUserRepository.users = listOf(user(1L, "Alice"))
+        createViewModel()
+
+        fillForm("alice", "1234")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(form.error).isEqualTo("Username already exists")
+        assertThat(form.isSaving).isFalse()
+        assertThat(fakeUserRepository.users).hasSize(1)
+    }
+
+    @Test
+    fun addPlayer_valid_createsPlayerWithPinAndClosesDialog() = runTest {
         fakeUserRepository.nextCreatedUserId = 42L
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+        createViewModel()
 
-        viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("Bob")
-        viewModel.onPinChanged("5678")
+        fillForm("  Bob ", "5678")
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.showAddPlayerDialog).isFalse()
-        assertThat(viewModel.uiState.value.addPlayerError).isNull()
-        assertThat(viewModel.uiState.value.snackbarMessage).isEqualTo("Player Bob created successfully")
+        assertThat(state.addPlayerForm).isNull()
+        assertThat(state.snackbarMessage).isEqualTo("Player Bob created")
+        assertThat(state.players.map { it.username }).containsExactly("Bob")
+        assertThat(fakeUserRepository.verifyPin(42L, "5678")).isTrue()
     }
 
     @Test
-    fun addPlayer_repositoryThrows_showsErrorAndKeepsDialogOpen() = runTest {
-        fakeUserRepository.shouldThrowOnCreate = RuntimeException("Database error")
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+    fun addPlayer_repositoryRejects_showsMessageAndKeepsForm() = runTest {
+        fakeUserRepository.shouldThrowOnCreate = InvalidInputException("Username must be 1–20 characters")
+        createViewModel()
 
-        viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("Bob")
-        viewModel.onPinChanged("5678")
+        fillForm("Bob", "5678")
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(viewModel.uiState.value.showAddPlayerDialog).isTrue()
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Database error")
+        assertThat(form.error).isEqualTo("Username must be 1–20 characters")
+        assertThat(form.username).isEqualTo("Bob")
+        assertThat(form.isSaving).isFalse()
     }
 
     @Test
-    fun addPlayer_errorClearsOnUsernameChange() = runTest {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+    fun addPlayer_errorClearsOnEdit() = runTest {
+        createViewModel()
 
-        viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("")
-        viewModel.onPinChanged("1234")
+        fillForm("", "1234")
         viewModel.onConfirmAddPlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Username cannot be empty")
+        assertThat(form.error).isNotNull()
 
         viewModel.onUsernameChanged("A")
-        assertThat(viewModel.uiState.value.addPlayerError).isNull()
+        assertThat(form.error).isNull()
     }
 
     @Test
-    fun addPlayer_duplicateUsername_caseInsensitive_showsError() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
+    fun dismissAddPlayer_closesFormAndDropsPins() = runTest {
+        createViewModel()
+        fillForm("Bob", "5678")
+
+        viewModel.onDismissAddPlayerDialog()
+        assertThat(state.addPlayerForm).isNull()
 
         viewModel.onAddPlayerClicked()
-        viewModel.onUsernameChanged("alice")
-        viewModel.onPinChanged("1234")
-        viewModel.onConfirmAddPlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.addPlayerError).isEqualTo("Username already exists")
-    }
-
-    @Test
-    fun deletePlayer_showsConfirmation() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onDeletePlayerClicked(1L)
-
-        assertThat(viewModel.uiState.value.showDeleteConfirmation).isTrue()
-        assertThat(viewModel.uiState.value.selectedPlayerId).isEqualTo(1L)
-        assertThat(viewModel.uiState.value.selectedPlayerName).isEqualTo("Alice")
-    }
-
-    @Test
-    fun deletePlayer_confirmed_deletesAndShowsSnackbar() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onDeletePlayerClicked(1L)
-        viewModel.onConfirmDeletePlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.showDeleteConfirmation).isFalse()
-        assertThat(viewModel.uiState.value.snackbarMessage).isEqualTo("Player deleted")
-    }
-
-    @Test
-    fun deletePlayer_error_showsSnackbar() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        fakeUserRepository.shouldThrowOnDelete = IllegalStateException("Player is in an active bet")
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onDeletePlayerClicked(1L)
-        viewModel.onConfirmDeletePlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.showDeleteConfirmation).isFalse()
-        assertThat(viewModel.uiState.value.snackbarMessage).isEqualTo("Cannot delete: Player is in an active bet")
-    }
-
-    @Test
-    fun renamePlayer_valid_renamesAndShowsSnackbar() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onRenamePlayerClicked(1L)
-        viewModel.onRenameUsernameChanged("Alicia")
-        viewModel.onConfirmRenamePlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.showRenameDialog).isFalse()
-        assertThat(viewModel.uiState.value.snackbarMessage).isEqualTo("Player renamed to Alicia")
-    }
-
-    @Test
-    fun renamePlayer_emptyName_showsError() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onRenamePlayerClicked(1L)
-        viewModel.onRenameUsernameChanged("")
-        viewModel.onConfirmRenamePlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.renameError).isEqualTo("Username cannot be empty")
-    }
-
-    @Test
-    fun renamePlayer_duplicateName_showsError() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            ),
-            User(
-                id = 2L,
-                username = "Bob",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onRenamePlayerClicked(1L)
-        viewModel.onRenameUsernameChanged("Bob")
-        viewModel.onConfirmRenamePlayer()
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.renameError).isEqualTo("Username already exists")
-    }
-
-    @Test
-    fun bailoutPlayer_showsSnackbar() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 50,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onBailoutPlayer(1L)
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.snackbarMessage).isEqualTo("Bailout granted to Alice")
-    }
-
-    @Test
-    fun bailoutPlayer_error_showsSnackbar() = runTest {
-        fakeUserRepository.users = listOf(
-            User(
-                id = 1L,
-                username = "Alice",
-                pinHash = "hash",
-                balance = 1000,
-                totalWins = 0,
-                totalLosses = 0,
-                totalEarnings = 0,
-                totalLost = 0,
-                totalDebt = 0,
-                bailoutCount = 0,
-                createdAt = System.currentTimeMillis(),
-            )
-        )
-        fakeUserRepository.shouldThrowOnBailout = RuntimeException("Database error")
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
-        advanceUntilIdle()
-
-        viewModel.onBailoutPlayer(1L)
-        advanceUntilIdle()
-
-        assertThat(viewModel.uiState.value.snackbarMessage).isEqualTo("Failed to grant bailout")
+        assertThat(form.pin).isEmpty()
+        assertThat(form.confirmPin).isEmpty()
     }
 
     @Test
     fun snackbarShown_clearsMessage() = runTest {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
+        createViewModel()
+        fillForm("Bob", "5678")
+        viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
         viewModel.onSnackbarShown()
 
-        assertThat(viewModel.uiState.value.snackbarMessage).isNull()
+        assertThat(state.snackbarMessage).isNull()
+    }
+
+    @Test
+    fun initialsOf_usesFirstLettersOfUpToTwoWords() {
+        assertThat(initialsOf("jay")).isEqualTo("J")
+        assertThat(initialsOf(" Mary  jane watson ")).isEqualTo("MJ")
     }
 }

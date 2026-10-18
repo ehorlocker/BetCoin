@@ -5,13 +5,16 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.betcoin.ui.bethistory.BetHistoryScreen
 import com.betcoin.ui.home.HomeScreen
 import com.betcoin.ui.leaderboard.LeaderboardScreen
 import com.betcoin.ui.newbet.NewBetScreen
 import com.betcoin.ui.onboarding.OnboardingScreen
 import com.betcoin.ui.players.ManagePlayersScreen
+import com.betcoin.ui.players.PlayerDetailScreen
 
 /**
  * Navigation routes used in the BetCoin app.
@@ -23,6 +26,13 @@ object Routes {
     const val LEADERBOARD = "leaderboard"
     const val BET_HISTORY = "bet_history"
     const val MANAGE_PLAYERS = "manage_players"
+
+    /** Navigation argument holding the player's user ID. */
+    const val PLAYER_ID_ARG = "playerId"
+    const val PLAYER_DETAIL = "player_detail/{$PLAYER_ID_ARG}"
+
+    /** Route to the Player Detail screen of [playerId]. */
+    fun playerDetail(playerId: Long): String = "player_detail/$playerId"
 }
 
 /**
@@ -97,6 +107,21 @@ fun NavGraph(
         }
         composable(Routes.MANAGE_PLAYERS) {
             ManagePlayersScreen(
+                viewModel = hiltViewModel(),
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onPlayerClick = { playerId ->
+                    navController.navigate(Routes.playerDetail(playerId))
+                },
+                // onAdminPanel is wired to the Admin Panel in BET-29.
+            )
+        }
+        composable(
+            route = Routes.PLAYER_DETAIL,
+            arguments = listOf(navArgument(Routes.PLAYER_ID_ARG) { type = NavType.LongType }),
+        ) {
+            PlayerDetailScreen(
                 viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
