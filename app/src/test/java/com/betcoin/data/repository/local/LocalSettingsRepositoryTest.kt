@@ -76,7 +76,7 @@ class LocalSettingsRepositoryTest {
 
   @Test
   fun setAdminPin_existingSettings_preservesId() = runTest {
-    fakeDao.insert(AppSettings(id = 1, adminPinHash = "old_hash"))
+    fakeDao.insert(AppSettings(id = 1, adminPinHash = "old_hash", recoveryCodeHash = "recovery_hash"))
 
     repository.setAdminPin("5678")
 

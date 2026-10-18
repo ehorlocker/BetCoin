@@ -20,7 +20,7 @@ interface UserDao {
   @Query("SELECT * FROM users WHERE id = :userId")
   suspend fun getById(userId: Long): User?
 
-  /** Returns the user with the given [username], or null if not found. */
+  /** Returns the user with the given [username] (case-insensitive), or null if not found. */
   @Query("SELECT * FROM users WHERE username = :username")
   suspend fun getByUsername(username: String): User?
 

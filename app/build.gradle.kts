@@ -57,6 +57,11 @@ android {
     }
 }
 
+ksp {
+    // Exported Room schemas are checked in (spec §3 Schema Versioning).
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 // Passes each variant's merged manifest to its unit tests, so the dev flavor's
 // tests can assert backup stays off (DevManifestBackupTest).
 class MergedManifestArgument(

@@ -24,6 +24,7 @@ class UserTest {
     assertThat(user.totalLost).isEqualTo(0L)
     assertThat(user.bailoutCount).isEqualTo(0)
     assertThat(user.totalDebt).isEqualTo(0L)
+    assertThat(user.avatarRef).isNull()
   }
 
   @Test
