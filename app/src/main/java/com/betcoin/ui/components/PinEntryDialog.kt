@@ -38,6 +38,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -66,7 +67,8 @@ const val PIN_INPUT_TAG = "pin_entry_input"
  *
  * @param label Whose PIN is asked for, e.g. a player's username or "Admin".
  * @param verifier Checks a complete PIN and returns whether it is correct. Runs in a coroutine, so
- *   it can hash off the main thread.
+ *   it can hash off the main thread. It must not throw: catch failures inside the lambda, because an
+ *   exception escapes uncaught and crashes the app.
  * @param onVerified Called once the verifier accepts a PIN.
  * @param onDismiss Called when the user cancels.
  * @param title Optional action summary shown above the prompt, e.g. "Resolve: Jay wins".
@@ -180,6 +182,9 @@ private fun PinField(
         modifier = modifier.testTag(PIN_INPUT_TAG),
         readOnly = !enabled,
         singleLine = true,
+        // Password semantics keep accessibility services from reading the digits (§5.5); the
+        // decoration box below draws the dots.
+        visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         decorationBox = {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -211,7 +216,12 @@ private fun PinField(
     )
 }
 
-/** One participant's turn in a [ConsentSequence]. */
+/**
+ * One participant's turn in a [ConsentSequence].
+ *
+ * @param label Whose PIN is asked for. Also identifies the step, so labels must be stable.
+ * @param verifier Same contract as [PinEntryDialog]'s verifier: it must not throw.
+ */
 data class ConsentStep(
     val label: String,
     val verifier: suspend (String) -> Boolean,
@@ -259,7 +269,14 @@ class ConsentSequenceState(val steps: List<ConsentStep>) {
  * a fresh dialog, so no entered PIN carries over. [onAllConfirmed] is called exactly once, after
  * the last PIN is accepted.
  *
- * @param steps Participants to confirm, in order.
+ * Progress is keyed on the step labels, not on [steps] itself, so a list rebuilt on recomposition
+ * (with new verifier lambdas) keeps its place and uses the latest verifiers. A change in the
+ * labels starts the sequence over.
+ *
+ * Callers must stop composing [ConsentSequence] in [onAbort] and once [onAllConfirmed] is called.
+ * Removing it cancels any verification still in flight.
+ *
+ * @param steps Participants to confirm, in order. Each verifier must not throw.
  * @param onAllConfirmed Called once every PIN has been accepted.
  * @param onAbort Called if any participant cancels.
  * @param title Optional action summary shown in every dialog, e.g. "Resolve: Jay wins".
@@ -271,11 +288,12 @@ fun ConsentSequence(
     onAbort: () -> Unit,
     title: String? = null,
 ) {
-    val state = remember(steps) { ConsentSequenceState(steps) }
+    // ConsentStep holds a lambda, so a rebuilt list never equals the old one; key on the labels.
+    val state = remember(steps.map { it.label }) { ConsentSequenceState(steps) }
     if (state.isComplete) return
 
     key(state.currentIndex) {
-        val step = state.currentStep
+        val step = steps[state.currentIndex]
         PinEntryDialog(
             label = step.label,
             verifier = step.verifier,
