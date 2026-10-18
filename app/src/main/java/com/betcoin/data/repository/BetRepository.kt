@@ -107,6 +107,10 @@ interface BetRepository {
     /**
      * Admin-only cancel: same as [cancelBet] but requires no participant consent.
      *
+     * Only `ACTIVE` bets can be cancelled; any other status throws
+     * [com.betcoin.data.model.InvalidBetStateException]. An unknown bet or a deleted participant
+     * throws [com.betcoin.data.model.InvalidInputException].
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun forceCancelBet(betId: Long)
@@ -130,12 +134,19 @@ interface BetRepository {
     /**
      * Admin-only resolve: same as [resolveBet] but requires no participant PINs.
      *
+     * Only `ACTIVE` bets can be resolved ([com.betcoin.data.model.InvalidBetStateException]
+     * otherwise). An unknown bet, or an outcome that belongs to another bet, throws
+     * [com.betcoin.data.model.InvalidInputException].
+     *
      * Implementation must run inside a transaction.
      */
     suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long)
 
     /**
-     * Admin operation: edits the bet's prompt text.
+     * Admin operation: edits the bet's prompt text. Allowed in any status.
+     *
+     * The prompt is trimmed and must be 1-120 characters, and the bet must exist; otherwise
+     * [com.betcoin.data.model.InvalidInputException] is thrown.
      */
     suspend fun updateBetPrompt(betId: Long, newPrompt: String)
 
@@ -157,7 +168,9 @@ interface BetRepository {
 
     /**
      * Deletes a bet and its outcomes and participants. Only allowed for
-     * `RESOLVED` or `CANCELLED` bets.
+     * `RESOLVED` or `CANCELLED` bets; any other status throws
+     * [com.betcoin.data.model.InvalidBetStateException]. An unknown bet throws
+     * [com.betcoin.data.model.InvalidInputException]. User balances and stats are untouched.
      */
     suspend fun deleteBet(betId: Long)
 

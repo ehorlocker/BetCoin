@@ -24,8 +24,6 @@ import javax.inject.Inject
  *
  * Every mutation checks all of its rules inside a Room transaction before writing anything, so a
  * thrown [com.betcoin.data.model.BetCoinException] leaves the database unchanged.
- *
- * Admin operations are implemented in BET-11.
  */
 class LocalBetRepository @Inject constructor(
     private val database: BetCoinDatabase,
@@ -216,7 +214,8 @@ class LocalBetRepository @Inject constructor(
         }
     }
 
-    override suspend fun forceCancelBet(betId: Long): Unit = TODO()
+    /** Same rules and exceptions as [cancelBet]; consent is the caller's concern. */
+    override suspend fun forceCancelBet(betId: Long) = cancelBet(betId)
 
     override suspend fun reopenBet(betId: Long) {
         database.withTransaction {
@@ -317,11 +316,35 @@ class LocalBetRepository @Inject constructor(
         participant.id to user
     }
 
-    override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long): Unit = TODO()
-    override suspend fun updateBetPrompt(betId: Long, newPrompt: String): Unit = TODO()
+    /** Same rules and exceptions as [resolveBet]; PIN checks are the caller's concern. */
+    override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) =
+        resolveBet(betId, winningOutcomeId)
+
+    override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {
+        val trimmedPrompt = newPrompt.trim()
+        if (trimmedPrompt.length !in PROMPT_LENGTH) {
+            throw InvalidInputException("Prompt must be 1–120 characters")
+        }
+        database.withTransaction {
+            val bet = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
+            betDao.update(bet.copy(prompt = trimmedPrompt))
+        }
+    }
+
     override suspend fun adminRemoveParticipant(betId: Long, participantId: Long): Unit = TODO()
     override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long): Unit = TODO()
-    override suspend fun deleteBet(betId: Long): Unit = TODO()
+
+    override suspend fun deleteBet(betId: Long) {
+        database.withTransaction {
+            val bet = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
+            if (bet.status != BetStatus.RESOLVED && bet.status != BetStatus.CANCELLED) {
+                throw InvalidBetStateException(betId, bet.status)
+            }
+            participantDao.deleteByBetId(betId)
+            outcomeDao.deleteByBetId(betId)
+            betDao.delete(bet)
+        }
+    }
 
     override suspend fun repeatBet(betId: Long): Long = database.withTransaction {
         val original = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
