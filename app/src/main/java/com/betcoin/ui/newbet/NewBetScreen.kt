@@ -49,6 +49,8 @@ import com.betcoin.ui.components.BetCoinCard
 import com.betcoin.ui.components.BetCoinChip
 import com.betcoin.ui.components.BetCoinInput
 import com.betcoin.ui.components.ButtonVariant
+import com.betcoin.ui.components.ConsentSequence
+import com.betcoin.ui.components.ConsentStep
 import com.betcoin.ui.components.PinEntryDialog
 
 /** Test tags for the New Bet screen's inputs. */
@@ -56,22 +58,23 @@ const val NEW_BET_PROMPT_TAG = "new_bet_prompt"
 const val NEW_BET_OUTCOME_TAG_PREFIX = "new_bet_outcome_"
 const val NEW_BET_PLAYER_TAG = "new_bet_player"
 const val NEW_BET_WAGER_TAG = "new_bet_wager"
+const val NEW_BET_ERROR_TAG = "new_bet_error"
 
 /**
- * New Bet flow, Steps A (Create Bet) and B (Add Participants), per §4.2.
+ * New Bet flow, Steps A (Create Bet), B (Add Participants) and C (Review & Lock), per §4.2.
  *
- * System Back and the top-bar Close button both go through [NewBetViewModel.onBackRequested],
- * which asks "Discard this bet?" unless Step A is still empty.
+ * The top-bar Close button (and System Back on Steps A and B) asks "Discard this bet?" unless
+ * Step A is still empty. System Back and the Back button on Step C return to Step B.
  *
  * @param viewModel the [NewBetViewModel] that manages state
  * @param onNavigateBack called once the flow is left (after discarding, if needed)
- * @param onContinue called with the pending bet's ID when Step B's Continue is tapped
+ * @param onLocked called with the bet's ID once Step C has locked it (the bet is now ACTIVE)
  */
 @Composable
 fun NewBetScreen(
     viewModel: NewBetViewModel,
     onNavigateBack: () -> Unit = {},
-    onContinue: (betId: Long) -> Unit = {},
+    onLocked: (betId: Long) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -79,6 +82,10 @@ fun NewBetScreen(
 
     LaunchedEffect(state.exited) {
         if (state.exited) onNavigateBack()
+    }
+
+    LaunchedEffect(state.lockedBetId) {
+        state.lockedBetId?.let(onLocked)
     }
 
     Scaffold(
@@ -102,12 +109,13 @@ fun NewBetScreen(
                         text = when (state.step) {
                             NewBetStep.A -> "Step A · Create Bet"
                             NewBetStep.B -> "Step B · Add Participants"
+                            NewBetStep.C -> "Step C · Review & Lock"
                         },
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                TextButton(onClick = viewModel::onBackRequested) {
+                TextButton(onClick = viewModel::onCloseRequested) {
                     Text("Close")
                 }
             }
@@ -123,13 +131,15 @@ fun NewBetScreen(
         ) {
             when (state.step) {
                 NewBetStep.A -> StepA(state, viewModel)
-                NewBetStep.B -> StepB(state, viewModel, onContinue)
+                NewBetStep.B -> StepB(state, viewModel)
+                NewBetStep.C -> StepC(state, viewModel)
             }
             state.errorMessage?.let { message ->
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag(NEW_BET_ERROR_TAG),
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -145,6 +155,22 @@ fun NewBetScreen(
             onDismiss = viewModel::onPinDismissed,
             title = "Join: $outcome for ${join.wager}",
         )
+    }
+
+    if (state.confirmingLock) {
+        val steps = state.participants.mapNotNull { entry ->
+            entry.user?.let { user ->
+                ConsentStep(label = user.username, verifier = { pin -> viewModel.verifyParticipantPin(user.id, pin) })
+            }
+        }
+        if (steps.isNotEmpty()) {
+            ConsentSequence(
+                steps = steps,
+                onAllConfirmed = viewModel::onAllPinsConfirmed,
+                onAbort = viewModel::onLockAborted,
+                title = "Lock bet: ${state.betPrompt}",
+            )
+        }
     }
 
     if (state.showDiscardDialog) {
@@ -220,7 +246,6 @@ private fun StepA(state: NewBetViewModel.UiState, viewModel: NewBetViewModel) {
 private fun StepB(
     state: NewBetViewModel.UiState,
     viewModel: NewBetViewModel,
-    onContinue: (Long) -> Unit,
 ) {
     Text(
         text = state.betPrompt,
@@ -318,8 +343,62 @@ private fun StepB(
     }
     BetCoinButton(
         text = "Continue",
-        onClick = { state.betId?.let(onContinue) },
+        onClick = viewModel::onContinue,
         enabled = state.canContinue,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun StepC(state: NewBetViewModel.UiState, viewModel: NewBetViewModel) {
+    Text(
+        text = state.betPrompt,
+        style = MaterialTheme.typography.titleLarge,
+    )
+
+    SectionLabel("Outcomes")
+    state.betOutcomes.forEach { outcome ->
+        Text(text = outcome.outcomeText, style = MaterialTheme.typography.bodyLarge)
+    }
+
+    SectionLabel("Participants (${state.participants.size})")
+    state.participants.forEach { entry ->
+        val name = entry.user?.username ?: entry.participant.deletedUsername.orEmpty()
+        BetCoinCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text(text = name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "${entry.outcome.outcomeText} · ${entry.participant.wagerAmount} BetCoin",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+    val pot = state.participants.sumOf { it.participant.wagerAmount }
+    Text(
+        text = "Total pot: $pot BetCoin",
+        style = MaterialTheme.typography.titleSmall,
+    )
+
+    state.lockBlocker?.let { FieldError(it) }
+    Text(
+        text = "Each participant will re-enter their PIN in this order, then the wagers are deducted.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    BetCoinButton(
+        text = "Lock Bet",
+        onClick = viewModel::onLockRequested,
+        enabled = state.canLock,
+        variant = ButtonVariant.BettingAction,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    BetCoinButton(
+        text = "Back",
+        onClick = viewModel::onBackRequested,
+        enabled = !state.isBusy && !state.confirmingLock,
+        variant = ButtonVariant.Secondary,
         modifier = Modifier.fillMaxWidth(),
     )
 }

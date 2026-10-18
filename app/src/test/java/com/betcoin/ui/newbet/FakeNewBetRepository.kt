@@ -9,6 +9,7 @@ import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.InvalidBetStateException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.ParticipantWithUser
+import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.testing.FakeUserRepository
 import kotlinx.coroutines.flow.Flow
@@ -108,15 +109,35 @@ class FakeNewBetRepository(private val users: FakeUserRepository) : BetRepositor
         bets.value = bets.value.filterNot { it.id == betId }
     }
 
-    private fun requirePending(betId: Long) {
+    private fun requirePending(betId: Long): Bet {
         val bet = bets.value.find { it.id == betId } ?: throw InvalidInputException("Bet $betId not found")
         if (bet.status != BetStatus.PENDING_CONFIRMATION) throw InvalidBetStateException(betId, bet.status)
+        return bet
     }
 
     override fun getActiveBets(): Flow<List<BetWithDetails>> = flowOf(emptyList())
     override fun getAllBets(): Flow<List<BetWithDetails>> = flowOf(emptyList())
     override fun getPendingBet(): Flow<BetWithDetails?> = flowOf(null)
-    override suspend fun lockBet(betId: Long) = error("Not used by Steps A and B")
+    /** Bets passed to [lockBet], in call order. */
+    val lockedBetIds = mutableListOf<Long>()
+
+    /** When set, [lockBet] throws it instead of locking, to simulate a failure after Step C's checks. */
+    var lockFailure: Exception? = null
+
+    override suspend fun lockBet(betId: Long) {
+        lockFailure?.let { throw it }
+        val bet = requirePending(betId)
+        val members = participantsOf(betId)
+        if (members.size < 2) throw InvalidInputException("A bet needs at least 2 participants")
+        if (members.distinctBy { it.outcomeId }.size == 1) throw UnanimousPickException()
+        members.forEach { p ->
+            val user = users.getUser(p.userId!!)!!
+            if (p.wagerAmount > user.balance) throw InsufficientBalanceException(user.id, p.wagerAmount, user.balance)
+        }
+        members.forEach { users.updateBalance(it.userId!!, -it.wagerAmount) }
+        lockedBetIds += betId
+        bets.value = bets.value.map { if (it.id == bet.id) it.copy(status = BetStatus.ACTIVE) else it }
+    }
     override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) = error("Not used")
     override suspend fun cancelBet(betId: Long) = error("Not used")
     override suspend fun forceCancelBet(betId: Long) = error("Not used")

@@ -114,6 +114,11 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
+                onLocked = { betId ->
+                    navController.navigate(Routes.betDetail(betId)) {
+                        popUpTo(Routes.NEW_BET_ROUTE) { inclusive = true }
+                    }
+                },
             )
         }
         composable(Routes.LEADERBOARD) {
