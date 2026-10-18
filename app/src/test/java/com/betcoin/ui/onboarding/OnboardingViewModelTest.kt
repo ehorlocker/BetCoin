@@ -1,5 +1,6 @@
 package com.betcoin.ui.onboarding
 
+import com.betcoin.data.repository.RecoveryCode
 import com.betcoin.data.repository.SettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -14,9 +15,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Tests for [OnboardingViewModel].
- *
- * Verifies first-launch detection, PIN validation, and admin PIN setup.
+ * Tests for [OnboardingViewModel]: PIN entry and confirmation, saving the PIN, and the
+ * one-time recovery code gate.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingViewModelTest {
@@ -29,6 +29,7 @@ class OnboardingViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeSettingsRepository = FakeSettingsRepository()
+        viewModel = OnboardingViewModel(fakeSettingsRepository)
     }
 
     @After
@@ -36,88 +37,213 @@ class OnboardingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    // --- isFirstLaunch ---
+    private val enterPinState get() = viewModel.uiState.value as OnboardingUiState.EnterPin
+    private val recoveryState get() = viewModel.uiState.value as OnboardingUiState.ShowRecoveryCode
+
+    private fun enterPins(pin: String, confirmPin: String) {
+        viewModel.onPinChanged(pin)
+        viewModel.onConfirmPinChanged(confirmPin)
+    }
+
+    // --- PIN entry ---
 
     @Test
-    fun checkFirstLaunch_noPinSet_emitsTrue() = runTest {
-        fakeSettingsRepository.isFirstLaunchResult = true
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
-        advanceUntilIdle()
-
-        assertThat(viewModel.isFirstLaunch.value).isTrue()
+    fun initialState_isEmptyPinEntry() {
+        assertThat(viewModel.uiState.value).isEqualTo(OnboardingUiState.EnterPin())
+        assertThat(viewModel.onboardingComplete.value).isFalse()
     }
 
     @Test
-    fun checkFirstLaunch_pinAlreadySet_emitsFalse() = runTest {
-        fakeSettingsRepository.isFirstLaunchResult = false
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
-        advanceUntilIdle()
+    fun onPinChanged_keepsOnlyFourDigits() {
+        viewModel.onPinChanged("12a3456")
+        viewModel.onConfirmPinChanged("9 8-7")
 
-        assertThat(viewModel.isFirstLaunch.value).isFalse()
+        assertThat(enterPinState.pin).isEqualTo("1234")
+        assertThat(enterPinState.confirmPin).isEqualTo("987")
     }
 
-    // --- setAdminPin ---
-
     @Test
-    fun setAdminPin_validPin_storesPinAndCompletes() = runTest {
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
+    fun onSavePin_tooShort_showsLengthError() = runTest {
+        enterPins("123", "123")
+
+        viewModel.onSavePin()
         advanceUntilIdle()
 
-        viewModel.setAdminPin("1234")
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_PIN_LENGTH)
+        assertThat(fakeSettingsRepository.storedHash).isNull()
+    }
+
+    @Test
+    fun onSavePin_empty_showsLengthError() = runTest {
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_PIN_LENGTH)
+        assertThat(fakeSettingsRepository.storedHash).isNull()
+    }
+
+    @Test
+    fun onSavePin_mismatch_showsMismatchErrorAndSavesNothing() = runTest {
+        enterPins("1234", "1243")
+
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_PIN_MISMATCH)
+        assertThat(fakeSettingsRepository.storedHash).isNull()
+        assertThat(fakeSettingsRepository.storedRecoveryCodeHash).isNull()
+    }
+
+    @Test
+    fun onSavePin_confirmationIncomplete_showsMismatchError() = runTest {
+        enterPins("1234", "12")
+
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_PIN_MISMATCH)
+    }
+
+    @Test
+    fun editingAfterError_clearsError() = runTest {
+        enterPins("1234", "1243")
+        viewModel.onSavePin()
+        assertThat(enterPinState.error).isNotNull()
+
+        viewModel.onConfirmPinChanged("124")
+
+        assertThat(enterPinState.error).isNull()
+    }
+
+    // --- Saving ---
+
+    @Test
+    fun onSavePin_matchingPins_storesPinAndShowsRecoveryCode() = runTest {
+        enterPins("1234", "1234")
+
+        viewModel.onSavePin()
         advanceUntilIdle()
 
         assertThat(fakeSettingsRepository.verifyAdminPin("1234")).isTrue()
+        val code = recoveryState.recoveryCode
+        assertThat(code).matches("[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}")
+        assertThat(RecoveryCode.normalize(code)).isNotNull()
+        assertThat(recoveryState.acknowledged).isFalse()
+        assertThat(viewModel.onboardingComplete.value).isFalse()
+    }
+
+    @Test
+    fun onSavePin_storesOnlyTheHashOfTheShownCode() = runTest {
+        enterPins("1234", "1234")
+
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        val code = recoveryState.recoveryCode
+        assertThat(fakeSettingsRepository.storedRecoveryCodeHash).isNotEqualTo(code)
+        // The shown code is the one that can reset the PIN.
+        fakeSettingsRepository.resetAdminPinWithRecoveryCode(code.lowercase(), "5678")
+        assertThat(fakeSettingsRepository.verifyAdminPin("5678")).isTrue()
+    }
+
+    @Test
+    fun onSavePin_whileSaving_isMarkedSavingAndIgnoresEdits() = runTest {
+        enterPins("1234", "1234")
+
+        viewModel.onSavePin()
+        assertThat(enterPinState.isSaving).isTrue()
+        viewModel.onPinChanged("9")
+        assertThat(enterPinState.pin).isEqualTo("1234")
+
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value).isInstanceOf(OnboardingUiState.ShowRecoveryCode::class.java)
+    }
+
+    @Test
+    fun onSavePin_repositoryFails_showsErrorAndStaysOnPinEntry() = runTest {
+        val failing = object : SettingsRepository by fakeSettingsRepository {
+            override suspend fun setAdminPin(pin: String) = throw IllegalStateException("disk full")
+        }
+        viewModel = OnboardingViewModel(failing)
+        enterPins("1234", "1234")
+
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_SAVE_FAILED)
+        assertThat(enterPinState.isSaving).isFalse()
+        assertThat(enterPinState.pin).isEqualTo("1234")
+        assertThat(viewModel.onboardingComplete.value).isFalse()
+    }
+
+    @Test
+    fun onSavePin_recoveryCodeFails_showsCodeErrorAndRetryShowsCode() = runTest {
+        var failCodeGeneration = true
+        val flaky = object : SettingsRepository by fakeSettingsRepository {
+            override suspend fun regenerateRecoveryCode(): String {
+                if (failCodeGeneration) throw IllegalStateException("boom")
+                return fakeSettingsRepository.regenerateRecoveryCode()
+            }
+        }
+        viewModel = OnboardingViewModel(flaky)
+        enterPins("1234", "1234")
+
+        viewModel.onSavePin()
+        advanceUntilIdle()
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_CODE_FAILED)
+        assertThat(fakeSettingsRepository.verifyAdminPin("1234")).isTrue()
+
+        failCodeGeneration = false
+        viewModel.onSavePin()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value).isInstanceOf(OnboardingUiState.ShowRecoveryCode::class.java)
+    }
+
+    // --- Recovery code gate ---
+
+    @Test
+    fun onContinue_beforeAcknowledging_doesNotComplete() = runTest {
+        enterPins("1234", "1234")
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        viewModel.onContinue()
+
+        assertThat(viewModel.onboardingComplete.value).isFalse()
+    }
+
+    @Test
+    fun onContinue_afterAcknowledging_completes() = runTest {
+        enterPins("1234", "1234")
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        viewModel.onAcknowledgedChanged(true)
+        assertThat(recoveryState.acknowledged).isTrue()
+        viewModel.onContinue()
+
         assertThat(viewModel.onboardingComplete.value).isTrue()
     }
 
     @Test
-    fun setAdminPin_tooShort_showsError() = runTest {
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
+    fun onContinue_afterUntickingAgain_doesNotComplete() = runTest {
+        enterPins("1234", "1234")
+        viewModel.onSavePin()
         advanceUntilIdle()
 
-        viewModel.setAdminPin("12")
-        advanceUntilIdle()
+        viewModel.onAcknowledgedChanged(true)
+        viewModel.onAcknowledgedChanged(false)
+        viewModel.onContinue()
 
-        assertThat(viewModel.errorMessage.value).isEqualTo("PIN must be at least 4 digits")
         assertThat(viewModel.onboardingComplete.value).isFalse()
     }
 
     @Test
-    fun setAdminPin_empty_showsError() = runTest {
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
-        advanceUntilIdle()
+    fun onContinue_duringPinEntry_doesNothing() {
+        viewModel.onAcknowledgedChanged(true)
+        viewModel.onContinue()
 
-        viewModel.setAdminPin("")
-        advanceUntilIdle()
-
-        assertThat(viewModel.errorMessage.value).isEqualTo("PIN must be at least 4 digits")
+        assertThat(viewModel.uiState.value).isEqualTo(OnboardingUiState.EnterPin())
         assertThat(viewModel.onboardingComplete.value).isFalse()
-    }
-
-    @Test
-    fun setAdminPin_nonNumeric_showsError() = runTest {
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
-        advanceUntilIdle()
-
-        viewModel.setAdminPin("abcd")
-        advanceUntilIdle()
-
-        assertThat(viewModel.errorMessage.value).isEqualTo("PIN must be numeric")
-        assertThat(viewModel.onboardingComplete.value).isFalse()
-    }
-
-    // --- clearError ---
-
-    @Test
-    fun clearError_clearsErrorMessage() = runTest {
-        viewModel = OnboardingViewModel(fakeSettingsRepository)
-        advanceUntilIdle()
-
-        viewModel.setAdminPin("12")
-        advanceUntilIdle()
-        assertThat(viewModel.errorMessage.value).isNotNull()
-
-        viewModel.clearError()
-        assertThat(viewModel.errorMessage.value).isNull()
     }
 }
