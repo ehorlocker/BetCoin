@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.betcoin.ui.betdetail.BetDetailScreen
@@ -24,6 +24,14 @@ object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val NEW_BET = "new_bet"
+
+    /** Optional New Bet argument: an existing pending bet to open at Step B (Recovery, Repeat). */
+    const val NEW_BET_BET_ID_ARG = "betId"
+    const val NEW_BET_ROUTE = "$NEW_BET?$NEW_BET_BET_ID_ARG={$NEW_BET_BET_ID_ARG}"
+
+    /** New Bet at Step A, or at Step B for the pending bet [betId]. */
+    fun newBet(betId: Long? = null): String =
+        if (betId == null) NEW_BET else "$NEW_BET?$NEW_BET_BET_ID_ARG=$betId"
     const val LEADERBOARD = "leaderboard"
     const val BET_HISTORY = "bet_history"
     const val MANAGE_PLAYERS = "manage_players"
@@ -79,7 +87,7 @@ fun NavGraph(
             HomeScreen(
                 viewModel = hiltViewModel(),
                 onNewBet = {
-                    navController.navigate(Routes.NEW_BET)
+                    navController.navigate(Routes.newBet())
                 },
                 onLeaderboard = {
                     navController.navigate(Routes.LEADERBOARD)
@@ -92,8 +100,17 @@ fun NavGraph(
                 },
             )
         }
-        composable(Routes.NEW_BET) {
+        composable(
+            route = Routes.NEW_BET_ROUTE,
+            arguments = listOf(
+                navArgument(Routes.NEW_BET_BET_ID_ARG) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
+        ) {
             NewBetScreen(
+                viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
                 },
