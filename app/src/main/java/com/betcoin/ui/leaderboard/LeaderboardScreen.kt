@@ -144,6 +144,7 @@ private fun HeaderText(text: String, textAlign: TextAlign = TextAlign.Start) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = textAlign,
         maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -168,6 +169,7 @@ private fun LeaderboardRow(row: LeaderboardViewModel.Row, onClick: () -> Unit) {
                     color = if (row.netWorth < 0) MaterialTheme.colorScheme.error else Color.Unspecified,
                     textAlign = TextAlign.End,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             },
             winLoss = {
@@ -176,6 +178,7 @@ private fun LeaderboardRow(row: LeaderboardViewModel.Row, onClick: () -> Unit) {
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.End,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             },
             modifier = Modifier.fillMaxWidth(),

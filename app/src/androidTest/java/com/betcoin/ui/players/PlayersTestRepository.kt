@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
- * Minimal in-memory [UserRepository] for the Manage Players and Player Detail UI tests.
+ * Minimal in-memory [UserRepository] for the Manage Players, Player Detail and Leaderboard UI tests.
  *
  * PINs are bcrypt-hashed with [PinHasher], like the real repository, so no plain-text PIN is kept.
  * Admin operations these screens never call throw.
@@ -19,7 +19,7 @@ class PlayersTestRepository : UserRepository {
     val users = MutableStateFlow<List<User>>(emptyList())
     val lockedBalances = MutableStateFlow<Map<Long, Long>>(emptyMap())
 
-    /** Adds a player with [pin] and [balance] and returns their ID. */
+    /** Adds a player with [pin], [balance], [totalDebt], [totalWins] and [totalLosses] and returns their ID. */
     fun addPlayer(
         username: String,
         pin: String = "1234",

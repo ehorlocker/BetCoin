@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.betcoin.ui.components.formatCoins
 import com.betcoin.ui.players.PlayersTestRepository
 import com.betcoin.ui.theme.BetCoinTheme
 import com.google.common.truth.Truth.assertThat
@@ -64,7 +65,7 @@ class LeaderboardScreenTest {
 
         assertThat(topOf("Bob")).isLessThan(topOf("Amy"))
         assertThat(topOf("Amy")).isLessThan(topOf("Cal"))
-        composeTestRule.onNodeWithText("2,000").assertIsDisplayed()
+        composeTestRule.onNodeWithText(formatCoins(2000)).assertIsDisplayed()
     }
 
     @Test
@@ -72,7 +73,7 @@ class LeaderboardScreenTest {
         repository.addPlayer("Dan", balance = 100, totalDebt = 1000)
         showScreen()
 
-        composeTestRule.onNodeWithText("-900").assertIsDisplayed()
+        composeTestRule.onNodeWithText(formatCoins(-900)).assertIsDisplayed()
     }
 
     @Test
@@ -88,7 +89,7 @@ class LeaderboardScreenTest {
         repository.addPlayer("A".repeat(20), balance = 1234567)
         showScreen()
 
-        composeTestRule.onNodeWithText("1,234,567").assertIsDisplayed()
+        composeTestRule.onNodeWithText(formatCoins(1_234_567)).assertIsDisplayed()
         composeTestRule.onNodeWithText("0-0").assertIsDisplayed()
     }
 
