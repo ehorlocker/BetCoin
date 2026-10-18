@@ -22,4 +22,15 @@ class RoutesTest {
     fun managePlayersRoute_isCorrectValue() {
         assertThat(Routes.MANAGE_PLAYERS).isEqualTo("manage_players")
     }
+
+    @Test
+    fun newBet_withoutBetId_opensStepA() {
+        assertThat(Routes.newBet()).isEqualTo("new_bet")
+    }
+
+    @Test
+    fun newBet_withBetId_passesItAsTheOptionalArgument() {
+        assertThat(Routes.newBet(42L)).isEqualTo("new_bet?betId=42")
+        assertThat(Routes.NEW_BET_ROUTE).isEqualTo("new_bet?betId={betId}")
+    }
 }

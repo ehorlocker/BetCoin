@@ -106,7 +106,10 @@ class HomeScreenTest {
             override suspend fun repeatBet(betId: Long) = 0L
         }
         val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(emptyList<User>())
+            override fun getAllUsers() = flowOf(listOf(
+                User(id = 1, username = "Alice", pinHash = "hash", createdAt = 0),
+                User(id = 2, username = "Bob", pinHash = "hash", createdAt = 0),
+            ))
             override fun getLeaderboard() = flowOf(emptyList<User>())
             override suspend fun createUser(username: String, pin: String) = 0L
             override suspend fun verifyPin(userId: Long, pin: String) = false

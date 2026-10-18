@@ -1,5 +1,6 @@
 package com.betcoin
 
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -42,7 +43,13 @@ class DevBuildBannerTest {
         assertBannerShown()
 
         for (destination in listOf("New Bet", "Leaderboard", "Bet History", "Manage Players")) {
-            composeTestRule.onNodeWithText(destination).performClick()
+            val button = composeTestRule.onNodeWithText(destination)
+            // New Bet stays disabled with a hint until 2 players exist (spec §4.2 Home).
+            if (SemanticsProperties.Disabled in button.fetchSemanticsNode().config) {
+                composeTestRule.onNodeWithText("Add at least 2 players", substring = true).assertIsDisplayed()
+                continue
+            }
+            button.performClick()
             composeTestRule.waitForIdle()
             assertBannerShown()
             Espresso.pressBack()

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import com.betcoin.ui.theme.BetCoinOutline
  * @param placeholder Placeholder text displayed when empty.
  * @param modifier Modifier for the input.
  * @param visualTransformation Visual transformation for the input (e.g., password).
+ * @param keyboardOptions Keyboard type and IME options (e.g., a number keyboard).
  */
 @Composable
 fun BetCoinInput(
@@ -41,6 +43,7 @@ fun BetCoinInput(
     placeholder: String,
     modifier: Modifier = Modifier,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -59,6 +62,7 @@ fun BetCoinInput(
         cursorBrush = SolidColor(BetCoinTertiary),
         interactionSource = interactionSource,
         visualTransformation = visualTransformation,
+        keyboardOptions = keyboardOptions,
         decorationBox = { innerTextField ->
             if (value.isEmpty()) {
                 Text(

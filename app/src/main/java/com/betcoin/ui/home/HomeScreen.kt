@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.betcoin.ui.components.BetCoinButton
 
+/** A bet needs at least two participants, so New Bet stays disabled below this (§10). */
+private const val MIN_PLAYERS_FOR_BET = 2
+
 /**
  * Home screen — the main hub of the BetCoin app.
  *
@@ -63,11 +66,21 @@ fun HomeScreen(
         )
         Spacer(modifier = Modifier.height(32.dp))
 
+        val canStartBet = userCount >= MIN_PLAYERS_FOR_BET
         BetCoinButton(
             text = "New Bet",
             onClick = onNewBet,
+            enabled = canStartBet,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (!canStartBet) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Add at least $MIN_PLAYERS_FOR_BET players in Manage Players to start a bet",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Leaderboard",
