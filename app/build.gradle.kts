@@ -1,3 +1,5 @@
+import com.android.build.api.artifact.SingleArtifact
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
@@ -58,6 +60,27 @@ android {
 ksp {
     // Exported Room schemas are checked in (spec §3 Schema Versioning).
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Passes each variant's merged manifest to its unit tests, so the dev flavor's
+// tests can assert backup stays off (DevManifestBackupTest).
+class MergedManifestArgument(
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    val manifest: Provider<RegularFile>,
+) : CommandLineArgumentProvider {
+    override fun asArguments() =
+        listOf("-Dbetcoin.mergedManifest=${manifest.get().asFile.absolutePath}")
+}
+
+androidComponents {
+    onVariants { variant ->
+        val manifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+        val testTaskName = "test${variant.name.replaceFirstChar(Char::uppercase)}UnitTest"
+        tasks.withType<Test>().named { it == testTaskName }.configureEach {
+            jvmArgumentProviders.add(MergedManifestArgument(manifest))
+        }
+    }
 }
 
 dependencies {
