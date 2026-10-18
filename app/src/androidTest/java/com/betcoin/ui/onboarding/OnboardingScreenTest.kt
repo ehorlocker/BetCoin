@@ -1,5 +1,6 @@
 package com.betcoin.ui.onboarding
 
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,7 +11,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -24,6 +25,7 @@ import com.betcoin.data.security.PinHasher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -36,7 +38,7 @@ import org.junit.runner.RunWith
 class OnboardingScreenTest {
 
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private fun setContent(
         state: OnboardingUiState,
@@ -130,6 +132,26 @@ class OnboardingScreenTest {
         composeTestRule.onNodeWithText("I've written this down").performClick()
 
         assertEquals(true, acknowledged)
+    }
+
+    @Test
+    fun recoveryCode_backIsIgnored() {
+        setContent(OnboardingUiState.ShowRecoveryCode("ABCD-EFGH-JKLM"))
+
+        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.waitForIdle()
+
+        assertFalse(composeTestRule.activity.isFinishing)
+        composeTestRule.onNodeWithTag(RECOVERY_CODE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun enterPin_backIsNotIntercepted() {
+        setContent(OnboardingUiState.EnterPin())
+
+        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
+
+        assertTrue(composeTestRule.activity.isFinishing)
     }
 
     // --- Full flow with the real ViewModel ---

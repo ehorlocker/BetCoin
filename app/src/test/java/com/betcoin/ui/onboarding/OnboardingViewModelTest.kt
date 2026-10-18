@@ -177,7 +177,7 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun onSavePin_recoveryCodeFails_showsErrorAndRetryShowsCode() = runTest {
+    fun onSavePin_recoveryCodeFails_showsCodeErrorAndRetryShowsCode() = runTest {
         var failCodeGeneration = true
         val flaky = object : SettingsRepository by fakeSettingsRepository {
             override suspend fun regenerateRecoveryCode(): String {
@@ -190,7 +190,8 @@ class OnboardingViewModelTest {
 
         viewModel.onSavePin()
         advanceUntilIdle()
-        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_SAVE_FAILED)
+        assertThat(enterPinState.error).isEqualTo(OnboardingViewModel.ERROR_CODE_FAILED)
+        assertThat(fakeSettingsRepository.verifyAdminPin("1234")).isTrue()
 
         failCodeGeneration = false
         viewModel.onSavePin()

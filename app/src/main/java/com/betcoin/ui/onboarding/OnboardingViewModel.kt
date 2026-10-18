@@ -89,13 +89,16 @@ class OnboardingViewModel @Inject constructor(
 
         _uiState.value = state.copy(error = null, isSaving = true)
         viewModelScope.launch {
+            // Retrying after a code failure sets the same PIN again, which is harmless.
+            var error = ERROR_SAVE_FAILED
             _uiState.value = try {
                 settingsRepository.setAdminPin(state.pin)
+                error = ERROR_CODE_FAILED
                 OnboardingUiState.ShowRecoveryCode(settingsRepository.regenerateRecoveryCode())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                state.copy(error = ERROR_SAVE_FAILED, isSaving = false)
+                state.copy(error = error, isSaving = false)
             }
         }
     }
@@ -128,5 +131,6 @@ class OnboardingViewModel @Inject constructor(
         const val ERROR_PIN_LENGTH = "PIN must be exactly 4 digits"
         const val ERROR_PIN_MISMATCH = "PINs don't match"
         const val ERROR_SAVE_FAILED = "Couldn't save the PIN. Try again."
+        const val ERROR_CODE_FAILED = "Couldn't create the recovery code. Try again."
     }
 }
