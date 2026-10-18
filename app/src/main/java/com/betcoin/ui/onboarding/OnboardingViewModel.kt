@@ -90,15 +90,15 @@ class OnboardingViewModel @Inject constructor(
         _uiState.value = state.copy(error = null, isSaving = true)
         viewModelScope.launch {
             // Retrying after a code failure sets the same PIN again, which is harmless.
-            var error = ERROR_SAVE_FAILED
+            var failureMessage = ERROR_SAVE_FAILED
             _uiState.value = try {
                 settingsRepository.setAdminPin(state.pin)
-                error = ERROR_CODE_FAILED
+                failureMessage = ERROR_CODE_FAILED
                 OnboardingUiState.ShowRecoveryCode(settingsRepository.regenerateRecoveryCode())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                state.copy(error = error, isSaving = false)
+                state.copy(error = failureMessage, isSaving = false)
             }
         }
     }

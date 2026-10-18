@@ -1,6 +1,7 @@
 package com.betcoin.ui.onboarding
 
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,7 +26,6 @@ import com.betcoin.data.security.PinHasher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -136,22 +136,45 @@ class OnboardingScreenTest {
 
     @Test
     fun recoveryCode_backIsIgnored() {
+        val fallbackBack = registerFallbackBackCallback()
         setContent(OnboardingUiState.ShowRecoveryCode("ABCD-EFGH-JKLM"))
 
-        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
-        composeTestRule.waitForIdle()
+        pressBack()
 
-        assertFalse(composeTestRule.activity.isFinishing)
+        assertEquals(0, fallbackBack.calls)
         composeTestRule.onNodeWithTag(RECOVERY_CODE_TAG).assertIsDisplayed()
     }
 
     @Test
     fun enterPin_backIsNotIntercepted() {
+        val fallbackBack = registerFallbackBackCallback()
         setContent(OnboardingUiState.EnterPin())
 
-        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
+        pressBack()
 
-        assertTrue(composeTestRule.activity.isFinishing)
+        assertEquals(1, fallbackBack.calls)
+    }
+
+    /**
+     * Registers a Back callback before the content, so the screen's BackHandler (added later)
+     * takes priority and this one only runs when the screen doesn't consume Back.
+     */
+    private fun registerFallbackBackCallback(): CountingBackCallback {
+        val callback = CountingBackCallback()
+        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.addCallback(callback) }
+        return callback
+    }
+
+    private fun pressBack() {
+        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.waitForIdle()
+    }
+
+    private class CountingBackCallback : OnBackPressedCallback(true) {
+        var calls = 0
+        override fun handleOnBackPressed() {
+            calls++
+        }
     }
 
     // --- Full flow with the real ViewModel ---
