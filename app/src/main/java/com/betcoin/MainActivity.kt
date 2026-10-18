@@ -1,8 +1,11 @@
 package com.betcoin
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.navigation.NavGraph
 import com.betcoin.navigation.Routes
+import com.betcoin.ui.components.AppRootLayout
 import com.betcoin.ui.theme.BetCoinTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -26,6 +30,9 @@ import javax.inject.Inject
 /**
  * The single [ComponentActivity] for BetCoin, annotated with [AndroidEntryPoint]
  * to enable Hilt injection. Hosts the Compose NavHost via [setContent].
+ *
+ * Runs edge-to-edge (spec §4.1.1) and wraps everything in [AppRootLayout], which draws the
+ * dev build banner on the dev flavor.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -35,6 +42,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // BetCoin is dark-only, so system bar icons stay light whatever the system theme.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
 
         setContent {
             BetCoinTheme {
@@ -42,28 +54,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    val navController = rememberNavController()
-                    var startDestination by remember { mutableStateOf<String?>(null) }
+                    AppRootLayout {
+                        val navController = rememberNavController()
+                        var startDestination by remember { mutableStateOf<String?>(null) }
 
-                    LaunchedEffect(Unit) {
-                        startDestination = if (settingsRepository.isFirstLaunch()) {
-                            Routes.ONBOARDING
-                        } else {
-                            Routes.HOME
+                        LaunchedEffect(Unit) {
+                            startDestination = if (settingsRepository.isFirstLaunch()) {
+                                Routes.ONBOARDING
+                            } else {
+                                Routes.HOME
+                            }
                         }
-                    }
 
-                    if (startDestination != null) {
-                        NavGraph(
-                            navController = navController,
-                            startDestination = startDestination!!,
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator()
+                        if (startDestination != null) {
+                            NavGraph(
+                                navController = navController,
+                                startDestination = startDestination!!,
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }

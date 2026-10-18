@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coral "DEV" badge drawn over the launcher foreground on the dev flavor (spec §14). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Pill, inside the 66dp adaptive icon safe zone -->
+    <path
+        android:fillColor="#FFB2B7"
+        android:pathData="M41,65h26a8,8 0,0 1,0 16h-26a8,8 0,0 1,0 -16z" />
+    <!-- "DEV" lettering -->
+    <path
+        android:pathData="M42,69L42,77L45,77Q48,77 48,73Q48,69 45,69Z M56,69L51,69L51,77L56,77 M51,73L55,73 M59,69L62.5,77L66,69"
+        android:strokeWidth="2"
+        android:strokeColor="#5B1822"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
