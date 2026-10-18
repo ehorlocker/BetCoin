@@ -1,13 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup rules for API 24-30 (prod). Ignored on API 31+, which uses
+    data_extraction_rules.xml. Only the Room database and the avatar pictures
+    are backed up. The dev flavor overrides this file to exclude everything
+    (see src/dev/res/xml).
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <include domain="database" path="betcoin.db" />
+    <include domain="database" path="betcoin.db-wal" />
+    <include domain="database" path="betcoin.db-shm" />
+    <include domain="file" path="avatars/" />
 </full-backup-content>
