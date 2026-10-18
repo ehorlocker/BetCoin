@@ -17,6 +17,10 @@ interface BetParticipantDao {
   @Insert
   suspend fun insert(participant: BetParticipant): Long
 
+  /** Returns the participant with the given [participantId], or null if not found. */
+  @Query("SELECT * FROM bet_participants WHERE id = :participantId")
+  suspend fun getById(participantId: Long): BetParticipant?
+
   /** Returns all participants for the given [betId]. */
   @Query("SELECT * FROM bet_participants WHERE bet_id = :betId")
   suspend fun getByBetId(betId: Long): List<BetParticipant>

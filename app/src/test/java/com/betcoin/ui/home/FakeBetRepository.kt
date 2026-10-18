@@ -31,6 +31,8 @@ class FakeBetRepository : BetRepository {
     }
 
     override fun getAllBets(): Flow<List<BetWithDetails>> = flowOf(emptyList())
+    override fun getPendingBet(): Flow<BetWithDetails?> = flowOf(null)
+    override suspend fun discardPendingBet(betId: Long) {}
     override fun getBetWithDetails(betId: Long): Flow<BetWithDetails> = flowOf(mockBetWithDetails())
     override suspend fun createBet(prompt: String, outcomes: List<String>): Long = 0L
     override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
