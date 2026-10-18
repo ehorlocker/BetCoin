@@ -41,7 +41,7 @@ class AppSettingsDaoTest {
 
   @Test
   fun insert_settingsSuccessfully() = runTest {
-    val settings = AppSettings(adminPinHash = "admin_hash_123")
+    val settings = AppSettings(adminPinHash = "admin_hash_123", recoveryCodeHash = "recovery_hash")
     appSettingsDao.insert(settings)
 
     val retrieved = appSettingsDao.getSettings()
@@ -51,7 +51,7 @@ class AppSettingsDaoTest {
 
   @Test
   fun insert_defaultsIdToOne() = runTest {
-    val settings = AppSettings(adminPinHash = "some_hash")
+    val settings = AppSettings(adminPinHash = "some_hash", recoveryCodeHash = "recovery_hash")
     appSettingsDao.insert(settings)
 
     val retrieved = appSettingsDao.getSettings()
@@ -61,8 +61,8 @@ class AppSettingsDaoTest {
 
   @Test
   fun insert_calledTwice_replacesExistingRow() = runTest {
-    appSettingsDao.insert(AppSettings(adminPinHash = "first_hash"))
-    appSettingsDao.insert(AppSettings(adminPinHash = "second_hash"))
+    appSettingsDao.insert(AppSettings(adminPinHash = "first_hash", recoveryCodeHash = "recovery_hash"))
+    appSettingsDao.insert(AppSettings(adminPinHash = "second_hash", recoveryCodeHash = "recovery_hash"))
 
     val retrieved = appSettingsDao.getSettings()
     assertThat(retrieved).isNotNull()
@@ -79,7 +79,7 @@ class AppSettingsDaoTest {
 
   @Test
   fun getSettings_afterInsert_returnsSettings() = runTest {
-    appSettingsDao.insert(AppSettings(adminPinHash = "hash_value"))
+    appSettingsDao.insert(AppSettings(adminPinHash = "hash_value", recoveryCodeHash = "recovery_hash"))
 
     val settings = appSettingsDao.getSettings()
     assertThat(settings).isNotNull()
@@ -90,7 +90,7 @@ class AppSettingsDaoTest {
 
   @Test
   fun update_changesAdminPinHash() = runTest {
-    appSettingsDao.insert(AppSettings(adminPinHash = "old_hash"))
+    appSettingsDao.insert(AppSettings(adminPinHash = "old_hash", recoveryCodeHash = "recovery_hash"))
 
     val settings = appSettingsDao.getSettings()!!
     appSettingsDao.update(settings.copy(adminPinHash = "new_hash"))
@@ -101,8 +101,8 @@ class AppSettingsDaoTest {
 
   @Test
   fun update_preservesId() = runTest {
-    appSettingsDao.insert(AppSettings(adminPinHash = "old_hash"))
-    appSettingsDao.update(AppSettings(adminPinHash = "new_hash"))
+    appSettingsDao.insert(AppSettings(adminPinHash = "old_hash", recoveryCodeHash = "recovery_hash"))
+    appSettingsDao.update(AppSettings(adminPinHash = "new_hash", recoveryCodeHash = "recovery_hash"))
 
     val updated = appSettingsDao.getSettings()!!
     assertThat(updated.id).isEqualTo(1)

@@ -1,19 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup rules for API 31+ (prod). Only the Room database and the
+    avatar pictures are backed up, so switching phones keeps players,
+    balances, bet history and pictures. The dev flavor overrides this file
+    to exclude everything (see src/dev/res/xml).
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <include domain="database" path="betcoin.db" />
+        <include domain="database" path="betcoin.db-wal" />
+        <include domain="database" path="betcoin.db-shm" />
+        <include domain="file" path="avatars/" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="database" path="betcoin.db" />
+        <include domain="database" path="betcoin.db-wal" />
+        <include domain="database" path="betcoin.db-shm" />
+        <include domain="file" path="avatars/" />
     </device-transfer>
-    -->
 </data-extraction-rules>
