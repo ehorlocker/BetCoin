@@ -110,10 +110,10 @@ class LocalBetRepositoryTest {
    * An ACTIVE bet with three outcomes (A, B, C): Alice 100 and Carol 300 on A, Bob 200 on B.
    * Nobody picked C. Resolving to A pays Alice 150 and Carol 450 from the 600 pot.
    */
-  private suspend fun activeBetWithThreePlayers(): ActiveBet {
-    val alice = insertUser("Alice")
-    val bob = insertUser("Bob")
-    val carol = insertUser("Carol")
+  private suspend fun activeBetWithThreePlayers(prefix: String = ""): ActiveBet {
+    val alice = insertUser("${prefix}Alice")
+    val bob = insertUser("${prefix}Bob")
+    val carol = insertUser("${prefix}Carol")
     val betId = repository.createBet("Who wins?", listOf("A", "B", "C"))
     val (a, b, c) = outcomeIds(betId)
     repository.addParticipant(betId, alice, a, 100L)
@@ -1304,7 +1304,7 @@ class LocalBetRepositoryTest {
       repository.adminEditWager(participantIdOf(pendingId, alice), 50L)
     }
 
-    val resolved = activeBetWithThreePlayers()
+    val resolved = activeBetWithThreePlayers(prefix = "R")
     val resolvedParticipant = participantIdOf(resolved.betId, resolved.alice)
     repository.resolveBet(resolved.betId, resolved.outcomeA)
     assertRejected<InvalidBetStateException> { repository.adminEditWager(resolvedParticipant, 50L) }

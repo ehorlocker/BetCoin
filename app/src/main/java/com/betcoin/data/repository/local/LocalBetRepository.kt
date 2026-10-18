@@ -346,7 +346,7 @@ class LocalBetRepository @Inject constructor(
                 throw UnanimousPickException()
             }
             val userId = participant.userId
-                ?: throw InvalidInputException("Participant $participantId no longer exists")
+                ?: throw InvalidInputException("User for participant $participantId no longer exists")
             val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
             userDao.updateBalance(user.id, user.balance + participant.wagerAmount)
             participantDao.delete(participant)
@@ -362,7 +362,7 @@ class LocalBetRepository @Inject constructor(
                 throw InvalidInputException("Wager must be at least 1")
             }
             val userId = participant.userId
-                ?: throw InvalidInputException("Participant $participantId no longer exists")
+                ?: throw InvalidInputException("User for participant $participantId no longer exists")
             val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
             val diff = newWagerAmount - participant.wagerAmount
             // Only increases can be unaffordable; a decrease is always allowed.
