@@ -59,7 +59,7 @@ fun BetCoinAvatar(
             .size(size.dp)
             .clip(CircleShape)
             .background(backgroundColor)
-            .border(2.dp, BetCoinPrimary, CircleShape),
+            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text(

@@ -1,6 +1,7 @@
 package com.betcoin.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
@@ -99,5 +100,27 @@ class ColorTest {
     @Test
     fun tertiaryAndContainer_areDistinct() {
         assertThat(BetCoinTertiary).isNotEqualTo(BetCoinTertiaryContainer)
+    }
+
+    @Test
+    fun lightScheme_usesSpecifiedRoles() {
+        val scheme = BetCoinLightColorScheme
+        assertThat(scheme.primary).isEqualTo(Color(0xFF006B59))
+        assertThat(scheme.onPrimary).isEqualTo(Color(0xFFFFFFFF))
+        assertThat(scheme.background).isEqualTo(Color(0xFFF9F9FD))
+        assertThat(scheme.onSurface).isEqualTo(Color(0xFF1A1C1F))
+        assertThat(scheme.errorContainer).isEqualTo(Color(0xFFFFDAD6))
+        assertThat(scheme.onErrorContainer).isEqualTo(Color(0xFF410002))
+    }
+
+    @Test
+    fun lightScheme_backgroundIsLight() {
+        assertThat(BetCoinLightColorScheme.background.luminance()).isGreaterThan(0.8f)
+        assertThat(BetCoinLightColorScheme.onBackground.luminance()).isLessThan(0.1f)
+    }
+
+    @Test
+    fun darkScheme_unchanged() {
+        assertThat(BetCoinDarkColorScheme.background).isEqualTo(Color(0xFF111316))
     }
 }

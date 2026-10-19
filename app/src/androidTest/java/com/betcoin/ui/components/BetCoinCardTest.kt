@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -21,7 +22,7 @@ class BetCoinCardTest {
     @Test
     fun card_displaysContent() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinCard {
                     androidx.compose.material3.Text("Bet Title")
                 }
@@ -36,7 +37,7 @@ class BetCoinCardTest {
     fun card_isClickable_whenOnClickProvided() {
         var clicked = false
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinCard(onClick = { clicked = true }) {
                     androidx.compose.material3.Text("Clickable Card")
                 }

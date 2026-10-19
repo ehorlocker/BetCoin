@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
+import com.betcoin.data.model.ThemePreference
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +22,7 @@ class ThemeTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun betCoinTheme_appliesDarkColorScheme() {
+    fun betCoinTheme_dark_appliesDarkColorScheme() {
         var primary: Color? = null
         var secondary: Color? = null
         var tertiary: Color? = null
@@ -29,7 +30,7 @@ class ThemeTest {
         var surface: Color? = null
 
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 primary = MaterialTheme.colorScheme.primary
                 secondary = MaterialTheme.colorScheme.secondary
                 tertiary = MaterialTheme.colorScheme.tertiary
@@ -43,6 +44,22 @@ class ThemeTest {
         assertThat(tertiary).isEqualTo(BetCoinTertiary)
         assertThat(background).isEqualTo(BetCoinBackground)
         assertThat(surface).isEqualTo(BetCoinSurface)
+    }
+
+    @Test
+    fun betCoinTheme_light_appliesLightColorScheme() {
+        var background: Color? = null
+        var primary: Color? = null
+
+        composeTestRule.setContent {
+            BetCoinTheme(themePreference = ThemePreference.LIGHT) {
+                background = MaterialTheme.colorScheme.background
+                primary = MaterialTheme.colorScheme.primary
+            }
+        }
+
+        assertThat(background).isEqualTo(BetCoinLightBackground)
+        assertThat(primary).isEqualTo(BetCoinLightPrimary)
     }
 
     @Test

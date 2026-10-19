@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +45,7 @@ class PinEntryDialogTest {
         verifier: suspend (String) -> Boolean = bcryptVerifier(JAY_HASH),
     ) {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 PinEntryDialog(
                     label = "Jay",
                     verifier = verifier,
@@ -68,7 +69,7 @@ class PinEntryDialogTest {
         var forgot = 0
         var dismissed = 0
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 PinEntryDialog(
                     label = "Admin",
                     verifier = { false },
@@ -182,7 +183,7 @@ class PinEntryDialogTest {
             ConsentStep("Alex", bcryptVerifier(ALEX_HASH)),
         )
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 var showing by remember { mutableStateOf(true) }
                 if (showing) {
                     ConsentSequence(
@@ -267,7 +268,7 @@ class PinEntryDialogTest {
         var confirmed = 0
         var recompose by mutableIntStateOf(0)
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 // Built inline like a real caller, so every recomposition gets new lambdas and a
                 // list that isn't equal to the previous one.
                 val steps = recompose.let {

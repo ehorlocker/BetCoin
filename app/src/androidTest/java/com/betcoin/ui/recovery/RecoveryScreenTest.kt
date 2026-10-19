@@ -1,5 +1,6 @@
 package com.betcoin.ui.recovery
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -27,7 +28,7 @@ class RecoveryScreenTest {
         onDiscard: () -> Unit = {},
     ) {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 RecoveryScreen(
                     uiState = state,
                     onReturnToBet = onReturnToBet,

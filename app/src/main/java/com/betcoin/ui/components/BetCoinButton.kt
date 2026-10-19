@@ -12,9 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinOnPrimary
-import com.betcoin.ui.theme.BetCoinPrimary
-import com.betcoin.ui.theme.BetCoinSuccess
 
 enum class ButtonVariant {
     Primary,
@@ -30,20 +27,21 @@ fun BetCoinButton(
     variant: ButtonVariant = ButtonVariant.Primary,
     enabled: Boolean = true,
 ) {
+    val colors = MaterialTheme.colorScheme
     val (containerColor, contentColor, borderColor) = when (variant) {
         ButtonVariant.Primary -> Triple(
-            BetCoinPrimary,
-            BetCoinOnPrimary,
+            colors.primary,
+            colors.onPrimary,
             Color.Transparent,
         )
         ButtonVariant.Secondary -> Triple(
             Color.Transparent,
-            BetCoinPrimary,
-            BetCoinPrimary,
+            colors.primary,
+            colors.primary,
         )
         ButtonVariant.BettingAction -> Triple(
-            BetCoinSuccess,
-            BetCoinOnPrimary,
+            colors.primary,
+            colors.onPrimary,
             Color.Transparent,
         )
     }
