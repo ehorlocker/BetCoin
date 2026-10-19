@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -80,6 +81,7 @@ fun BetHistoryContent(
     onBetClick: (Long) -> Unit = {},
 ) {
     var isNavigatingBack by remember { mutableStateOf(false) }
+    val dateFormat = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
 
     BackHandler(enabled = !isNavigatingBack) {
         isNavigatingBack = true
@@ -129,15 +131,21 @@ fun BetHistoryContent(
                 uiState.isLoading -> CenteredBox { CircularProgressIndicator() }
                 uiState.isError -> CenteredBox { MessageText("Couldn't load bets.") }
                 uiState.rows.isEmpty() -> CenteredBox { MessageText(uiState.filter.emptyMessage) }
-                else -> LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(uiState.rows, key = { it.betId }) { row ->
-                        BetHistoryRowCard(row = row, onClick = { onBetClick(row.betId) })
+                else -> key(uiState.filter) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(uiState.rows, key = { it.betId }) { row ->
+                            BetHistoryRowCard(
+                                row = row,
+                                dateText = dateFormat.format(Date(row.createdAt)),
+                                onClick = { onBetClick(row.betId) },
+                            )
+                        }
                     }
                 }
             }
@@ -168,7 +176,7 @@ private fun MessageText(text: String) {
 }
 
 @Composable
-private fun BetHistoryRowCard(row: BetHistoryRow, onClick: () -> Unit) {
+private fun BetHistoryRowCard(row: BetHistoryRow, dateText: String, onClick: () -> Unit) {
     BetCoinCard(
         onClick = onClick,
         modifier = Modifier
@@ -191,7 +199,7 @@ private fun BetHistoryRowCard(row: BetHistoryRow, onClick: () -> Unit) {
             }
             val participants = if (row.participantCount == 1) "1 participant" else "${row.participantCount} participants"
             Text(
-                text = "${formatDate(row.createdAt)} · $participants · Pot: ${formatCoins(row.pot)}",
+                text = "$dateText · $participants · Pot: ${formatCoins(row.pot)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -227,6 +235,3 @@ private fun StatusBadge(status: BetStatus) {
         )
     }
 }
-
-private fun formatDate(epochMillis: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(epochMillis))
