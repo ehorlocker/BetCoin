@@ -5,6 +5,7 @@ import com.betcoin.data.model.BetCoinException
 import com.betcoin.data.model.DuplicateUsernameException
 import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.InvalidBetStateException
+import com.betcoin.data.model.InvalidImageException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.data.model.UnanimousPickException
@@ -28,4 +29,5 @@ fun BetCoinException.toUserMessage(): String = when (this) {
     is NotEligibleForBailoutException -> "Not eligible for a bailout"
     is InvalidInputException -> "That's no longer valid. Check it and try again."
     is WrongRecoveryCodeException -> "Wrong recovery code"
+    is InvalidImageException -> "Couldn't use that image"
 }

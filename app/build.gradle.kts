@@ -125,6 +125,10 @@ dependencies {
     // PIN hashing
     implementation(libs.jbcrypt)
 
+    // Profile pictures
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.exifinterface)
+
     // Unit tests
     testImplementation(libs.junit)
     testImplementation(libs.truth)

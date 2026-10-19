@@ -5,6 +5,7 @@ import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.DuplicateUsernameException
 import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.InvalidBetStateException
+import com.betcoin.data.model.InvalidImageException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.data.model.UnanimousPickException
@@ -60,6 +61,11 @@ class BetCoinExceptionMessagesTest {
     @Test
     fun wrongRecoveryCode() {
         assertThat(WrongRecoveryCodeException().toUserMessage()).isEqualTo("Wrong recovery code")
+    }
+
+    @Test
+    fun invalidImage() {
+        assertThat(InvalidImageException().toUserMessage()).isEqualTo("Couldn't use that image")
     }
 
     @Test
