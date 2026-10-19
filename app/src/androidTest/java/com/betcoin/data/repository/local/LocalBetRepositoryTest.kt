@@ -522,15 +522,40 @@ class LocalBetRepositoryTest {
   }
 
   @Test
-  fun discardOlderPendingBets_leavesNonPendingBetsUntouched() = runTest {
-    val (activeId, _, _) = pendingBetWithTwoPlayers()
-    repository.lockBet(activeId)
-    val pendingId = repository.createBet("Pending?", listOf("c", "d"))
+  fun discardOlderPendingBets_createdAtIsPrimarySortKey() = runTest {
+    val betDao = database.betDao()
+    val newerCreatedAt = betDao.insert(
+      Bet(prompt = "A", status = BetStatus.PENDING_CONFIRMATION, createdAt = 3_000L)
+    )
+    val olderCreatedAt = betDao.insert(
+      Bet(prompt = "B", status = BetStatus.PENDING_CONFIRMATION, createdAt = 1_000L)
+    )
 
     repository.discardOlderPendingBets()
 
-    assertThat(database.betDao().getById(activeId)?.status).isEqualTo(BetStatus.ACTIVE)
-    assertThat(database.betDao().getById(pendingId)).isNotNull()
+    assertThat(olderCreatedAt).isGreaterThan(newerCreatedAt)
+    assertThat(betDao.getById(newerCreatedAt)).isNotNull()
+    assertThat(betDao.getById(olderCreatedAt)).isNull()
+    assertThat(repository.getPendingBet().first()?.bet?.id).isEqualTo(newerCreatedAt)
+  }
+
+  @Test
+  fun discardOlderPendingBets_leavesNonPendingBetsUntouched() = runTest {
+    val betDao = database.betDao()
+    val (activeId, _, _) = pendingBetWithTwoPlayers()
+    repository.lockBet(activeId)
+    val olderPending = betDao.insert(
+      Bet(prompt = "older", status = BetStatus.PENDING_CONFIRMATION, createdAt = 1_000L)
+    )
+    val newerPending = betDao.insert(
+      Bet(prompt = "newer", status = BetStatus.PENDING_CONFIRMATION, createdAt = 2_000L)
+    )
+
+    repository.discardOlderPendingBets()
+
+    assertThat(betDao.getById(activeId)?.status).isEqualTo(BetStatus.ACTIVE)
+    assertThat(betDao.getById(newerPending)).isNotNull()
+    assertThat(betDao.getById(olderPending)).isNull()
   }
 
   @Test

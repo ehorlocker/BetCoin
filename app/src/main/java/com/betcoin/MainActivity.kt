@@ -14,7 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,10 +55,12 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppRootLayout {
                         val navController = rememberNavController()
-                        var startDestination by remember { mutableStateOf<String?>(null) }
+                        var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
 
                         LaunchedEffect(Unit) {
-                            startDestination = startDestinationResolver.resolve()
+                            if (startDestination == null) {
+                                startDestination = startDestinationResolver.resolve()
+                            }
                         }
 
                         if (startDestination != null) {
