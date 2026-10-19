@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,12 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
-import com.betcoin.data.model.ThemePreference
-import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.devtools.DevToolsEntry
 import com.betcoin.navigation.NavGraph
 import com.betcoin.navigation.StartDestinationResolver
 import com.betcoin.ui.components.AppRootLayout
+import com.betcoin.ui.theme.AppThemeViewModel
 import com.betcoin.ui.theme.BetCoinTheme
 import com.betcoin.ui.theme.isDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -46,16 +46,20 @@ class MainActivity : ComponentActivity() {
     lateinit var startDestinationResolver: StartDestinationResolver
 
     @Inject
-    lateinit var settingsRepository: SettingsRepository
-
-    @Inject
     lateinit var devToolsEntry: DevToolsEntry
+
+    private val appThemeViewModel: AppThemeViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
         setContent {
-            val themePreference by settingsRepository.getThemePreference()
-                .collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)
+            // Render nothing until the stored preference is known, so the wrong theme never flashes.
+            val themePreference = appThemeViewModel.themePreference
+                .collectAsStateWithLifecycle().value ?: return@setContent
             val darkTheme = themePreference.isDarkTheme()
 
             // System bar icon style follows the resolved theme.

@@ -1,6 +1,9 @@
 package com.betcoin.ui.theme
 
+import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.TextStyle
@@ -60,6 +63,32 @@ class ThemeTest {
 
         assertThat(background).isEqualTo(BetCoinLightBackground)
         assertThat(primary).isEqualTo(BetCoinLightPrimary)
+    }
+
+    private fun systemBackground(nightMode: Int): Color? {
+        var background: Color? = null
+        composeTestRule.setContent {
+            val base = LocalConfiguration.current
+            val config = Configuration(base).apply {
+                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or nightMode
+            }
+            CompositionLocalProvider(LocalConfiguration provides config) {
+                BetCoinTheme(themePreference = ThemePreference.SYSTEM) {
+                    background = MaterialTheme.colorScheme.background
+                }
+            }
+        }
+        return background
+    }
+
+    @Test
+    fun betCoinTheme_system_followsNightMode() {
+        assertThat(systemBackground(Configuration.UI_MODE_NIGHT_YES)).isEqualTo(BetCoinBackground)
+    }
+
+    @Test
+    fun betCoinTheme_system_followsDayMode() {
+        assertThat(systemBackground(Configuration.UI_MODE_NIGHT_NO)).isEqualTo(BetCoinLightBackground)
     }
 
     @Test

@@ -26,6 +26,7 @@ class SettingsScreenTest {
         state: SettingsUiState = SettingsUiState(),
         onThemeSelected: (ThemePreference) -> Unit = {},
         onBack: () -> Unit = {},
+        onErrorShown: () -> Unit = {},
         devToolsRow: @androidx.compose.runtime.Composable () -> Unit = {},
     ) {
         composeTestRule.setContent {
@@ -34,7 +35,7 @@ class SettingsScreenTest {
                     uiState = state,
                     versionLabel = "1.0 (dev)",
                     onThemeSelected = onThemeSelected,
-                    onErrorShown = {},
+                    onErrorShown = onErrorShown,
                     onBack = onBack,
                     devToolsRow = devToolsRow,
                 )
@@ -83,5 +84,14 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithContentDescription("Back").performClick()
 
         assert(backed) { "onBack was not invoked" }
+    }
+
+    @Test
+    fun errorMessage_showsSnackbarAndCallsOnErrorShown() {
+        var shown = false
+        show(SettingsUiState(errorMessage = "Boom"), onErrorShown = { shown = true })
+
+        composeTestRule.onNodeWithText("Boom").assertIsDisplayed()
+        composeTestRule.waitUntil(5_000) { shown }
     }
 }
