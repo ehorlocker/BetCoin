@@ -3,6 +3,7 @@ package com.betcoin.ui.players
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.betcoin.data.avatar.AvatarStore
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetCoinException
 import com.betcoin.data.repository.UserRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -30,6 +32,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ManagePlayersViewModel @Inject constructor(
     private val userRepository: UserRepository,
+    private val avatarStore: AvatarStore,
 ) : ViewModel() {
 
     /** State of the Add Player dialog. The PIN fields are only held while the dialog is open. */
@@ -44,6 +47,8 @@ class ManagePlayersViewModel @Inject constructor(
     data class UiState(
         val isLoading: Boolean = true,
         val players: List<User> = emptyList(),
+        /** Loaded avatar models by user id; users without a ref or with a missing image are absent. */
+        val avatars: Map<Long, Any> = emptyMap(),
         /** Non-null while the Add Player dialog is open. */
         val addPlayerForm: AddPlayerForm? = null,
         val snackbarMessage: String? = null,
@@ -57,10 +62,14 @@ class ManagePlayersViewModel @Inject constructor(
     private val localState = MutableStateFlow(LocalState())
 
     val uiState: StateFlow<UiState> =
-        combine(userRepository.getAllUsers(), localState) { users, local ->
+        combine(
+            userRepository.getAllUsers().map { users -> users to loadAvatars(users) },
+            localState,
+        ) { (users, avatars), local ->
             UiState(
                 isLoading = false,
                 players = users,
+                avatars = avatars,
                 addPlayerForm = local.addPlayerForm,
                 snackbarMessage = local.snackbarMessage,
             )
@@ -121,6 +130,13 @@ class ManagePlayersViewModel @Inject constructor(
     private fun updateForm(transform: (AddPlayerForm) -> AddPlayerForm) {
         localState.update { state ->
             state.addPlayerForm?.let { state.copy(addPlayerForm = transform(it)) } ?: state
+        }
+    }
+
+    private suspend fun loadAvatars(users: List<User>): Map<Long, Any> = buildMap {
+        for (user in users) {
+            val ref = user.avatarRef ?: continue
+            avatarStore.load(ref)?.let { put(user.id, it) }
         }
     }
 

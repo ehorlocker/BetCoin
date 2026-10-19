@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,8 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.betcoin.ui.components.BetCoinAvatar
 import com.betcoin.ui.components.BetCoinCard
 import com.betcoin.ui.components.formatCoins
+import com.betcoin.ui.players.initialsOf
 
 /** Matches [BetCoinCard]'s inner padding so header columns line up with row columns. */
 private val CardContentPadding = 24.dp
@@ -155,12 +158,20 @@ private fun LeaderboardRow(row: LeaderboardViewModel.Row, onClick: () -> Unit) {
         LeaderboardColumns(
             rank = { Text(text = "${row.rank}", style = MaterialTheme.typography.titleMedium) },
             username = {
-                Text(
-                    text = row.username,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BetCoinAvatar(
+                        initials = initialsOf(row.username),
+                        size = 32,
+                        imageModel = row.avatarModel,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = row.username,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             },
             netWorth = {
                 Text(

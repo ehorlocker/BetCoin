@@ -1,5 +1,6 @@
 package com.betcoin.ui.players
 
+import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -33,7 +34,7 @@ class ManagePlayersScreenTest {
         onPlayerClick: (Long) -> Unit = {},
         onAdminPanel: () -> Unit = {},
     ) {
-        val viewModel = ManagePlayersViewModel(repository)
+        val viewModel = ManagePlayersViewModel(repository, FakeAvatarStore())
         composeTestRule.setContent {
             BetCoinTheme(themePreference = ThemePreference.DARK) {
                 ManagePlayersScreen(

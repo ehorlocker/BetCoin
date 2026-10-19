@@ -3,6 +3,7 @@ package com.betcoin.ui.players
 import android.database.sqlite.SQLiteException
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.InvalidInputException
+import com.betcoin.testing.FakeAvatarStore
 import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.google.common.truth.Truth.assertThat
@@ -29,12 +30,14 @@ class ManagePlayersViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakeUserRepository: FakeUserRepository
+    private lateinit var fakeAvatarStore: FakeAvatarStore
     private lateinit var viewModel: ManagePlayersViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeUserRepository = FakeUserRepository()
+        fakeAvatarStore = FakeAvatarStore()
     }
 
     @After
@@ -44,7 +47,7 @@ class ManagePlayersViewModelTest {
 
     /** Creates the ViewModel and keeps its WhileSubscribed state collected for the test. */
     private fun TestScope.createViewModel() {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
+        viewModel = ManagePlayersViewModel(fakeUserRepository, fakeAvatarStore)
         backgroundScope.launch { viewModel.uiState.collect {} }
         advanceUntilIdle()
     }
@@ -68,9 +71,26 @@ class ManagePlayersViewModelTest {
 
     @Test
     fun initialState_isLoading() {
-        viewModel = ManagePlayersViewModel(fakeUserRepository)
+        viewModel = ManagePlayersViewModel(fakeUserRepository, fakeAvatarStore)
 
         assertThat(state.isLoading).isTrue()
+    }
+
+    @Test
+    fun avatars_mapsUsersWithAvatarRefToLoadedModel() = runTest {
+        fakeUserRepository.users = listOf(user(1L, "Alice").copy(avatarRef = "a.jpg"), user(2L, "Bob"))
+        fakeAvatarStore.images["a.jpg"] = "MODEL"
+        createViewModel()
+
+        assertThat(state.avatars).containsExactly(1L, "MODEL")
+    }
+
+    @Test
+    fun avatars_missingImage_isAbsent() = runTest {
+        fakeUserRepository.users = listOf(user(1L, "Alice").copy(avatarRef = "a.jpg"))
+        createViewModel()
+
+        assertThat(state.avatars).isEmpty()
     }
 
     @Test
