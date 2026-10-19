@@ -30,6 +30,11 @@ class FakeNewBetRepository(private val users: FakeUserRepository) : BetRepositor
 
     /** Bets passed to [discardPendingBet], in call order. */
     val discardedBetIds = mutableListOf<Long>()
+    /** When set, [createBet] throws it. */
+    var createBetError: Throwable? = null
+
+    /** When set, [discardPendingBet] throws it. */
+    var discardError: Throwable? = null
     var createBetCalls = 0
         private set
 
@@ -38,6 +43,7 @@ class FakeNewBetRepository(private val users: FakeUserRepository) : BetRepositor
     fun participantsOf(betId: Long): List<BetParticipant> = participants.value.filter { it.betId == betId }
 
     override suspend fun createBet(prompt: String, outcomes: List<String>): Long {
+        createBetError?.let { throw it }
         createBetCalls++
         if (prompt.trim().length !in 1..120) throw InvalidInputException("Prompt must be 1–120 characters")
         if (outcomes.size !in 2..8) throw InvalidInputException("A bet needs 2–8 outcomes")
@@ -104,6 +110,7 @@ class FakeNewBetRepository(private val users: FakeUserRepository) : BetRepositor
     override suspend fun discardOlderPendingBets() {}
 
     override suspend fun discardPendingBet(betId: Long) {
+        discardError?.let { throw it }
         requirePending(betId)
         discardedBetIds += betId
         participants.value = participants.value.filterNot { it.betId == betId }

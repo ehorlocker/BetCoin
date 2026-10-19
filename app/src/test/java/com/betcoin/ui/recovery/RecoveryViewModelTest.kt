@@ -112,6 +112,28 @@ class RecoveryViewModelTest {
     }
 
     @Test
+    fun discard_onIoFailure_staysPendingAndCanRetry() = runTest {
+        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.discardError = java.io.IOException("disk")
+        val viewModel = RecoveryViewModel(repository)
+        backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.discard()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value)
+            .isEqualTo(RecoveryUiState.Pending(betId = 7, prompt = "Who wins Smash?", participantCount = 3, isDiscarding = false))
+
+        repository.discardError = null
+        viewModel.discard()
+        advanceUntilIdle()
+
+        assertThat(repository.discardedBetIds).containsExactly(7L)
+        assertThat(viewModel.uiState.value).isEqualTo(RecoveryUiState.GoHome)
+    }
+
+    @Test
     fun staysGoHomeWhenNewPendingBetAppears() = runTest {
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }

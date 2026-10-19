@@ -5,6 +5,7 @@ import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.navigation.Routes
 import com.betcoin.testing.FakeUserRepository
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -200,6 +201,20 @@ class NewBetViewModelTest {
         advanceUntilIdle()
 
         assertThat(bets.createBetCalls).isEqualTo(0)
+        assertThat(state.step).isEqualTo(NewBetStep.A)
+    }
+
+    @Test
+    fun next_onIoFailure_showsGenericErrorAndStopsBusy() = runTest {
+        createViewModel()
+        fillStepA()
+        bets.createBetError = IOException("disk")
+
+        viewModel.onNext()
+        advanceUntilIdle()
+
+        assertThat(state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(state.isBusy).isFalse()
         assertThat(state.step).isEqualTo(NewBetStep.A)
     }
 
@@ -433,6 +448,21 @@ class NewBetViewModelTest {
 
         assertThat(bets.discardedBetIds).containsExactly(betId)
         assertThat(state.exited).isTrue()
+    }
+
+    @Test
+    fun discardConfirmed_onIoFailure_staysOnScreenWithGenericError() = runTest {
+        openStepBWithPlayers()
+        viewModel.onBackRequested()
+        bets.discardError = IOException("disk")
+
+        viewModel.onDiscardConfirmed()
+        advanceUntilIdle()
+
+        assertThat(state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(state.isBusy).isFalse()
+        assertThat(state.showDiscardDialog).isFalse()
+        assertThat(state.exited).isFalse()
     }
 
     // --- Step C ---

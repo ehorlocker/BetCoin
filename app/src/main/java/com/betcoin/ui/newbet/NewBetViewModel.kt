@@ -442,10 +442,21 @@ class NewBetViewModel @Inject constructor(
                 betRepository.discardPendingBet(betId)
             } catch (e: BetCoinException) {
                 // The bet is already gone or no longer pending, so there's nothing left to discard.
+            } catch (e: IOException) {
+                discardFailed()
+                return@launch
+            } catch (e: SQLiteException) {
+                discardFailed()
+                return@launch
             }
             savedStateHandle.remove<Long>(Routes.NEW_BET_BET_ID_ARG)
             form.update { it.copy(isBusy = false, showDiscardDialog = false, exited = true) }
         }
+    }
+
+    /** Stays on the screen so the user can retry the discard. */
+    private fun discardFailed() {
+        form.update { it.copy(isBusy = false, showDiscardDialog = false, errorMessage = GENERIC_ERROR_MESSAGE) }
     }
 
     private fun BetCoinException.toLockMessage(participants: List<ParticipantWithUser>): String = when (this) {

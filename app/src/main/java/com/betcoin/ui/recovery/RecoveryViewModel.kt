@@ -1,5 +1,6 @@
 package com.betcoin.ui.recovery
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.betcoin.data.model.BetCoinException
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /** UI state for the Recovery screen shown when a bet was interrupted mid-creation. */
@@ -73,6 +75,12 @@ class RecoveryViewModel @Inject constructor(
                 betRepository.discardPendingBet(pending.betId)
             } catch (_: BetCoinException) {
                 // No longer pending: the goal state (no pending bet) is reached either way.
+            } catch (_: IOException) {
+                localState.update { it.copy(isDiscarding = false) }
+                return@launch
+            } catch (_: SQLiteException) {
+                localState.update { it.copy(isDiscarding = false) }
+                return@launch
             }
             localState.update { it.copy(discarded = true) }
         }
