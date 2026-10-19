@@ -27,5 +27,5 @@ interface AvatarStore {
    * Returns an opaque image model for [avatarRef] that an image loader can display (a
    * [java.io.File] for the local implementation), or null if the image is missing.
    */
-  fun load(avatarRef: String): Any?
+  suspend fun load(avatarRef: String): Any?
 }

@@ -39,5 +39,5 @@ class FakeAvatarStore : AvatarStore {
     saved -= avatarRef
   }
 
-  override fun load(avatarRef: String): Any? = if (avatarRef in saved) avatarRef else null
+  override suspend fun load(avatarRef: String): Any? = if (avatarRef in saved) avatarRef else null
 }

@@ -55,7 +55,7 @@ class LocalAvatarStoreTest {
     return options.outWidth to options.outHeight
   }
 
-  private fun savedFile(ref: String): File {
+  private suspend fun savedFile(ref: String): File {
     val loaded = store.load(ref)
     assertThat(loaded).isInstanceOf(File::class.java)
     return loaded as File
@@ -185,12 +185,12 @@ class LocalAvatarStoreTest {
   }
 
   @Test
-  fun load_missing_returnsNull() {
+  fun load_missing_returnsNull() = runBlocking {
     assertThat(store.load("missing.jpg")).isNull()
   }
 
   @Test
-  fun load_pathTraversalRef_returnsNull() {
+  fun load_pathTraversalRef_returnsNull() = runBlocking {
     File(context.filesDir, "foo.jpg").writeText("x")
     try {
       assertThat(store.load("../foo.jpg")).isNull()
