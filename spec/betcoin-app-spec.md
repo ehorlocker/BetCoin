@@ -362,9 +362,8 @@ Otherwise (capped: the losers put in more than the winners can win):
 ```
 - Every winner's uncapped share is the same multiple of their wager (`totalPot / winningWagers`), so the cap applies to all winners or to none
 - Integer division: use `Long` math, multiplying before dividing
-- Uncapped: the rounding remainder (`totalPot − sum of payouts`) goes to the winner with the largest wager
-- Capped: winners' payouts are exact; the rounding remainder (`refundPool − sum of loser payouts`) goes to the loser with the largest wager
-- Tiebreaker for either remainder: the participant added first (lowest `BetParticipant.id`)
+- Rounding remainder (`totalPot − sum of payouts`, always fewer coins than recipients): handed out one coin at a time to the recipients with the largest wagers, so nobody gets more than one extra coin. Recipients are the winners if uncapped, the losers if capped (winners' payouts are exact)
+- Tiebreaker for equal wagers: the participant added first (lowest `BetParticipant.id`)
 - A loser who gets a partial refund still counts as a loss (§5.8)
 - **No one picked the winning outcome** (`winningWagers == 0`): the bet still resolves to that outcome, but it's a **push**. Every participant gets `payout = wagerAmount`, so all wagers are refunded, and no W/L stats change. This check comes before the cap.
 - Implement as a pure function (`PayoutCalculator`) so it can be unit-tested directly
@@ -629,7 +628,7 @@ abstract class RepositoryModule {
 | PIN not exactly 4 digits | Block — digits only, exactly 4 |
 | User leaves New Bet flow | "Discard this bet?" → deletes the pending bet (§4.2) |
 | Winner's share of the pot would exceed their wager in profit | Cap at even money (`payout = 2 × wager`); refund the unmatched part to losers in proportion to their wagers (§5.3) |
-| Rounding remainder in payouts | Uncapped: goes to largest-wager winner. Capped: goes to largest-wager loser. Tiebreaker: first added |
+| Rounding remainder in payouts | One coin each to the largest-wager recipients (winners if uncapped, losers if capped), so nobody gets more than one extra coin. Tiebreaker: first added |
 | Wrong PIN entered | "Wrong PIN" message, no lockout, can retry |
 | App force-closed during bet creation | On relaunch, show Recovery Screen with Return to Bet / Discard Bet (see Section 11) |
 | Participant dismisses a PIN prompt during a consent sequence | Whole action aborted, nothing changed |

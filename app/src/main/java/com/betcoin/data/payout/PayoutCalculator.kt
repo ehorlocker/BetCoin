@@ -30,15 +30,16 @@ object PayoutCalculator {
    *
    * Otherwise winners can win at most their own wager (even money):
    * - Uncapped (`losingWagers <= winningWagers`): each winner gets
-   *   `wager * totalPot / winningWagers`, losers get 0, and the rounding remainder goes to the
-   *   winner with the largest wager.
+   *   `wager * totalPot / winningWagers` and losers get 0.
    * - Capped (`losingWagers > winningWagers`): each winner gets exactly `2 * wager`, and the
    *   unmatched `refundPool = losingWagers - winningWagers` is refunded to the losers as
-   *   `wager * refundPool / losingWagers`, with the rounding remainder going to the loser with
-   *   the largest wager.
+   *   `wager * refundPool / losingWagers`.
    *
-   * Math is [Long], multiplying before dividing. Ties for the remainder go to the lowest
-   * participant id. Payouts always sum to the total pot.
+   * Math is [Long], multiplying before dividing. The rounding remainder (always fewer coins than
+   * recipients) is handed out one coin each to the recipients (winners if uncapped, losers if
+   * capped) with the largest wagers, ties going to the lowest participant id, so nobody gets more
+   * than one coin above their floor share and payouts stay within the cap. Payouts always sum to
+   * the total pot.
    *
    * @throws IllegalArgumentException if a wager is not positive or a participant id repeats.
    * @throws ArithmeticException if a wager multiplied by the pot (or refund pool) overflows
@@ -66,7 +67,7 @@ object PayoutCalculator {
     val isCapped = losingWagers > winningWagers
 
     val payouts = participants.associateTo(LinkedHashMap()) { it.participantId to 0L }
-    val remainderRecipient: PayoutEntry
+    val recipients: List<PayoutEntry>
     if (isCapped) {
       for (winner in winners) {
         payouts[winner.participantId] = 2 * winner.wagerAmount
@@ -76,18 +77,19 @@ object PayoutCalculator {
         payouts[loser.participantId] =
           Math.multiplyExact(loser.wagerAmount, refundPool) / losingWagers
       }
-      remainderRecipient = losers.minWith(largestWagerThenLowestId)
+      recipients = losers
     } else {
       for (winner in winners) {
         payouts[winner.participantId] =
           Math.multiplyExact(winner.wagerAmount, totalPot) / winningWagers
       }
-      remainderRecipient = winners.minWith(largestWagerThenLowestId)
+      recipients = winners
     }
 
     val remainder = totalPot - payouts.values.sum()
-    payouts[remainderRecipient.participantId] =
-      payouts.getValue(remainderRecipient.participantId) + remainder
+    recipients.sortedWith(largestWagerThenLowestId).take(remainder.toInt()).forEach {
+      payouts[it.participantId] = payouts.getValue(it.participantId) + 1
+    }
 
     return PayoutResult(payouts = payouts, isPush = false, isCapped = isCapped)
   }

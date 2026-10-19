@@ -193,9 +193,9 @@ class PayoutCalculatorTest {
   }
 
   @Test
-  fun capped_multiWinnerMultiLoser_remainderToLargestLoser() {
+  fun capped_multiWinnerMultiLoser_remainderToLargestLosers() {
     // Winners 30, losers 107, refundPool 77: 33*77/107 = 23, 34*77/107 = 24, 40*77/107 = 28,
-    // remainder 2 goes to the largest loser (id 5).
+    // remainder 2 is spread one coin each to the two largest losers (ids 5 and 4).
     val entries = listOf(
       entry(1, outcomeA, 10),
       entry(2, outcomeA, 20),
@@ -207,13 +207,13 @@ class PayoutCalculatorTest {
     val result = PayoutCalculator.calculate(entries, outcomeA)
 
     assertThat(result.isCapped).isTrue()
-    assertThat(result.payouts).containsExactly(1L, 20L, 2L, 40L, 3L, 23L, 4L, 24L, 5L, 30L)
+    assertThat(result.payouts).containsExactly(1L, 20L, 2L, 40L, 3L, 23L, 4L, 25L, 5L, 29L)
     assertSumsToPot(entries, result)
   }
 
   @Test
   fun capped_remainderTieOnLargestLoser_goesToLowestParticipantId() {
-    // Losers 60, refundPool 50: each 20*50/60 = 16, remainder 2 goes to the lowest-id loser.
+    // Losers 60, refundPool 50: each 20*50/60 = 16, remainder 2 is one coin each to the two lowest-id losers.
     val entries = listOf(
       entry(1, outcomeA, 10),
       entry(4, outcomeB, 20),
@@ -224,7 +224,7 @@ class PayoutCalculatorTest {
     val result = PayoutCalculator.calculate(entries, outcomeA)
 
     assertThat(result.isCapped).isTrue()
-    assertThat(result.payouts).containsExactly(1L, 20L, 2L, 18L, 3L, 16L, 4L, 16L)
+    assertThat(result.payouts).containsExactly(1L, 20L, 2L, 17L, 3L, 17L, 4L, 16L)
     assertSumsToPot(entries, result)
   }
 
@@ -266,6 +266,64 @@ class PayoutCalculatorTest {
       assertThat(result.payouts[it.participantId]).isEqualTo(2 * it.wagerAmount)
     }
     assertSumsToPot(entries, result)
+  }
+
+  @Test
+  fun uncapped_remainderSpreadsOneCoinEach_neverExceedsDoubleWager() {
+    // Pot 5, winners 3: shares 1 each, remainder 2 goes one coin each to ids 1 and 2.
+    val entries = listOf(
+      entry(1, outcomeA, 1),
+      entry(2, outcomeA, 1),
+      entry(3, outcomeA, 1),
+      entry(4, outcomeB, 2),
+    )
+
+    val result = PayoutCalculator.calculate(entries, outcomeA)
+
+    assertThat(result.isCapped).isFalse()
+    assertThat(result.payouts).containsExactly(1L, 2L, 2L, 2L, 3L, 1L, 4L, 0L)
+    assertSumsToPot(entries, result)
+  }
+
+  @Test
+  fun capped_remainderSpreadsOneCoinEach_loserNeverGetsMoreThanWager() {
+    // RefundPool 2 over three losers: shares 0, remainder 2 goes one coin each to ids 2 and 3.
+    val entries = listOf(
+      entry(1, outcomeA, 1),
+      entry(2, outcomeB, 1),
+      entry(3, outcomeB, 1),
+      entry(4, outcomeB, 1),
+    )
+
+    val result = PayoutCalculator.calculate(entries, outcomeA)
+
+    assertThat(result.isCapped).isTrue()
+    assertThat(result.payouts).containsExactly(1L, 2L, 2L, 1L, 3L, 1L, 4L, 0L)
+    assertSumsToPot(entries, result)
+  }
+
+  @Test
+  fun payouts_stayWithinBounds_acrossGeneratedBets() {
+    for (winners in 1..5) {
+      for (losers in 1..6) {
+        for (winnerWager in 1L..4L) {
+          for (loserWager in 1L..4L) {
+            val entries = (1..winners).map { entry(it.toLong(), outcomeA, winnerWager + it % 2) } +
+              (1..losers).map { entry(100L + it, outcomeB, loserWager + it % 3) }
+
+            val result = PayoutCalculator.calculate(entries, outcomeA)
+
+            assertSumsToPot(entries, result)
+            entries.forEach {
+              val payout = result.payouts.getValue(it.participantId)
+              val limit = if (it.outcomeId == outcomeA) 2 * it.wagerAmount else it.wagerAmount
+              assertThat(payout).isAtMost(limit)
+              assertThat(payout).isAtLeast(0L)
+            }
+          }
+        }
+      }
+    }
   }
 
   @Test

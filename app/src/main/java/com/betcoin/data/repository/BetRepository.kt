@@ -86,8 +86,8 @@ interface BetRepository {
      *
      * The bet must be `ACTIVE` (`InvalidBetStateException`) and
      * [winningOutcomeId] must be one of its outcomes, picked or not. Each
-     * participant's `payout` is credited (winners' share of the pot, 0 for
-     * losers). If nobody picked [winningOutcomeId] it's a push: every wager is
+     * participant's `payout` is credited (winners' share of the pot; for
+     * losers their refund from the even-money cap (§5.3), usually 0). If nobody picked [winningOutcomeId] it's a push: every wager is
      * refunded and no W/L stats change. Sets `winningOutcomeId` and `resolvedAt`.
      *
      * Implementation must run inside a transaction.
@@ -119,9 +119,9 @@ interface BetRepository {
      * Reopens a resolved or cancelled bet: reverses payouts/refunds, clears
      * resolution data, and transitions status back to `ACTIVE`.
      *
-     * From `RESOLVED`, deducts each participant's `payout` (losers' is 0),
-     * reverses the W/L stats the resolution applied, and nulls every `payout`,
-     * `winningOutcomeId` and `resolvedAt`. From `CANCELLED`, re-deducts every
+     * From `RESOLVED`, deducts each participant's `payout` (losers' is their cap
+     * refund (§5.3), usually 0), reverses the W/L stats the resolution applied, and nulls
+     * every `payout`, `winningOutcomeId` and `resolvedAt`. From `CANCELLED`, re-deducts every
      * wager. Throws `InsufficientBalanceException` if a participant's balance
      * can't cover their payout (or wager), `InvalidInputException` if a
      * participant has been deleted, and `InvalidBetStateException` for any other

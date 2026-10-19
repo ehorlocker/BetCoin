@@ -230,8 +230,9 @@ class LocalBetRepository @Inject constructor(
     }
 
     /**
-     * Takes back every payout (losers' is their cap refund, 0 when uncapped) and reverses the §5.8 stats that [resolveBet]
-     * applied, so the bet's coins are locked in the pot again. Must run inside a transaction.
+     * Takes back every payout (losers' is their cap refund, 0 when uncapped) and reverses the
+     * §5.8 stats that [resolveBet] applied, so the bet's coins are locked in the pot again.
+     * Must run inside a transaction.
      */
     private suspend fun reopenResolved(bet: Bet) {
         val winningOutcomeId =
