@@ -5,6 +5,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.Bet
+import com.betcoin.data.database.entity.BetOutcome
+import com.betcoin.data.database.entity.BetParticipant
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetCoinException
 import com.betcoin.data.model.BetStatus
@@ -462,6 +464,109 @@ class LocalBetRepositoryTest {
   @Test
   fun discardPendingBet_rejectsUnknownBet() = runTest {
     assertRejected<InvalidInputException> { repository.discardPendingBet(999L) }
+  }
+
+  // --- discardOlderPendingBets ---
+
+  @Test
+  fun discardOlderPendingBets_keepsOnlyNewest() = runTest {
+    val betDao = database.betDao()
+    val alice = insertUser("Alice")
+    val oldest = betDao.insert(
+      Bet(prompt = "oldest", status = BetStatus.PENDING_CONFIRMATION, createdAt = 1_000L)
+    )
+    val middle = betDao.insert(
+      Bet(prompt = "middle", status = BetStatus.PENDING_CONFIRMATION, createdAt = 2_000L)
+    )
+    val newest = betDao.insert(
+      Bet(prompt = "newest", status = BetStatus.PENDING_CONFIRMATION, createdAt = 3_000L)
+    )
+    val olderIds = listOf(oldest, middle)
+    for (betId in olderIds + newest) {
+      val outcomeId = database.betOutcomeDao().insert(BetOutcome(betId = betId, outcomeText = "a"))
+      database.betOutcomeDao().insert(BetOutcome(betId = betId, outcomeText = "b"))
+      if (betId != newest) {
+        database.betParticipantDao().insert(
+          BetParticipant(betId = betId, userId = alice, outcomeId = outcomeId, wagerAmount = 10L)
+        )
+      }
+    }
+
+    repository.discardOlderPendingBets()
+
+    assertThat(repository.getPendingBet().first()?.bet?.id).isEqualTo(newest)
+    assertThat(betDao.getPendingBets()).hasSize(1)
+    for (betId in olderIds) {
+      assertThat(betDao.getById(betId)).isNull()
+      assertThat(database.betOutcomeDao().getByBetId(betId)).isEmpty()
+      assertThat(database.betParticipantDao().getByBetId(betId)).isEmpty()
+    }
+    assertThat(database.betOutcomeDao().getByBetId(newest)).hasSize(2)
+  }
+
+  @Test
+  fun discardOlderPendingBets_tieOnCreatedAt_keepsHighestId() = runTest {
+    val betDao = database.betDao()
+    val lower = betDao.insert(
+      Bet(prompt = "lower", status = BetStatus.PENDING_CONFIRMATION, createdAt = 5_000L)
+    )
+    val higher = betDao.insert(
+      Bet(prompt = "higher", status = BetStatus.PENDING_CONFIRMATION, createdAt = 5_000L)
+    )
+
+    repository.discardOlderPendingBets()
+
+    assertThat(higher).isGreaterThan(lower)
+    assertThat(betDao.getPendingBets().map { it.id }).containsExactly(higher)
+    assertThat(repository.getPendingBet().first()?.bet?.id).isEqualTo(higher)
+  }
+
+  @Test
+  fun discardOlderPendingBets_createdAtIsPrimarySortKey() = runTest {
+    val betDao = database.betDao()
+    val newerCreatedAt = betDao.insert(
+      Bet(prompt = "A", status = BetStatus.PENDING_CONFIRMATION, createdAt = 3_000L)
+    )
+    val olderCreatedAt = betDao.insert(
+      Bet(prompt = "B", status = BetStatus.PENDING_CONFIRMATION, createdAt = 1_000L)
+    )
+
+    repository.discardOlderPendingBets()
+
+    assertThat(olderCreatedAt).isGreaterThan(newerCreatedAt)
+    assertThat(betDao.getById(newerCreatedAt)).isNotNull()
+    assertThat(betDao.getById(olderCreatedAt)).isNull()
+    assertThat(repository.getPendingBet().first()?.bet?.id).isEqualTo(newerCreatedAt)
+  }
+
+  @Test
+  fun discardOlderPendingBets_leavesNonPendingBetsUntouched() = runTest {
+    val betDao = database.betDao()
+    val (activeId, _, _) = pendingBetWithTwoPlayers()
+    repository.lockBet(activeId)
+    val olderPending = betDao.insert(
+      Bet(prompt = "older", status = BetStatus.PENDING_CONFIRMATION, createdAt = 1_000L)
+    )
+    val newerPending = betDao.insert(
+      Bet(prompt = "newer", status = BetStatus.PENDING_CONFIRMATION, createdAt = 2_000L)
+    )
+
+    repository.discardOlderPendingBets()
+
+    assertThat(betDao.getById(activeId)?.status).isEqualTo(BetStatus.ACTIVE)
+    assertThat(betDao.getById(newerPending)).isNotNull()
+    assertThat(betDao.getById(olderPending)).isNull()
+  }
+
+  @Test
+  fun discardOlderPendingBets_noPending_isNoOp() = runTest {
+    val (activeId, _, _) = pendingBetWithTwoPlayers()
+    repository.lockBet(activeId)
+    val before = snapshot()
+
+    repository.discardOlderPendingBets()
+
+    assertThat(snapshot()).isEqualTo(before)
   }
 
   // --- Queries ---
