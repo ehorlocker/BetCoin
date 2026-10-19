@@ -1,5 +1,6 @@
 package com.betcoin.ui.betdetail
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,8 +13,9 @@ import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
+import com.betcoin.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -137,9 +140,11 @@ class BetDetailViewModel @Inject constructor(
     suspend fun verifyParticipantPin(userId: Long, pin: String): Boolean =
         try {
             userRepository.verifyPin(userId, pin)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (e: BetCoinException) {
+            false
+        } catch (e: IOException) {
+            false
+        } catch (e: SQLiteException) {
             false
         }
 
@@ -165,6 +170,14 @@ class BetDetailViewModel @Inject constructor(
             } catch (e: BetCoinException) {
                 val message = e.toActionMessage(currentDetail()?.participants.orEmpty())
                 _actionState.update { it.copy(consent = null, isBusy = false, errorMessage = message) }
+            } catch (e: IOException) {
+                _actionState.update {
+                    it.copy(consent = null, isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE)
+                }
+            } catch (e: SQLiteException) {
+                _actionState.update {
+                    it.copy(consent = null, isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE)
+                }
             }
         }
     }
@@ -201,7 +214,7 @@ private fun BetCoinException.toActionMessage(participants: List<ParticipantRow>)
     }
     is InvalidInputException -> "A participant was deleted, so this can't be done here. Use the Admin Panel."
     is InvalidBetStateException -> "This bet has changed. Nothing was updated."
-    else -> message ?: "Something went wrong"
+    else -> toUserMessage()
 }
 
 /** UI state for the Bet Detail screen. */

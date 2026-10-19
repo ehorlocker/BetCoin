@@ -1,15 +1,16 @@
 package com.betcoin.ui.onboarding
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.betcoin.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -95,9 +96,9 @@ class OnboardingViewModel @Inject constructor(
                 settingsRepository.setAdminPin(state.pin)
                 failureMessage = ERROR_CODE_FAILED
                 OnboardingUiState.ShowRecoveryCode(settingsRepository.regenerateRecoveryCode())
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                state.copy(error = failureMessage, isSaving = false)
+            } catch (e: SQLiteException) {
                 state.copy(error = failureMessage, isSaving = false)
             }
         }

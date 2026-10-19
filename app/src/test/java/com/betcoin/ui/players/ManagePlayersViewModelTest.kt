@@ -1,9 +1,12 @@
 package com.betcoin.ui.players
 
+import android.database.sqlite.SQLiteException
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.testing.FakeUserRepository
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -16,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Tests for [ManagePlayersViewModel].
@@ -226,9 +230,52 @@ class ManagePlayersViewModelTest {
         viewModel.onConfirmAddPlayer()
         advanceUntilIdle()
 
-        assertThat(form.error).isEqualTo("Username must be 1–20 characters")
+        assertThat(form.error).isEqualTo("That's no longer valid. Check it and try again.")
         assertThat(form.username).isEqualTo("Bob")
         assertThat(form.isSaving).isFalse()
+    }
+
+    @Test
+    fun addPlayer_ioFailure_showsGenericMessageAndKeepsForm() = runTest {
+        fakeUserRepository.shouldThrowOnCreate = IOException("disk full")
+        createViewModel()
+
+        fillForm("Bob", "5678")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(form.error).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(form.isSaving).isFalse()
+    }
+
+    @Test
+    fun addPlayer_sqliteFailure_showsGenericMessage() = runTest {
+        fakeUserRepository.shouldThrowOnCreate = SQLiteException("locked")
+        createViewModel()
+
+        fillForm("Bob", "5678")
+        viewModel.onConfirmAddPlayer()
+        advanceUntilIdle()
+
+        assertThat(form.error).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(form.isSaving).isFalse()
+    }
+
+    @Test
+    fun usersEmissionDuringCreateUserIsNotLost() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        fakeUserRepository.createUserGate = gate
+        createViewModel()
+        fillForm("Bob", "5678")
+
+        viewModel.onConfirmAddPlayer()
+        fakeUserRepository.users = fakeUserRepository.users + user(99L, "Other")
+        advanceUntilIdle()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertThat(state.players.map { it.username }).containsAtLeast("Other", "Bob")
+        assertThat(state.addPlayerForm).isNull()
     }
 
     @Test

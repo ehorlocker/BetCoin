@@ -2,9 +2,13 @@ package com.betcoin.ui.players
 
 import androidx.lifecycle.SavedStateHandle
 import com.betcoin.data.database.entity.User
+import com.betcoin.data.model.BetStatus
+import com.betcoin.data.model.InvalidBetStateException
+import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.navigation.Routes
 import com.betcoin.testing.FakeUserRepository
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.players.PlayerDetailViewModel.UiState
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Tests for [PlayerDetailViewModel].
@@ -189,6 +194,28 @@ class PlayerDetailViewModelTest {
     }
 
     @Test
+    fun verifyPin_falseWhenTheRepositoryThrowsIoOrBusinessError() = runTest {
+        playerId = createPlayer(balance = 0)
+        createViewModel()
+
+        repository.shouldThrowOnVerifyPin = IOException("disk")
+        assertThat(viewModel.verifyPin("1234")).isFalse()
+        repository.shouldThrowOnVerifyPin = InvalidInputException("User 1 not found")
+        assertThat(viewModel.verifyPin("1234")).isFalse()
+    }
+
+    @Test
+    fun verifyPin_propagatesUnexpectedExceptions() = runTest {
+        playerId = createPlayer(balance = 0)
+        createViewModel()
+        repository.shouldThrowOnVerifyPin = IllegalStateException("bug")
+
+        val result = runCatching { viewModel.verifyPin("1234") }
+
+        assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
     fun pinDismissed_closesDialogWithoutBailout() = runTest {
         playerId = createPlayer(balance = 0)
         createViewModel()
@@ -235,6 +262,34 @@ class PlayerDetailViewModelTest {
         assertThat(loaded.message).isEqualTo("Not eligible for a bailout")
         assertThat(loaded.isBailingOut).isFalse()
         assertThat(loaded.stats.bailoutCount).isEqualTo(0)
+    }
+
+    @Test
+    fun pinVerified_otherBusinessError_showsMapperTextNotExceptionMessage() = runTest {
+        playerId = createPlayer(balance = 0)
+        repository.shouldThrowOnBailout = InvalidBetStateException(77L, BetStatus.RESOLVED)
+        createViewModel()
+
+        viewModel.onBailoutClicked()
+        viewModel.onBailoutPinVerified()
+        advanceUntilIdle()
+
+        assertThat(loaded.message).isEqualTo("This bet has changed and can't be updated any more")
+        assertThat(loaded.isBailingOut).isFalse()
+    }
+
+    @Test
+    fun pinVerified_ioFailure_showsGenericMessage() = runTest {
+        playerId = createPlayer(balance = 0)
+        repository.shouldThrowOnBailout = IOException("disk")
+        createViewModel()
+
+        viewModel.onBailoutClicked()
+        viewModel.onBailoutPinVerified()
+        advanceUntilIdle()
+
+        assertThat(loaded.message).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(loaded.isBailingOut).isFalse()
     }
 
     @Test

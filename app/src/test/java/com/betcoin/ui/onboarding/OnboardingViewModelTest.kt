@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Tests for [OnboardingViewModel]: PIN entry and confirmation, saving the PIN, and the
@@ -162,7 +163,7 @@ class OnboardingViewModelTest {
     @Test
     fun onSavePin_repositoryFails_showsErrorAndStaysOnPinEntry() = runTest {
         val failing = object : SettingsRepository by fakeSettingsRepository {
-            override suspend fun setAdminPin(pin: String) = throw IllegalStateException("disk full")
+            override suspend fun setAdminPin(pin: String) = throw IOException("disk full")
         }
         viewModel = OnboardingViewModel(failing)
         enterPins("1234", "1234")
@@ -181,7 +182,7 @@ class OnboardingViewModelTest {
         var failCodeGeneration = true
         val flaky = object : SettingsRepository by fakeSettingsRepository {
             override suspend fun regenerateRecoveryCode(): String {
-                if (failCodeGeneration) throw IllegalStateException("boom")
+                if (failCodeGeneration) throw IOException("boom")
                 return fakeSettingsRepository.regenerateRecoveryCode()
             }
         }

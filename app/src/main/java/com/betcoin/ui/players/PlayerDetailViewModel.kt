@@ -1,14 +1,17 @@
 package com.betcoin.ui.players
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetCoinException
-import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
+import com.betcoin.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -105,6 +108,10 @@ class PlayerDetailViewModel @Inject constructor(
             userRepository.verifyPin(userId, pin)
         } catch (e: BetCoinException) {
             false
+        } catch (e: IOException) {
+            false
+        } catch (e: SQLiteException) {
+            false
         }
 
     /** Called once the player's PIN is accepted. */
@@ -114,10 +121,12 @@ class PlayerDetailViewModel @Inject constructor(
             val message = try {
                 userRepository.bailout(userId)
                 "Bailout granted: +1,000 BetCoin"
-            } catch (e: NotEligibleForBailoutException) {
-                "Not eligible for a bailout"
             } catch (e: BetCoinException) {
-                e.message ?: "Bailout failed"
+                e.toUserMessage()
+            } catch (e: IOException) {
+                GENERIC_ERROR_MESSAGE
+            } catch (e: SQLiteException) {
+                GENERIC_ERROR_MESSAGE
             }
             localState.update { it.copy(isBailingOut = false, message = message) }
         }

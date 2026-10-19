@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Tests for [NewBetViewModel]: Step A validation and createBet, Step B participants with PIN
@@ -534,6 +535,34 @@ class NewBetViewModelTest {
         assertThat(viewModel.verifyParticipantPin(alice, "1111")).isTrue()
         assertThat(viewModel.verifyParticipantPin(alice, "2222")).isFalse()
         assertThat(viewModel.verifyParticipantPin(bob, "2222")).isTrue()
+    }
+
+    @Test
+    fun verifyParticipantPin_falseOnIoFailureAndPropagatesUnexpectedExceptions() = runTest {
+        val (alice, _) = openStepC()
+
+        users.shouldThrowOnVerifyPin = IOException("disk")
+        assertThat(viewModel.verifyParticipantPin(alice, "1111")).isFalse()
+
+        users.shouldThrowOnVerifyPin = IllegalStateException("bug")
+        val result = runCatching { viewModel.verifyParticipantPin(alice, "1111") }
+        assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
+    fun verifyPin_falseOnIoFailureAndPropagatesUnexpectedExceptions() = runTest {
+        val (alice, _) = openStepBWithPlayers()
+        viewModel.onUserSelected(alice)
+        viewModel.onOutcomeSelected(state.betOutcomes[0].id)
+        viewModel.onWagerChanged("250")
+        viewModel.onAddParticipant()
+
+        users.shouldThrowOnVerifyPin = IOException("disk")
+        assertThat(viewModel.verifyPin("1111")).isFalse()
+
+        users.shouldThrowOnVerifyPin = IllegalStateException("bug")
+        val result = runCatching { viewModel.verifyPin("1111") }
+        assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test
