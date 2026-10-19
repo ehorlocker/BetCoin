@@ -128,6 +128,26 @@ class ColorTest {
     }
 
     @Test
+    fun darkErrorContainer_isDark_soLightBarIconsContrast() {
+        assertThat(BetCoinDarkColorScheme.errorContainer.luminance()).isLessThan(0.5f)
+    }
+
+    @Test
+    fun lightErrorContainer_isLight_soDarkBarIconsContrast() {
+        assertThat(BetCoinLightColorScheme.errorContainer.luminance()).isGreaterThan(0.5f)
+    }
+
+    @Test
+    fun darkBackground_isDark_soLightBarIconsContrast() {
+        assertThat(BetCoinDarkColorScheme.background.luminance()).isLessThan(0.5f)
+    }
+
+    @Test
+    fun lightBackground_isLight_soDarkBarIconsContrast() {
+        assertThat(BetCoinLightColorScheme.background.luminance()).isGreaterThan(0.5f)
+    }
+
+    @Test
     fun windowBackgroundResources_matchComposeBackgrounds() {
         assertThat(windowBackground("src/main/res/values/colors.xml"))
             .isEqualTo(BetCoinLightBackground.toArgb())

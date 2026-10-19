@@ -30,6 +30,7 @@ import com.betcoin.ui.components.AppRootLayout
 import com.betcoin.ui.theme.AppThemeViewModel
 import com.betcoin.ui.theme.BetCoinTheme
 import com.betcoin.ui.theme.isDarkTheme
+import com.betcoin.ui.theme.systemBarStyle
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -44,7 +45,9 @@ import javax.inject.Inject
  * [NavGraph] once ready, and [LaunchErrorScreen] with Retry if resolving failed.
  *
  * The theme comes from [AppThemeViewModel]: nothing is drawn until the stored preference is
- * known, and the system bar icon style follows the resolved light/dark theme.
+ * known, and the system bar icon style follows the resolved light/dark theme (see
+ * [systemBarStyle]). On the dev flavor the status bar sits over the banner's errorContainer,
+ * which contrasts with the same icon rule in both themes.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -58,6 +61,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Until the stored preference is known, follow the device mode.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
@@ -71,16 +75,8 @@ class MainActivity : ComponentActivity() {
             // System bar icon style follows the resolved theme.
             DisposableEffect(darkTheme) {
                 enableEdgeToEdge(
-                    statusBarStyle = if (darkTheme) {
-                        SystemBarStyle.dark(Color.TRANSPARENT)
-                    } else {
-                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-                    },
-                    navigationBarStyle = if (darkTheme) {
-                        SystemBarStyle.dark(Color.TRANSPARENT)
-                    } else {
-                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-                    },
+                    statusBarStyle = systemBarStyle(darkTheme),
+                    navigationBarStyle = systemBarStyle(darkTheme),
                 )
                 onDispose {}
             }
