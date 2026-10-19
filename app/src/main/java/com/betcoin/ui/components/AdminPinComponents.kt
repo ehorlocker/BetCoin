@@ -36,7 +36,7 @@ const val RECOVERY_CODE_REVEAL_TAG = "recovery_code_reveal"
  * Password semantics keep the digits masked and out of accessibility output (§5.5). The caller
  * sanitizes [value] to digits and the maximum length in [onValueChange].
  *
- * @param imeAction Keyboard action button; [onImeAction] runs when it is pressed.
+ * @param imeAction Keyboard action button; [onImeAction] runs when the Done action is pressed.
  * @param supportingText Optional error line shown under the field.
  */
 @Composable

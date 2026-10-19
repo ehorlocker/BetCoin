@@ -1,6 +1,8 @@
 package com.betcoin.ui.admin
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -10,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.Density
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -67,6 +70,32 @@ class AdminPanelScreenTest {
 
         assertEquals(1, changePinClicks)
         assertEquals(1, regenerateClicks)
+    }
+
+    @Test
+    fun recoveryCodeShown_doneScrollableIntoView_atLargeFontScale() {
+        composeRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                AdminPanelContent(
+                    uiState = AdminUiState(recoveryCode = RecoveryCodeDialogState.Show("ABCD-2345-EFGH")),
+                    onNavigateBack = {},
+                    onChangePinClicked = {},
+                    onChangePinPinChanged = {},
+                    onChangePinConfirmChanged = {},
+                    onChangePinSave = {},
+                    onChangePinDismiss = {},
+                    onRegenerateClicked = {},
+                    onRegenerateConfirm = {},
+                    onRegenerateCancel = {},
+                    onRecoveryCodeAcknowledged = {},
+                    onRecoveryCodeDone = {},
+                    onMessageShown = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Done").performScrollTo().assertIsDisplayed()
     }
 
     @Test

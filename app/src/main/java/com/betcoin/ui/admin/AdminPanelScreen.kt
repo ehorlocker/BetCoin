@@ -2,10 +2,16 @@ package com.betcoin.ui.admin
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -152,7 +157,11 @@ fun AdminPanelContent(
             onDismissRequest = {},
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         ) {
-            Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(24.dp),
@@ -166,7 +175,11 @@ fun AdminPanelContent(
             onDismissRequest = {},
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         ) {
-            Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 6.dp) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+            ) {
                 RecoveryCodeReveal(
                     code = code.code,
                     acknowledged = code.acknowledged,
@@ -174,7 +187,7 @@ fun AdminPanelContent(
                     onContinue = onRecoveryCodeDone,
                     codeTestTag = ADMIN_SETTINGS_RECOVERY_CODE_TAG,
                     continueLabel = "Done",
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
                 )
             }
         }
