@@ -192,6 +192,7 @@ class BetDetailViewModelTest {
         assertThat(detail.potSize).isEqualTo(350)
         assertThat(detail.winningOutcome).isNull()
         assertThat(detail.isPush).isFalse()
+        assertThat(detail.isCapped).isFalse()
     }
 
     @Test
@@ -215,6 +216,38 @@ class BetDetailViewModelTest {
     }
 
     @Test
+    fun cappedResolvedBet_showsLoserRealNetAndIsCapped() = runTest(testDispatcher) {
+        val detail = detailOf(
+            bet(
+                BetStatus.RESOLVED,
+                listOf(participant(1, alice, jay, 200, payout = 100), participant(2, bob, kay, 100, payout = 200)),
+                winningOutcomeId = kay.id,
+                resolvedAt = RESOLVED_AT,
+            ),
+        )
+
+        assertThat(detail.participants.map { it.result to it.net })
+            .containsExactly(ParticipantResult.LOSS to -100L, ParticipantResult.WIN to 100L)
+            .inOrder()
+        assertThat(detail.isCapped).isTrue()
+    }
+
+    @Test
+    fun legacyResolvedBet_withZeroLoserPayout_isNotCapped() = runTest(testDispatcher) {
+        val detail = detailOf(
+            bet(
+                BetStatus.RESOLVED,
+                listOf(participant(1, alice, jay, 200, payout = 0), participant(2, bob, kay, 100, payout = 300)),
+                winningOutcomeId = kay.id,
+                resolvedAt = RESOLVED_AT,
+            ),
+        )
+
+        assertThat(detail.participants.map { it.net }).containsExactly(-200L, 200L).inOrder()
+        assertThat(detail.isCapped).isFalse()
+    }
+
+    @Test
     fun resolvedBetWithNoOneOnTheWinner_isAPushWithZeroNet() = runTest(testDispatcher) {
         val nobody = BetOutcome(id = 12, betId = BET_ID, outcomeText = "Nobody")
         val detail = detailOf(
@@ -227,6 +260,7 @@ class BetDetailViewModelTest {
         )
 
         assertThat(detail.isPush).isTrue()
+        assertThat(detail.isCapped).isFalse()
         assertThat(detail.winningOutcome).isEqualTo("Nobody")
         assertThat(detail.participants.map { it.result to it.net })
             .containsExactly(ParticipantResult.PUSH to 0L, ParticipantResult.PUSH to 0L)

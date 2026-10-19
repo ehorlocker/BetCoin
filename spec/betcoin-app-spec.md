@@ -19,7 +19,7 @@ BetCoin is a single-device Android app where friends bet imaginary "BetCoin" cur
 2. Each participant picks an outcome, sets a wager, and confirms with their PIN
 3. The bet goes live
 4. When the real-world event resolves, participants select the winning outcome
-5. Winnings are distributed proportionally from the pot
+5. Winners split the pot in proportion to their wagers, but nobody wins more than they risked: any unmatched part of the losers' wagers is refunded (§5.3)
 
 ### Starting Balance
 Every new user begins with **1,000 BetCoin**.
@@ -102,7 +102,7 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 | userId | Long? | FK → User.id, nullable (null after user deletion) |
 | outcomeId | Long | FK → BetOutcome.id, NOT NULL |
 | wagerAmount | Long | NOT NULL |
-| payout | Long? | NULL until resolved. Gross amount credited at resolution: winners' share of the pot, `0` for losers, `wagerAmount` for everyone when no one picked the winning outcome (§5.3) |
+| payout | Long? | NULL until resolved. Gross amount credited at resolution (§5.3): winners' share of the pot (at most `2 × wagerAmount`); for losers `0`, or their share of the refunded unmatched wagers when the cap applies; `wagerAmount` for everyone when no one picked the winning outcome |
 | deletedUsername | String? | Snapshot of username, set when user is deleted |
 
 ### 3.5 AppSettings
@@ -212,9 +212,9 @@ Accessed by tapping any bet in Bet History (or Active Bets). Displays the full b
   - Outcome they picked
   - Wager amount
   - Result indicator: WIN / LOSS / PENDING (based on bet status)
-  - Payout amount (if resolved): shows net gain/loss (`payout − wagerAmount`), e.g. `+150` / `−200` / `±0` for a push
+  - Payout amount (if resolved): shows net gain/loss (`payout − wagerAmount`), e.g. `+150` / `−200` / `−100` for a loser with a partial refund / `±0` for a push
 - **Pot Summary**: Total pot size, number of participants
-- **Resolution Info** (if RESOLVED): Winning outcome name, resolved date. If no one picked the winning outcome, also shows "No winners — all wagers refunded"
+- **Resolution Info** (if RESOLVED): Winning outcome name, resolved date. If no one picked the winning outcome, also shows "No winners — all wagers refunded". If the even-money cap applied (§5.3), also shows "Unmatched wagers refunded"
 - **Actions** (if ACTIVE): **Resolve** and **Cancel** buttons
 - **Actions** (if RESOLVED or CANCELLED): **Reopen Bet** and **Repeat Bet** buttons
 - **Cancelled Info** (if CANCELLED): Shows "Cancelled — all wagers refunded"
@@ -241,9 +241,9 @@ If a participant won't confirm, the fallback is the Admin Panel's **Admin Resolv
 - Available on **RESOLVED** or **CANCELLED** bets from the Bet Detail screen
 - Unanimous consent (above)
 - If reopening a **RESOLVED** bet:
-  - Every participant's `payout` is deducted from their balance. Winners give back their share of the pot. Losers have `payout = 0`, so nothing changes for them: their wager stays locked in the reopened pot. In a push, everyone's refunded wager is locked again.
+  - Every participant's `payout` is deducted from their balance. Winners give back their share of the pot. Losers give back any refund they got from the cap (§5.3); a loser with `payout = 0` is unchanged. Either way each wager ends up locked in the reopened pot again. In a push, everyone's refunded wager is locked again.
   - Each participant must have balance ≥ their `payout`, otherwise the reopen is blocked
-  - W/L stats are reverted using §5.8 in reverse (winners: `totalWins −= 1`, `totalEarnings −= payout − wager`; losers: `totalLosses −= 1`, `totalLost −= wager`; a push changes no stats)
+  - W/L stats are reverted using §5.8 in reverse (winners: `totalWins −= 1`, `totalEarnings −= payout − wager`; losers: `totalLosses −= 1`, `totalLost −= wager − payout`; a push changes no stats)
   - `payout` is reset to NULL on every participant; `winningOutcomeId` and `resolvedAt` are cleared
   - Bet status → ACTIVE
 - If reopening a **CANCELLED** bet:
@@ -344,19 +344,39 @@ When locking a bet (Step C), if **all participants** chose the same outcome:
 - Users must go back and change picks
 
 ### 5.3 Payout Calculation
-```
-totalPot = sum of all participants' wagerAmount
-winningWagers = sum of wagerAmount for participants who picked the winning outcome
+A winner can win at most their own wager (even money). Any part of the losers' wagers that the winners can't claim is refunded to the losers.
 
-For each winner:
-  payout = (theirWager / winningWagers) * totalPot
 ```
-- Integer division: compute `theirWager * totalPot / winningWagers` with `Long` math, multiplying before dividing
-- The rounding remainder (`totalPot − sum of payouts`) goes to the winner with the largest wager
-- Tiebreaker for the remainder: the participant added first (lowest `BetParticipant.id`)
-- Losers: `payout = 0`
-- **No one picked the winning outcome** (`winningWagers == 0`): the bet still resolves to that outcome, but it's a **push**. Every participant gets `payout = wagerAmount`, so all wagers are refunded, and no W/L stats change.
+totalPot      = sum of all participants' wagerAmount
+winningWagers = sum of wagerAmount for participants who picked the winning outcome
+losingWagers  = totalPot − winningWagers
+
+If losingWagers ≤ winningWagers (uncapped: the winners can absorb the whole pot):
+  each winner: payout = theirWager × totalPot / winningWagers    (never more than 2 × theirWager)
+  each loser:  payout = 0
+
+Otherwise (capped: the losers put in more than the winners can win):
+  each winner: payout = 2 × theirWager
+  refundPool   = losingWagers − winningWagers
+  each loser:  payout = theirWager × refundPool / losingWagers
+```
+- Every winner's uncapped share is the same multiple of their wager (`totalPot / winningWagers`), so the cap applies to all winners or to none
+- Integer division: use `Long` math, multiplying before dividing
+- Rounding remainder (`totalPot − sum of payouts`, always fewer coins than recipients): handed out one coin at a time to the recipients with the largest wagers, so nobody gets more than one extra coin. Recipients are the winners if uncapped, the losers if capped (winners' payouts are exact)
+- Tiebreaker for equal wagers: the participant added first (lowest `BetParticipant.id`)
+- A loser who gets a partial refund still counts as a loss (§5.8)
+- **No one picked the winning outcome** (`winningWagers == 0`): the bet still resolves to that outcome, but it's a **push**. Every participant gets `payout = wagerAmount`, so all wagers are refunded, and no W/L stats change. This check comes before the cap.
 - Implement as a pure function (`PayoutCalculator`) so it can be unit-tested directly
+
+**Examples**
+
+| Wagers | Winner | Payouts | Net |
+|---|---|---|---|
+| A 200 on X, B 100 on Y | B | B 200 (capped), A 100 (refund) | B +100, A −100 |
+| A 200 on X, B 100 on Y | A | A 300, B 0 (uncapped) | A +100, B −100 |
+| A 100, B 100 on X; C 300 on Y | X | A 200, B 200 (capped), C 100 (refund) | A +100, B +100, C −200 |
+| A 300 on X; B 100, C 100 on Y | Y | B 200, C 200 (capped), A 100 (refund) | B +100, C +100, A −200 |
+| A 100 on X, B 100 on Y | A | A 200, B 0 (boundary, uncapped) | A +100, B −100 |
 
 ### 5.4 Bailout System
 - Available when a user's **balance + coins locked in ACTIVE bets is less than 100**. Counting locked wagers stops someone from going all-in on a bet and then taking a bailout while the wager is still in play.
@@ -408,7 +428,7 @@ For each winner:
 ### 5.8 Win/Loss Tracking
 - On bet resolution:
   - Winners: `totalWins += 1`, `totalEarnings += payout - wager` (net profit)
-  - Losers: `totalLosses += 1`, `totalLost += wagerAmount`
+  - Losers: `totalLosses += 1`, `totalLost += wagerAmount − payout` (net loss; `payout` is the refund from the cap in §5.3, usually `0`)
   - Push (no one picked the winning outcome): no stats change
 - Admin Resolve updates stats the same way. Cancel and Force Cancel never touch stats.
 - Reopen reverses exactly what resolution applied (§4.2 Reopen Flow)
@@ -516,7 +536,7 @@ These operations must be atomic (`@Transaction`):
 | Operation | What's Atomic |
 |-----------|---------------|
 | `lockBet` | Validate ≥ 2 participants, not unanimous, every wager ≤ current balance → deduct all wagers → set status ACTIVE |
-| `resolveBet` | Calculate payouts → credit each participant's `payout` (winners, or everyone in a push) → update W/L stats (none for a push) → set status RESOLVED |
+| `resolveBet` | Calculate payouts → credit each participant's `payout` (winners, losers' cap refunds, or everyone in a push) → update W/L stats (none for a push) → set status RESOLVED |
 | `discardPendingBet` | Delete participant rows → outcome rows → bet row (PENDING_CONFIRMATION only) |
 | `cancelBet` | Refund all wagers → set status CANCELLED |
 | `forceCancelBet` | Same as cancelBet — admin override, no participant PINs required |
@@ -524,7 +544,7 @@ These operations must be atomic (`@Transaction`):
 | `adminRemoveParticipant` | Validate ≥ 2 remain and the rest are not all on one outcome → refund participant wager → remove participant row |
 | `adminEditWager` | Calculate difference → refund/deduct from user balance → update wager amount |
 | `deleteBet` | Delete all BetParticipant rows → delete all BetOutcome rows → delete Bet row |
-| `reopenBet` (from RESOLVED) | Validate every participant still exists and has balance ≥ their `payout` → deduct each participant's `payout` (losers' is 0, so they're unchanged) → revert W/L stats → null all payouts → clear winningOutcomeId/resolvedAt → set ACTIVE |
+| `reopenBet` (from RESOLVED) | Validate every participant still exists and has balance ≥ their `payout` → deduct each participant's `payout` (losers' is their cap refund, or 0) → revert W/L stats → null all payouts → clear winningOutcomeId/resolvedAt → set ACTIVE |
 | `reopenBet` (from CANCELLED) | Re-deduct all wagers from participants → set ACTIVE |
 | `deleteUser` | Validate no ACTIVE bets → snapshot username → null out FK → delete user row. The avatar file is deleted after the transaction commits. |
 
@@ -607,7 +627,8 @@ abstract class RepositoryModule {
 | Username blank, > 20 chars, or differs from an existing one only in case | Block — 1–20 chars after trimming, unique ignoring case |
 | PIN not exactly 4 digits | Block — digits only, exactly 4 |
 | User leaves New Bet flow | "Discard this bet?" → deletes the pending bet (§4.2) |
-| Rounding remainder in payouts | Goes to largest-wager winner (tiebreaker: first added) |
+| Winner's share of the pot would exceed their wager in profit | Cap at even money (`payout = 2 × wager`); refund the unmatched part to losers in proportion to their wagers (§5.3) |
+| Rounding remainder in payouts | One coin each to the largest-wager recipients (winners if uncapped, losers if capped), so nobody gets more than one extra coin. Tiebreaker: first added |
 | Wrong PIN entered | "Wrong PIN" message, no lockout, can retry |
 | App force-closed during bet creation | On relaunch, show Recovery Screen with Return to Bet / Discard Bet (see Section 11) |
 | Participant dismisses a PIN prompt during a consent sequence | Whole action aborted, nothing changed |
@@ -731,7 +752,7 @@ app/src/prod/
 ```
 
 ### Testing Expectations
-- **Unit tests (JVM):** `PayoutCalculator`, covering proportional split, remainder, tie on largest wager, and push. Also every ViewModel, using fake repositories. Fakes must hash or compare PINs the same way the real implementation does and never keep plain-text PINs in shared state.
+- **Unit tests (JVM):** `PayoutCalculator`, covering proportional split, remainder, tie on largest wager, push, and the even-money cap (two-player both ways, multi-winner and multi-loser with remainders, and the losing = winning boundary). Also every ViewModel, using fake repositories. Fakes must hash or compare PINs the same way the real implementation does and never keep plain-text PINs in shared state.
 - **Instrumented (in-memory Room):** every `@Transaction` operation in §7, including its failure cases, which must leave the database unchanged. Also the uniqueness and FK behavior from §3.
 - **Compose UI tests:** each screen's states (loading, empty, error) and its main interactions.
 - **Emulator check:** verify UI changes on the `BetCoin_Test` emulator per AGENTS.md before marking a ticket done.
