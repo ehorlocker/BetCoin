@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
@@ -28,7 +29,7 @@ class AppRootLayoutTest {
     @Test
     fun withLabel_drawsBannerAboveContent() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 AppRootLayout(bannerLabel = "DEV BUILD · betcoin_dev.db") {
                     Box(Modifier.fillMaxSize().testTag("content")) { Text("Screen") }
                 }
@@ -41,7 +42,7 @@ class AppRootLayoutTest {
     @Test
     fun withoutLabel_drawsNothingAndReservesNoSpace() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 AppRootLayout(bannerLabel = null) {
                     Box(Modifier.fillMaxSize().testTag("content")) { Text("Screen") }
                 }

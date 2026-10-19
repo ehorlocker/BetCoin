@@ -15,10 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinSurface
 
 /**
  * A frosted-glass betting card with 32dp rounded corners and a press-in animation.
@@ -39,8 +37,8 @@ fun BetCoinCard(
 
     val cardModifier = modifier
         .clip(RoundedCornerShape(32.dp))
-        .background(BetCoinSurface)
-        .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(32.dp))
+        .background(MaterialTheme.colorScheme.surface)
+        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(32.dp))
         .scale(scale)
         .padding(24.dp)
         .then(

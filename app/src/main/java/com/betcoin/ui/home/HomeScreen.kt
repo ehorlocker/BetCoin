@@ -2,20 +2,27 @@ package com.betcoin.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.betcoin.ui.components.BetCoinButton
@@ -30,6 +37,7 @@ private const val MIN_PLAYERS_FOR_BET = 2
  * to other app sections.
  *
  * @param viewModel the [HomeViewModel] that manages state
+ * @param onSettings invoked when the gear icon in the top-end corner is tapped
  */
 @Composable
 fun HomeScreen(
@@ -38,6 +46,7 @@ fun HomeScreen(
     onLeaderboard: () -> Unit = {},
     onBetHistory: () -> Unit = {},
     onManagePlayers: () -> Unit = {},
+    onSettings: () -> Unit = {},
 ) {
     val activeBetCount by viewModel.activeBetCount.collectAsStateWithLifecycle()
     val userCount by viewModel.userCount.collectAsStateWithLifecycle()
@@ -50,10 +59,22 @@ fun HomeScreen(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = "BetCoin",
-            style = MaterialTheme.typography.headlineLarge,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Balances the gear so the title stays centred.
+            Spacer(modifier = Modifier.size(48.dp))
+            Text(
+                text = "BetCoin",
+                style = MaterialTheme.typography.headlineLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+            }
+        }
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(

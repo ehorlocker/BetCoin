@@ -40,4 +40,10 @@ class MainActivityTest {
         assertThat(field).isNotNull()
         assertThat(field.type.name).contains("StartDestinationResolver")
     }
+
+    @Test
+    fun mainActivity_hasDevToolsEntryField() {
+        val field = MainActivity::class.java.getDeclaredField("devToolsEntry")
+        assertThat(field.type.name).contains("DevToolsEntry")
+    }
 }

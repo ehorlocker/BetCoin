@@ -1,6 +1,7 @@
 package com.betcoin.ui.theme
 
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Brand Accents (Midnight Playground)
@@ -15,6 +16,7 @@ val BetCoinSuccess = Color(0xFF7EF2D5)
 val BetCoinError = Color(0xFFFFB4AB)
 
 // Surfaces
+// Must match betcoin_background in res/values-night/colors.xml (window background before Compose draws).
 val BetCoinBackground = Color(0xFF111316)
 val BetCoinInputBackground = Color(0xFF0A0C0E) // Darker than background per spec
 val BetCoinSurface = Color(0xFF1E2023)
@@ -110,4 +112,82 @@ val BetCoinDarkColorScheme = darkColorScheme(
     surfaceContainerHighest = BetCoinSurfaceContainerHighest,
     surfaceContainerLow = BetCoinSurfaceContainerLow,
     surfaceContainerLowest = BetCoinSurfaceContainerLowest,
+)
+
+// Light palette (tonal light counterparts of the dark roles)
+val BetCoinLightPrimary = Color(0xFF006B59)
+val BetCoinLightOnPrimary = Color(0xFFFFFFFF)
+val BetCoinLightPrimaryContainer = Color(0xFF83F7DA)
+val BetCoinLightOnPrimaryContainer = Color(0xFF002019)
+val BetCoinLightInversePrimary = Color(0xFF7EF2D5)
+val BetCoinLightSecondary = Color(0xFF782E37)
+val BetCoinLightOnSecondary = Color(0xFFFFFFFF)
+val BetCoinLightSecondaryContainer = Color(0xFFFFDADB)
+val BetCoinLightOnSecondaryContainer = Color(0xFF3F020F)
+val BetCoinLightTertiary = Color(0xFF004E5F)
+val BetCoinLightOnTertiary = Color(0xFFFFFFFF)
+val BetCoinLightTertiaryContainer = Color(0xFFB3EBFF)
+val BetCoinLightOnTertiaryContainer = Color(0xFF001F27)
+// Must match betcoin_background in res/values/colors.xml (window background before Compose draws).
+val BetCoinLightBackground = Color(0xFFF9F9FD)
+val BetCoinLightOnBackground = Color(0xFF1A1C1F)
+val BetCoinLightSurface = Color(0xFFF9F9FD)
+val BetCoinLightOnSurface = Color(0xFF1A1C1F)
+val BetCoinLightSurfaceVariant = Color(0xFFDAE5E0)
+val BetCoinLightOnSurfaceVariant = Color(0xFF3D4945)
+val BetCoinLightSurfaceTint = Color(0xFF006B59)
+val BetCoinLightInverseSurface = Color(0xFF2F3034)
+val BetCoinLightInverseOnSurface = Color(0xFFF0F0F4)
+val BetCoinLightError = Color(0xFFBA1A1A)
+val BetCoinLightOnError = Color(0xFFFFFFFF)
+val BetCoinLightErrorContainer = Color(0xFFFFDAD6)
+val BetCoinLightOnErrorContainer = Color(0xFF410002)
+val BetCoinLightOutline = Color(0xFF6D7A75)
+val BetCoinLightOutlineVariant = Color(0xFFBCCAC4)
+val BetCoinLightScrim = Color(0xFF000000)
+val BetCoinLightSurfaceBright = Color(0xFFF9F9FD)
+val BetCoinLightSurfaceDim = Color(0xFFD9DADD)
+val BetCoinLightSurfaceContainerLowest = Color(0xFFFFFFFF)
+val BetCoinLightSurfaceContainerLow = Color(0xFFF3F3F7)
+val BetCoinLightSurfaceContainer = Color(0xFFEDEDF1)
+val BetCoinLightSurfaceContainerHigh = Color(0xFFE8E8EB)
+val BetCoinLightSurfaceContainerHighest = Color(0xFFE2E2E6)
+
+val BetCoinLightColorScheme = lightColorScheme(
+    primary = BetCoinLightPrimary,
+    onPrimary = BetCoinLightOnPrimary,
+    primaryContainer = BetCoinLightPrimaryContainer,
+    onPrimaryContainer = BetCoinLightOnPrimaryContainer,
+    inversePrimary = BetCoinLightInversePrimary,
+    secondary = BetCoinLightSecondary,
+    onSecondary = BetCoinLightOnSecondary,
+    secondaryContainer = BetCoinLightSecondaryContainer,
+    onSecondaryContainer = BetCoinLightOnSecondaryContainer,
+    tertiary = BetCoinLightTertiary,
+    onTertiary = BetCoinLightOnTertiary,
+    tertiaryContainer = BetCoinLightTertiaryContainer,
+    onTertiaryContainer = BetCoinLightOnTertiaryContainer,
+    background = BetCoinLightBackground,
+    onBackground = BetCoinLightOnBackground,
+    surface = BetCoinLightSurface,
+    onSurface = BetCoinLightOnSurface,
+    surfaceVariant = BetCoinLightSurfaceVariant,
+    onSurfaceVariant = BetCoinLightOnSurfaceVariant,
+    surfaceTint = BetCoinLightSurfaceTint,
+    inverseSurface = BetCoinLightInverseSurface,
+    inverseOnSurface = BetCoinLightInverseOnSurface,
+    error = BetCoinLightError,
+    onError = BetCoinLightOnError,
+    errorContainer = BetCoinLightErrorContainer,
+    onErrorContainer = BetCoinLightOnErrorContainer,
+    outline = BetCoinLightOutline,
+    outlineVariant = BetCoinLightOutlineVariant,
+    scrim = BetCoinLightScrim,
+    surfaceBright = BetCoinLightSurfaceBright,
+    surfaceDim = BetCoinLightSurfaceDim,
+    surfaceContainerLowest = BetCoinLightSurfaceContainerLowest,
+    surfaceContainerLow = BetCoinLightSurfaceContainerLow,
+    surfaceContainer = BetCoinLightSurfaceContainer,
+    surfaceContainerHigh = BetCoinLightSurfaceContainerHigh,
+    surfaceContainerHighest = BetCoinLightSurfaceContainerHighest,
 )
