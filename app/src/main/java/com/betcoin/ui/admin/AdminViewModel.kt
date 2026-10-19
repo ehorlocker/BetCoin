@@ -1,8 +1,8 @@
 package com.betcoin.ui.admin
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.database.sqlite.SQLiteException
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.ActiveBetConflictException
 import com.betcoin.data.model.BetCoinException
@@ -11,6 +11,7 @@ import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.common.toUserMessage
+import com.betcoin.ui.components.formatCoins
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -382,7 +383,9 @@ class AdminViewModel @Inject constructor(
     }
 
     private fun openPlayerDialog(dialog: PlayerDialogState) {
-        _uiState.update { it.copy(playerDialog = dialog) }
+        _uiState.update { state ->
+            if (state.playerDialog?.isBusy() == true) state else state.copy(playerDialog = dialog)
+        }
     }
 
     private fun updatePlayerDialog(transform: (PlayerDialogState) -> PlayerDialogState) {
@@ -474,7 +477,7 @@ class AdminViewModel @Inject constructor(
 
         fun messageDeleted(name: String) = "Deleted $name"
         fun messageBailout(name: String) = "$name got a 1,000 BetCoin bailout"
-        fun messageBalanceSet(name: String, balance: Long) = "$name's balance set to $balance"
+        fun messageBalanceSet(name: String, balance: Long) = "$name's balance set to ${formatCoins(balance)}"
         fun messageRenamed(newName: String) = "Renamed to $newName"
         fun messagePinReset(name: String) = "$name's PIN reset"
         fun messageDeleteBlocked(name: String) = "$name is in an active bet. Resolve or cancel it first."

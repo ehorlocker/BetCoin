@@ -2,9 +2,12 @@ package com.betcoin.ui.admin
 
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.DuplicateUsernameException
+import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
+import com.betcoin.ui.common.toUserMessage
+import com.betcoin.ui.components.formatCoins
 import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
@@ -385,7 +388,79 @@ class AdminViewModelPlayerTest {
         advanceUntilIdle()
 
         val dialog = state.playerDialog as PlayerDialogState.SetBalance
-        assertThat(dialog.error).isNotNull()
+        assertThat(dialog.error).isEqualTo(InvalidInputException("x").toUserMessage())
         assertThat(dialog.isSaving).isFalse()
+    }
+
+    @Test
+    fun staleUser_deleted_closesDialog_postsMappedMessage() = runTest(testDispatcher) {
+        viewModel.onDeletePlayerClicked(alice)
+        fake.users = fake.users.filterNot { it.id == alice.id }
+        viewModel.onPlayerDialogConfirm()
+        advanceUntilIdle()
+
+        assertThat(state.playerDialog).isNull()
+        assertThat(state.message).isEqualTo(InvalidInputException("x").toUserMessage())
+    }
+
+    @Test
+    fun setBalance_message_usesGrouping() = runTest(testDispatcher) {
+        viewModel.onSetBalanceClicked(alice)
+        viewModel.onPlayerDialogInputChanged("1234567")
+        viewModel.onPlayerDialogConfirm()
+        advanceUntilIdle()
+
+        assertThat(state.message).isEqualTo("Alice's balance set to ${formatCoins(1234567)}")
+    }
+
+    @Test
+    fun confirmWhileSaving_delete_oneRepositoryCall() = runTest(testDispatcher) {
+        gate = CompletableDeferred()
+        viewModel.onDeletePlayerClicked(alice)
+        viewModel.onPlayerDialogConfirm()
+        viewModel.onPlayerDialogConfirm()
+        advanceUntilIdle()
+        gate!!.complete(Unit)
+        advanceUntilIdle()
+
+        assertThat(deleteCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun confirmWhileSaving_editUsername_oneRepositoryCall() = runTest(testDispatcher) {
+        collectPlayers()
+        advanceUntilIdle()
+        gate = CompletableDeferred()
+        rename(alice, "Alicia")
+        viewModel.onPlayerDialogConfirm()
+        advanceUntilIdle()
+        gate!!.complete(Unit)
+        advanceUntilIdle()
+
+        assertThat(renameCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun confirmWhileSaving_resetPin_oneRepositoryCall() = runTest(testDispatcher) {
+        gate = CompletableDeferred()
+        resetPin("1234", "1234")
+        viewModel.onPlayerDialogConfirm()
+        advanceUntilIdle()
+        gate!!.complete(Unit)
+        advanceUntilIdle()
+
+        assertThat(resetPinCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun openDialogWhileBusy_isIgnored() = runTest(testDispatcher) {
+        gate = CompletableDeferred()
+        viewModel.onDeletePlayerClicked(alice)
+        viewModel.onPlayerDialogConfirm()
+        viewModel.onResetBalanceClicked(bob)
+
+        assertThat(state.playerDialog).isInstanceOf(PlayerDialogState.ConfirmDelete::class.java)
+        gate!!.complete(Unit)
+        advanceUntilIdle()
     }
 }
