@@ -41,6 +41,7 @@ class BetDetailScreenTest {
         participants: List<ParticipantRow>,
         winningOutcomeId: Long? = null,
         isPush: Boolean = false,
+        isCapped: Boolean = false,
         reopenBlockedReason: String? = null,
     ) = BetDetail(
         prompt = "Who wins the race?",
@@ -52,6 +53,7 @@ class BetDetailScreenTest {
         potSize = participants.sumOf { it.wager },
         winningOutcome = outcomes.firstOrNull { it.id == winningOutcomeId }?.text,
         isPush = isPush,
+        isCapped = isCapped,
         reopenBlockedReason = reopenBlockedReason,
     )
 
@@ -152,6 +154,29 @@ class BetDetailScreenTest {
         composeTestRule.onNodeWithText("Winning outcome: Jay").assertIsDisplayed()
         composeTestRule.onNodeWithText("Resolved", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("No winners", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Unmatched wagers refunded").assertDoesNotExist()
+    }
+
+    @Test
+    fun resolvedCappedBet_showsUnmatchedWagersRefunded() {
+        show(
+            BetDetailUiState.Success(
+                detail(
+                    BetStatus.RESOLVED,
+                    listOf(
+                        row(1, "Alice", "Jay", 100, ParticipantResult.WIN, net = 100),
+                        row(2, "Bob", "Kay", 200, ParticipantResult.LOSS, net = -100),
+                    ),
+                    winningOutcomeId = 10,
+                    isCapped = true,
+                ),
+            ),
+        )
+
+        scrollTo("Bob")
+        composeTestRule.onNodeWithText("\u2212100").assertIsDisplayed()
+        scrollTo("Unmatched wagers refunded")
+        composeTestRule.onNodeWithText("Unmatched wagers refunded").assertIsDisplayed()
     }
 
     @Test
