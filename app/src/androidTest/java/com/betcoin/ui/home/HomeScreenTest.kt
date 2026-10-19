@@ -70,8 +70,9 @@ class HomeScreenTest {
             override suspend fun updateUsername(userId: Long, newUsername: String) {}
         }
 
+        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
         composeTestRule.setContent {
-            HomeScreen(viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo))
+            HomeScreen(viewModel = homeViewModel)
         }
 
         composeTestRule.onNodeWithText("BetCoin").assertIsDisplayed()
@@ -127,9 +128,10 @@ class HomeScreenTest {
         }
 
         var newBetClicked = false
+        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
         composeTestRule.setContent {
             HomeScreen(
-                viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo),
+                viewModel = homeViewModel,
                 onNewBet = { newBetClicked = true },
             )
         }
@@ -183,9 +185,10 @@ class HomeScreenTest {
         }
 
         var leaderboardClicked = false
+        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
         composeTestRule.setContent {
             HomeScreen(
-                viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo),
+                viewModel = homeViewModel,
                 onLeaderboard = { leaderboardClicked = true },
             )
         }
@@ -239,9 +242,10 @@ class HomeScreenTest {
         }
 
         var betHistoryClicked = false
+        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
         composeTestRule.setContent {
             HomeScreen(
-                viewModel = HomeViewModel(fakeBetRepo, fakeUserRepo),
+                viewModel = homeViewModel,
                 onBetHistory = { betHistoryClicked = true },
             )
         }
