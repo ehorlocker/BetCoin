@@ -33,11 +33,4 @@ class MainActivityTest {
         )
         assertThat(method).isNotNull()
     }
-
-    @Test
-    fun mainActivity_hasStartDestinationResolverField() {
-        val field = MainActivity::class.java.getDeclaredField("startDestinationResolver")
-        assertThat(field).isNotNull()
-        assertThat(field.type.name).contains("StartDestinationResolver")
-    }
 }

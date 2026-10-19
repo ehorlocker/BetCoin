@@ -7,6 +7,7 @@ import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import kotlin.coroutines.cancellation.CancellationException
 
 class StartDestinationResolverTest {
     private val settings = FakeSettingsRepository()
@@ -63,6 +64,21 @@ class StartDestinationResolverTest {
         assertThat(logger.calls).hasSize(1)
         assertThat(logger.calls.single().tag).isEqualTo("BetCoinLaunch")
         assertThat(logger.calls.single().throwable).isSameInstanceAs(error)
+    }
+
+    @Test
+    fun discardOlderCancelled_propagates_andIsNotLogged() = runTest {
+        settings.isFirstLaunchResult = false
+        bets.discardOlderError = CancellationException("cancelled")
+
+        var thrown: Throwable? = null
+        try {
+            resolver.resolve()
+        } catch (e: CancellationException) {
+            thrown = e
+        }
+        assertThat(thrown).isInstanceOf(CancellationException::class.java)
+        assertThat(logger.calls).isEmpty()
     }
 
     @Test

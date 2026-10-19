@@ -2,10 +2,14 @@ package com.betcoin.navigation
 
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import com.betcoin.testing.FakePendingBetRepository
 import com.betcoin.testing.RecordingErrorLogger
 import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -144,12 +148,33 @@ class LaunchViewModelTest {
     }
 
     @Test
-    fun cancellation_isNotLoggedAsError() = runTest {
-        settings.isFirstLaunchError = CancellationException("cancelled")
+    fun cancellationFromRepositoryWhileScopeActive_emitsError_andLogs() = runTest {
+        val error = CancellationException("cancelled")
+        settings.isFirstLaunchError = error
         val vm = viewModel()
         advanceUntilIdle()
 
+        assertThat(vm.uiState.value).isEqualTo(LaunchUiState.Error)
+        assertThat(logger.calls).hasSize(1)
+        assertThat(logger.calls.single().throwable).isSameInstanceAs(error)
+    }
+
+    @Test
+    fun clearingViewModelMidResolve_doesNotLog() = runTest {
+        settings.isFirstLaunchGate = CompletableDeferred()
+        val store = ViewModelStore()
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = viewModel() as T
+        }
+        val vm = ViewModelProvider(store, factory)[LaunchViewModel::class.java]
+        advanceUntilIdle()
+        assertThat(vm.uiState.value).isEqualTo(LaunchUiState.Loading)
+
+        store.clear()
+        advanceUntilIdle()
+
         assertThat(logger.calls).isEmpty()
-        assertThat(vm.uiState.value).isNotEqualTo(LaunchUiState.Error)
+        assertThat(vm.uiState.value).isEqualTo(LaunchUiState.Loading)
     }
 }

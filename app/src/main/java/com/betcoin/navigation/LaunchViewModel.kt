@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.betcoin.util.ErrorLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,9 +65,10 @@ class LaunchViewModel @Inject constructor(
                 val route = resolver.resolve()
                 savedStateHandle[KEY_LAUNCH_ROUTE] = route
                 _uiState.value = LaunchUiState.Ready(route)
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
+                // A CancellationException from the repository while this scope is still active is a
+                // failure like any other; if the scope itself was cancelled this rethrows instead.
+                if (e is CancellationException) currentCoroutineContext().ensureActive()
                 errorLogger.logError(LAUNCH_LOG_TAG, "Failed to resolve the start destination", e)
                 _uiState.value = LaunchUiState.Error
             }

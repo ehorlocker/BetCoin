@@ -24,6 +24,9 @@ class FakeSettingsRepository : SettingsRepository {
     /** When set, [isFirstLaunch] throws it. */
     var isFirstLaunchError: Throwable? = null
 
+    /** When set, [isFirstLaunch] suspends until it completes. */
+    var isFirstLaunchGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
     /** Number of [isFirstLaunch] calls. */
     var isFirstLaunchCalls = 0
         private set
@@ -44,6 +47,7 @@ class FakeSettingsRepository : SettingsRepository {
 
     override suspend fun isFirstLaunch(): Boolean {
         isFirstLaunchCalls++
+        isFirstLaunchGate?.await()
         isFirstLaunchError?.let { throw it }
         return isFirstLaunchResult
     }
