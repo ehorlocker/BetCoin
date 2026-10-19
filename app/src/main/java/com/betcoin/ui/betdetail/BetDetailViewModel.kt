@@ -139,12 +139,12 @@ class BetDetailViewModel @Inject constructor(
 
     /**
      * Starts Repeat: copies this bet into a new pending one and exposes its id as
-     * [BetActionState.repeatedBetId]. Ignored unless RESOLVED or CANCELLED and idle.
+     * [BetActionState.repeatedBetId]. Ignored unless RESOLVED or CANCELLED, idle, and no PIN sequence open.
      */
     fun onRepeatRequested() {
         val detail = currentDetail() ?: return
         if (detail.status != BetStatus.RESOLVED && detail.status != BetStatus.CANCELLED) return
-        if (_actionState.value.isBusy) return
+        if (_actionState.value.isBusy || _actionState.value.consent != null) return
         _actionState.update { it.copy(isBusy = true, errorMessage = null) }
         viewModelScope.launch {
             try {
