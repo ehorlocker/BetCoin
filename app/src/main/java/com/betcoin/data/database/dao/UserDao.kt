@@ -54,6 +54,14 @@ interface UserDao {
   suspend fun updateBalance(userId: Long, newBalance: Long)
 
   /**
+   * Sets the avatar reference of the user with [userId] (null clears it).
+   *
+   * @return the number of rows updated (0 if the user doesn't exist).
+   */
+  @Query("UPDATE users SET avatar_ref = :avatarRef WHERE id = :userId")
+  suspend fun updateAvatarRef(userId: Long, avatarRef: String?): Int
+
+  /**
    * Adds signed [delta] to the balance of the user with [userId].
    *
    * @return the number of rows updated (0 if the user doesn't exist).

@@ -16,6 +16,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.repository.local.LocalBetRepository
 import com.betcoin.data.repository.local.LocalUserRepository
@@ -53,7 +54,7 @@ class NewBetScreenTest {
             .allowMainThreadQueries()
             .build()
         betRepository = LocalBetRepository(database)
-        userRepository = LocalUserRepository(database)
+        userRepository = LocalUserRepository(database, FakeAvatarStore())
     }
 
     @After

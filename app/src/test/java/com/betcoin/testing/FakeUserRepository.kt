@@ -1,5 +1,6 @@
 package com.betcoin.testing
 
+import android.net.Uri
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.ActiveBetConflictException
 import com.betcoin.data.model.DuplicateUsernameException
@@ -156,6 +157,22 @@ class FakeUserRepository : UserRepository {
         requireUser(userId)
         requireUnique(name, exceptId = userId)
         updateUser(userId) { it.copy(username = name) }
+    }
+
+    /** User IDs passed to [updateProfilePicture], in call order. */
+    val profilePictureUpdates = mutableListOf<Long>()
+
+    /** User IDs passed to [clearProfilePicture], in call order. */
+    val profilePictureClears = mutableListOf<Long>()
+
+    override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {
+        requireUser(userId)
+        profilePictureUpdates += userId
+    }
+
+    override suspend fun clearProfilePicture(userId: Long) {
+        requireUser(userId)
+        profilePictureClears += userId
     }
 
     private fun updateUser(userId: Long, transform: (User) -> User) {

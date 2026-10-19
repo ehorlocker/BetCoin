@@ -1,7 +1,9 @@
 package com.betcoin.data.repository.local
 
 import android.database.sqlite.SQLiteConstraintException
+import android.net.Uri
 import androidx.room.withTransaction
+import com.betcoin.data.avatar.AvatarStore
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.ActiveBetConflictException
@@ -10,7 +12,9 @@ import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.data.security.PinHasher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -18,10 +22,12 @@ import javax.inject.Inject
  *
  * PINs are hashed with bcrypt through [PinHasher] and never stored or logged in plain text.
  * Every rule is checked before writing, and multi-step writes run in one Room transaction, so a
- * thrown [com.betcoin.data.model.BetCoinException] leaves the database unchanged.
+ * thrown [com.betcoin.data.model.BetCoinException] leaves the database unchanged. Profile
+ * picture files live in [AvatarStore]; they are only removed after the database change commits.
  */
 class LocalUserRepository @Inject constructor(
     private val database: BetCoinDatabase,
+    private val avatarStore: AvatarStore,
 ) : UserRepository {
 
     private val userDao = database.userDao()
@@ -78,7 +84,7 @@ class LocalUserRepository @Inject constructor(
     }
 
     override suspend fun deleteUser(userId: Long) {
-        database.withTransaction {
+        val avatarRef = database.withTransaction {
             val user = requireUser(userId)
             if (userDao.countBetsWithStatus(userId) > 0) {
                 throw ActiveBetConflictException(
@@ -87,7 +93,9 @@ class LocalUserRepository @Inject constructor(
             }
             participantDao.detachUser(userId, user.username)
             userDao.delete(user)
+            user.avatarRef
         }
+        avatarRef?.let { avatarStore.delete(it) }
     }
 
     override suspend fun resetPin(userId: Long, newPin: String) {
@@ -122,6 +130,28 @@ class LocalUserRepository @Inject constructor(
                 throw DuplicateUsernameException(name)
             }
         }
+    }
+
+    override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {
+        requireUser(userId)
+        val newRef = avatarStore.save(imageUri)
+        val oldRef = try {
+            database.withTransaction {
+                val old = requireUser(userId).avatarRef
+                if (userDao.updateAvatarRef(userId, newRef) == 0) throw userNotFound(userId)
+                old
+            }
+        } catch (e: Throwable) {
+            withContext(NonCancellable) { avatarStore.delete(newRef) }
+            throw e
+        }
+        if (oldRef != null && oldRef != newRef) avatarStore.delete(oldRef)
+    }
+
+    override suspend fun clearProfilePicture(userId: Long) {
+        val oldRef = requireUser(userId).avatarRef ?: return
+        avatarStore.delete(oldRef)
+        userDao.updateAvatarRef(userId, null)
     }
 
     private suspend fun requireUser(userId: Long): User =

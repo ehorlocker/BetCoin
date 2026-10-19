@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.repository.local.LocalBetRepository
@@ -50,7 +51,7 @@ class HomeNewBetGateTest {
                 database.userDao().insert(User(username = "Player$index", pinHash = "hash", createdAt = 0L))
             }
         }
-        val homeViewModel = HomeViewModel(LocalBetRepository(database), LocalUserRepository(database))
+        val homeViewModel = HomeViewModel(LocalBetRepository(database), LocalUserRepository(database, FakeAvatarStore()))
         composeTestRule.setContent {
             HomeScreen(viewModel = homeViewModel)
         }
