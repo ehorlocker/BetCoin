@@ -50,4 +50,14 @@ class RoutesTest {
         assertThat(Routes.BET_DETAIL).isEqualTo("bet_detail/{betId}")
         assertThat(Routes.betDetail(42L)).isEqualTo("bet_detail/42")
     }
+
+    @Test
+    fun adminPanelRoute_isCorrectValue() {
+        assertThat(Routes.ADMIN_PANEL).isEqualTo("admin_panel")
+    }
+
+    @Test
+    fun adminPinRecoveryRoute_isCorrectValue() {
+        assertThat(Routes.ADMIN_PIN_RECOVERY).isEqualTo("admin_pin_recovery")
+    }
 }

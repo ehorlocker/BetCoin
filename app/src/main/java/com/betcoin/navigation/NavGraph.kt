@@ -1,6 +1,10 @@
 package com.betcoin.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -9,6 +13,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.betcoin.ui.admin.AdminGateViewModel
+import com.betcoin.ui.admin.AdminPanelScreen
+import com.betcoin.ui.admin.AdminPinGate
+import com.betcoin.ui.admin.AdminPinRecoveryScreen
 import com.betcoin.ui.betdetail.BetDetailScreen
 import com.betcoin.ui.bethistory.BetHistoryScreen
 import com.betcoin.ui.home.HomeScreen
@@ -40,6 +48,8 @@ object Routes {
     const val LEADERBOARD = "leaderboard"
     const val BET_HISTORY = "bet_history"
     const val MANAGE_PLAYERS = "manage_players"
+    const val ADMIN_PANEL = "admin_panel"
+    const val ADMIN_PIN_RECOVERY = "admin_pin_recovery"
 
     /** Navigation argument holding the player's user ID. */
     const val PLAYER_ID_ARG = "playerId"
@@ -161,6 +171,7 @@ fun NavGraph(
             )
         }
         composable(Routes.MANAGE_PLAYERS) {
+            var showAdminGate by remember { mutableStateOf(false) }
             ManagePlayersScreen(
                 viewModel = hiltViewModel(),
                 onNavigateBack = {
@@ -169,8 +180,23 @@ fun NavGraph(
                 onPlayerClick = { playerId ->
                     navController.navigate(Routes.playerDetail(playerId))
                 },
-                // onAdminPanel is wired to the Admin Panel in BET-29.
+                onAdminPanel = { showAdminGate = true },
             )
+            if (showAdminGate) {
+                val gateViewModel: AdminGateViewModel = hiltViewModel()
+                AdminPinGate(
+                    verifier = gateViewModel::verifyPin,
+                    onVerified = {
+                        showAdminGate = false
+                        navController.navigate(Routes.ADMIN_PANEL)
+                    },
+                    onForgotPin = {
+                        showAdminGate = false
+                        navController.navigate(Routes.ADMIN_PIN_RECOVERY)
+                    },
+                    onDismiss = { showAdminGate = false },
+                )
+            }
         }
         composable(
             route = Routes.PLAYER_DETAIL,
@@ -191,6 +217,25 @@ fun NavGraph(
                 viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+            )
+        }
+        composable(Routes.ADMIN_PANEL) {
+            AdminPanelScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+            )
+        }
+        composable(Routes.ADMIN_PIN_RECOVERY) {
+            AdminPinRecoveryScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onRecovered = {
+                    navController.navigate(Routes.ADMIN_PANEL) {
+                        popUpTo(Routes.ADMIN_PIN_RECOVERY) { inclusive = true }
+                    }
                 },
             )
         }
