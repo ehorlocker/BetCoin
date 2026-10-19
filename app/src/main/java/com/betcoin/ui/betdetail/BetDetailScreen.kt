@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -58,6 +59,7 @@ import java.util.Date
 const val BET_DETAIL_RESOLVE_TAG = "bet_detail_resolve"
 const val BET_DETAIL_CANCEL_TAG = "bet_detail_cancel"
 const val BET_DETAIL_REOPEN_TAG = "bet_detail_reopen"
+const val BET_DETAIL_REPEAT_TAG = "bet_detail_repeat"
 const val BET_DETAIL_REOPEN_REASON_TAG = "bet_detail_reopen_reason"
 const val BET_DETAIL_ACTION_ERROR_TAG = "bet_detail_action_error"
 
@@ -70,11 +72,13 @@ const val BET_DETAIL_ACTION_ERROR_TAG = "bet_detail_action_error"
  *
  * @param viewModel the [BetDetailViewModel] that observes the bet
  * @param onNavigateBack callback invoked when the user wants to go back
+ * @param onRepeatBet callback invoked with the new bet's id once Repeat Bet has created it
  */
 @Composable
 fun BetDetailScreen(
     viewModel: BetDetailViewModel,
     onNavigateBack: () -> Unit = {},
+    onRepeatBet: (Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val actionState by viewModel.actionState.collectAsStateWithLifecycle()
@@ -85,9 +89,18 @@ fun BetDetailScreen(
         onResolve = viewModel::onResolveRequested,
         onCancel = viewModel::onCancelRequested,
         onReopen = viewModel::onReopenRequested,
+        onRepeat = viewModel::onRepeatRequested,
         onOutcomePicked = viewModel::onOutcomePicked,
         onOutcomePickerDismissed = viewModel::onOutcomePickerDismissed,
     )
+
+    val repeatedBetId = actionState.repeatedBetId
+    LaunchedEffect(repeatedBetId) {
+        if (repeatedBetId != null) {
+            onRepeatBet(repeatedBetId)
+            viewModel.onRepeatNavigated()
+        }
+    }
 
     val consent = actionState.consent
     val detail = (uiState as? BetDetailUiState.Success)?.detail
@@ -118,6 +131,7 @@ fun BetDetailScreen(
  * @param onResolve callback invoked when Resolve is tapped
  * @param onCancel callback invoked when Cancel Bet is tapped
  * @param onReopen callback invoked when Reopen Bet is tapped
+ * @param onRepeat callback invoked when Repeat Bet is tapped
  * @param onOutcomePicked callback invoked with the chosen winning outcome's id
  * @param onOutcomePickerDismissed callback invoked when the outcome picker is dismissed
  */
@@ -129,6 +143,7 @@ fun BetDetailContent(
     onResolve: () -> Unit = {},
     onCancel: () -> Unit = {},
     onReopen: () -> Unit = {},
+    onRepeat: () -> Unit = {},
     onOutcomePicked: (Long) -> Unit = {},
     onOutcomePickerDismissed: () -> Unit = {},
 ) {
@@ -169,7 +184,7 @@ fun BetDetailContent(
                 BetDetailUiState.NotFound -> CenteredMessage("This bet no longer exists.")
                 BetDetailUiState.Error -> CenteredMessage("Couldn't load this bet.")
                 is BetDetailUiState.Success -> {
-                    BetDetailBody(uiState.detail, actionState, onResolve, onCancel, onReopen)
+                    BetDetailBody(uiState.detail, actionState, onResolve, onCancel, onReopen, onRepeat)
                     if (actionState.pickingOutcome) {
                         OutcomePickerDialog(uiState.detail.outcomes, onOutcomePicked, onOutcomePickerDismissed)
                     }
@@ -197,6 +212,7 @@ private fun BetDetailBody(
     onResolve: () -> Unit,
     onCancel: () -> Unit,
     onReopen: () -> Unit,
+    onRepeat: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -223,7 +239,7 @@ private fun BetDetailBody(
             BetStatus.ACTIVE, BetStatus.PENDING_CONFIRMATION -> Unit
         }
 
-        item(key = "actions") { Actions(detail, actionState, onResolve, onCancel, onReopen) }
+        item(key = "actions") { Actions(detail, actionState, onResolve, onCancel, onReopen, onRepeat) }
     }
 }
 
@@ -234,6 +250,7 @@ private fun Actions(
     onResolve: () -> Unit,
     onCancel: () -> Unit,
     onReopen: () -> Unit,
+    onRepeat: () -> Unit,
 ) {
     val idle = !actionState.isBusy
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -261,6 +278,13 @@ private fun Actions(
                     modifier = Modifier.fillMaxWidth().testTag(BET_DETAIL_REOPEN_TAG),
                 ) {
                     Text("Reopen Bet")
+                }
+                OutlinedButton(
+                    onClick = onRepeat,
+                    enabled = idle,
+                    modifier = Modifier.fillMaxWidth().testTag(BET_DETAIL_REPEAT_TAG),
+                ) {
+                    Text("Repeat Bet")
                 }
                 detail.reopenBlockedReason?.let { reason ->
                     Text(
