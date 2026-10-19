@@ -135,14 +135,18 @@ class LocalUserRepository @Inject constructor(
     override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {
         requireUser(userId)
         val newRef = avatarStore.save(imageUri)
+        // Set as the last statement of the transaction block: from then on the DB points at
+        // newRef, so a later failure (e.g. cancellation while resuming) must keep the file.
+        var committed = false
         val oldRef = try {
             database.withTransaction {
                 val old = requireUser(userId).avatarRef
                 if (userDao.updateAvatarRef(userId, newRef) == 0) throw userNotFound(userId)
+                committed = true
                 old
             }
         } catch (e: Throwable) {
-            withContext(NonCancellable) { avatarStore.delete(newRef) }
+            if (!committed) withContext(NonCancellable) { avatarStore.delete(newRef) }
             throw e
         }
         if (oldRef != null && oldRef != newRef) {

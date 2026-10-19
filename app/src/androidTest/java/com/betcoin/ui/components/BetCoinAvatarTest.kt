@@ -2,15 +2,23 @@ package com.betcoin.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import com.betcoin.ui.theme.BetCoinTheme
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.EventListener
+import coil3.request.ErrorResult
+import coil3.request.ImageRequest
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Compose UI tests for BetCoinAvatar.
@@ -56,6 +64,11 @@ class BetCoinAvatarTest {
             .assertIsDisplayed()
     }
 
+    @After
+    fun resetImageLoader() {
+        SingletonImageLoader.reset()
+    }
+
     @Test
     fun avatar_nullModel_showsInitials() {
         composeTestRule.setContent {
@@ -69,13 +82,26 @@ class BetCoinAvatarTest {
 
     @Test
     fun avatar_unloadableModel_showsInitials() {
+        val errored = AtomicBoolean(false)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        SingletonImageLoader.setUnsafe {
+            ImageLoader.Builder(context)
+                .eventListener(object : EventListener() {
+                    override fun onError(request: ImageRequest, result: ErrorResult) {
+                        errored.set(true)
+                    }
+                })
+                .build()
+        }
         composeTestRule.setContent {
             BetCoinTheme {
                 BetCoinAvatar(initials = "JD", imageModel = File("/nonexistent.jpg"))
             }
         }
 
+        composeTestRule.waitUntil(5_000) { errored.get() }
         composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithContentDescription("Profile picture").assertCountEquals(0)
         composeTestRule.onNodeWithText("JD").assertIsDisplayed()
     }
 
@@ -97,5 +123,6 @@ class BetCoinAvatarTest {
             composeTestRule.onAllNodesWithContentDescription("Profile picture")
                 .fetchSemanticsNodes().isNotEmpty()
         }
+        composeTestRule.onNodeWithText("JD").assertDoesNotExist()
     }
 }
