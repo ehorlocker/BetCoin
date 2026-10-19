@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
@@ -24,7 +25,7 @@ class AdminPinComponentsTest {
         onContinue: () -> Unit = {},
     ) {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 RecoveryCodeReveal(
                     code = "ABCD-2345-EFGH",
                     acknowledged = acknowledged,

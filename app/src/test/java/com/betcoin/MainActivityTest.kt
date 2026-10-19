@@ -33,4 +33,10 @@ class MainActivityTest {
         )
         assertThat(method).isNotNull()
     }
+
+    @Test
+    fun mainActivity_hasDevToolsEntryField() {
+        val field = MainActivity::class.java.getDeclaredField("devToolsEntry")
+        assertThat(field.type.name).contains("DevToolsEntry")
+    }
 }

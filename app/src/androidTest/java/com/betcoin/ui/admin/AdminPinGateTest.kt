@@ -1,5 +1,6 @@
 package com.betcoin.ui.admin
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -23,7 +24,7 @@ class AdminPinGateTest {
 
     private fun showGate() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 AdminPinGate(
                     verifier = { it == "1234" },
                     onVerified = { verified++ },

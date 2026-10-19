@@ -1,7 +1,11 @@
 package com.betcoin.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import com.google.common.truth.Truth.assertThat
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Test
 
 /**
@@ -99,5 +103,48 @@ class ColorTest {
     @Test
     fun tertiaryAndContainer_areDistinct() {
         assertThat(BetCoinTertiary).isNotEqualTo(BetCoinTertiaryContainer)
+    }
+
+    @Test
+    fun lightScheme_usesSpecifiedRoles() {
+        val scheme = BetCoinLightColorScheme
+        assertThat(scheme.primary).isEqualTo(Color(0xFF006B59))
+        assertThat(scheme.onPrimary).isEqualTo(Color(0xFFFFFFFF))
+        assertThat(scheme.background).isEqualTo(Color(0xFFF9F9FD))
+        assertThat(scheme.onSurface).isEqualTo(Color(0xFF1A1C1F))
+        assertThat(scheme.errorContainer).isEqualTo(Color(0xFFFFDAD6))
+        assertThat(scheme.onErrorContainer).isEqualTo(Color(0xFF410002))
+    }
+
+    @Test
+    fun lightScheme_backgroundIsLight() {
+        assertThat(BetCoinLightColorScheme.background.luminance()).isGreaterThan(0.8f)
+        assertThat(BetCoinLightColorScheme.onBackground.luminance()).isLessThan(0.1f)
+    }
+
+    @Test
+    fun darkScheme_unchanged() {
+        assertThat(BetCoinDarkColorScheme.background).isEqualTo(Color(0xFF111316))
+    }
+
+    @Test
+    fun windowBackgroundResources_matchComposeBackgrounds() {
+        assertThat(windowBackground("src/main/res/values/colors.xml"))
+            .isEqualTo(BetCoinLightBackground.toArgb())
+        assertThat(windowBackground("src/main/res/values-night/colors.xml"))
+            .isEqualTo(BetCoinBackground.toArgb())
+    }
+
+    // Unit tests run with the module directory as the working directory.
+    private fun windowBackground(path: String): Int {
+        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(path))
+        val colors = document.getElementsByTagName("color")
+        for (i in 0 until colors.length) {
+            val node = colors.item(i)
+            if (node.attributes.getNamedItem("name").nodeValue == "betcoin_background") {
+                return node.textContent.trim().removePrefix("#").toLong(16).toInt()
+            }
+        }
+        error("betcoin_background not found in $path")
     }
 }

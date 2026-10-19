@@ -6,6 +6,7 @@
 > **Design system:** [`dark-mode-design.md`](dark-mode-design.md) (Pastel Playroom Dark)  
 
 ### Revision Log
+- **2026-10-19** — BET-18: Settings screen with theme picker (System default / Light / Dark) and a light color scheme; the stored theme is applied at the app root through an activity-scoped `AppThemeViewModel`, and the Dev Tools row is wired through a flavor `DevToolsEntry` hook.
 - **2026-10-17** — Resolved open questions: Step B participants persisted to Room; exiting New Bet discards the pending bet; resolving to an unpicked outcome refunds everyone; bailout eligibility counts locked wagers; leaderboard ranks by net worth (4 columns); delete/rename moved behind Admin Panel; admin PIN recovery code; profile pictures via an `AvatarStore` abstraction; Settings screen with theme picker; system insets; input limits; destructive migrations until v1.0. Fixed the RESOLVED→ACTIVE reopen reversal (it previously refunded losers, creating coins). The dev build indicator is now one app-wide banner instead of a Home-only one. Added a dev-only Dev Tools screen (seed sample data, wipe database, reset admin PIN) and backup rules (prod backed up, dev excluded). Spelled out why there's no in-app database switch.
 - **2026-10-18** — BET-39: corrected `ParticipantWithUser` in §3 (`deletedUsername` lives on the participant), removed the stale §6 implementation-gap note, and synced the §13 tree with the code.
 
@@ -723,7 +724,7 @@ app/src/main/java/com/betcoin/
 │           ├── LocalBetRepository.kt     ✅ Room
 │           └── LocalSettingsRepository.kt ✅ Room + jBCrypt
 ├── ui/
-│   ├── theme/                            ✅ Color, Shape, Theme, Type (light palette 🆕)
+│   ├── theme/                            ✅ Color, Shape, Theme, Type, AppThemeViewModel
 │   ├── components/                       ✅ BetCoinAvatar/Button/Card/Chip/Input, Coins, PinEntryDialog,
 │   │                                        DevBuildBanner.kt (also holds AppRootLayout, the app-wide root, see §14)
 │   ├── onboarding/                       ✅ OnboardingScreen/ViewModel
@@ -735,7 +736,9 @@ app/src/main/java/com/betcoin/
 │   ├── betdetail/                        ✅ BetDetailScreen/ViewModel
 │   ├── leaderboard/                      ✅ LeaderboardScreen/ViewModel
 │   ├── bethistory/                       ✅ BetHistoryScreen/ViewModel
-│   └── settings/                         🆕 SettingsScreen/ViewModel
+│   └── settings/                         ✅ SettingsScreen/ViewModel, AppVersionLabel
+├── devtools/
+│   └── DevToolsEntry.kt                  ✅ flavor hook (Dev Tools row + route)
 ├── navigation/
 │   ├── NavGraph.kt                       ✅ (Routes object inside)
 │   └── StartDestinationResolver.kt       ✅
@@ -747,10 +750,10 @@ Flavor-specific source sets:
 ```
 app/src/dev/
 ├── AndroidManifest.xml                   ✅ allowBackup=false override
-├── java/com/betcoin/devtools/            🆕 DevToolsEntry impl, DevToolsScreen/ViewModel, SampleDataSeeder
+├── java/com/betcoin/devtools/            ✅ DevToolsEntry impl + placeholder screen; DevToolsScreen/ViewModel, SampleDataSeeder 🆕 (BET-32)
 └── res/                                  ✅ app_name "BetCoin DEV", DEV launcher icon, no-backup rules
 app/src/prod/
-└── java/com/betcoin/devtools/            🆕 no-op DevToolsEntry
+└── java/com/betcoin/devtools/            ✅ no-op DevToolsEntry
 ```
 
 ### Testing Expectations

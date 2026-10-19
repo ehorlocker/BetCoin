@@ -11,11 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinOutlineVariant
-import com.betcoin.ui.theme.BetCoinPrimary
-import com.betcoin.ui.theme.BetCoinSurfaceHigh
 
 /**
  * A selectable chip for odds or categories.
@@ -35,8 +31,10 @@ fun BetCoinChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val backgroundColor = if (selected) BetCoinPrimary else BetCoinSurfaceHigh
-    val borderColor = if (selected) BetCoinPrimary else BetCoinOutlineVariant
+    val colors = MaterialTheme.colorScheme
+    val backgroundColor = if (selected) colors.primary else colors.surfaceContainerHigh
+    val borderColor = if (selected) colors.primary else colors.outlineVariant
+    val contentColor = if (selected) colors.onPrimary else colors.onSurface
 
     Box(
         modifier = modifier
@@ -49,7 +47,7 @@ fun BetCoinChip(
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = Color.White,
+            color = contentColor,
         )
     }
 }

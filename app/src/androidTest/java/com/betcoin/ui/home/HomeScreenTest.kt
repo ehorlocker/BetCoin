@@ -2,6 +2,7 @@ package com.betcoin.ui.home
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -253,4 +254,29 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText("Bet History").performClick()
         assert(betHistoryClicked) { "Bet History callback was not invoked" }
     }
+
+    @Test
+    fun gearIcon_callsOnSettings() {
+        val homeViewModel = HomeViewModel(
+            object : BetRepository by unsupported<BetRepository>() {
+                override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
+            },
+            object : UserRepository by unsupported<UserRepository>() {
+                override fun getAllUsers() = flowOf(emptyList<User>())
+            },
+        )
+        var settingsClicked = false
+        composeTestRule.setContent {
+            HomeScreen(viewModel = homeViewModel, onSettings = { settingsClicked = true })
+        }
+
+        composeTestRule.onNodeWithContentDescription("Settings").performClick()
+        assert(settingsClicked) { "Settings callback was not invoked" }
+    }
+
+    /** A stub whose members all throw; the test overrides the few it needs. */
+    private inline fun <reified T : Any> unsupported(): T = java.lang.reflect.Proxy.newProxyInstance(
+        T::class.java.classLoader,
+        arrayOf(T::class.java),
+    ) { _, method, _ -> throw UnsupportedOperationException(method.name) } as T
 }

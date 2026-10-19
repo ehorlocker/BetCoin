@@ -15,18 +15,23 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.betcoin.devtools.DevToolsEntry
 import com.betcoin.navigation.NavGraph
 import com.betcoin.navigation.LaunchErrorScreen
 import com.betcoin.navigation.LaunchUiState
 import com.betcoin.navigation.LaunchViewModel
 import com.betcoin.ui.components.AppRootLayout
+import com.betcoin.ui.theme.AppThemeViewModel
 import com.betcoin.ui.theme.BetCoinTheme
+import com.betcoin.ui.theme.isDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * The single [ComponentActivity] for BetCoin, annotated with [AndroidEntryPoint]
@@ -37,22 +42,50 @@ import dagger.hilt.android.AndroidEntryPoint
  *
  * The start destination comes from [LaunchViewModel]: a spinner while it resolves, the
  * [NavGraph] once ready, and [LaunchErrorScreen] with Retry if resolving failed.
+ *
+ * The theme comes from [AppThemeViewModel]: nothing is drawn until the stored preference is
+ * known, and the system bar icon style follows the resolved light/dark theme.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val launchViewModel: LaunchViewModel by viewModels()
 
+    @Inject
+    lateinit var devToolsEntry: DevToolsEntry
+
+    private val appThemeViewModel: AppThemeViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // BetCoin is dark-only, so system bar icons stay light whatever the system theme.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
         )
-
         setContent {
-            BetCoinTheme {
+            // Render nothing until the stored preference is known, so the wrong theme never flashes.
+            val themePreference = appThemeViewModel.themePreference
+                .collectAsStateWithLifecycle().value ?: return@setContent
+            val darkTheme = themePreference.isDarkTheme()
+
+            // System bar icon style follows the resolved theme.
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = if (darkTheme) {
+                        SystemBarStyle.dark(Color.TRANSPARENT)
+                    } else {
+                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                    },
+                    navigationBarStyle = if (darkTheme) {
+                        SystemBarStyle.dark(Color.TRANSPARENT)
+                    } else {
+                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                    },
+                )
+                onDispose {}
+            }
+
+            BetCoinTheme(themePreference) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
@@ -73,6 +106,7 @@ class MainActivity : ComponentActivity() {
                             is LaunchUiState.Ready -> NavGraph(
                                 navController = navController,
                                 startDestination = current.startDestination,
+                                devToolsEntry = devToolsEntry,
                             )
                             LaunchUiState.Error -> LaunchErrorScreen(onRetry = launchViewModel::retry)
                         }
