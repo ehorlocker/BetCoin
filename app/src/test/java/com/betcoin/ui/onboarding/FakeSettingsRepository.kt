@@ -7,6 +7,7 @@ import com.betcoin.data.repository.RecoveryCode
 import com.betcoin.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import org.mindrot.jbcrypt.BCrypt
 
 /**
@@ -31,6 +32,9 @@ class FakeSettingsRepository : SettingsRepository {
     var isFirstLaunchCalls = 0
         private set
     val themePreference = MutableStateFlow(ThemePreference.SYSTEM)
+
+    /** When set, the [getThemePreference] flow throws it instead of emitting. */
+    var themePreferenceError: Throwable? = null
 
     /** When set, the next [setThemePreference] throws this once and does not store the value. */
     var failNextSetTheme: Throwable? = null
@@ -73,7 +77,8 @@ class FakeSettingsRepository : SettingsRepository {
         return regenerateRecoveryCode()
     }
 
-    override fun getThemePreference(): Flow<ThemePreference> = themePreference
+    override fun getThemePreference(): Flow<ThemePreference> =
+        themePreferenceError?.let { error -> flow { throw error } } ?: themePreference
 
     override suspend fun setThemePreference(pref: ThemePreference) {
         failNextSetTheme?.let {
