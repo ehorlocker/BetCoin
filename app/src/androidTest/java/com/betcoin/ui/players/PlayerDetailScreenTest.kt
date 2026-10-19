@@ -4,6 +4,8 @@ import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.avatar.FakeCameraCaptureStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -128,5 +130,117 @@ class PlayerDetailScreenTest {
         assertStat("Balance", "1,050")
         assertStat("Total debt", "1,000")
         composeTestRule.onNodeWithText("Bailout").assertDoesNotExist()
+    }
+
+    private fun loadedState(isUpdatingPicture: Boolean = false) = PlayerDetailViewModel.UiState.Loaded(
+        stats = PlayerDetailViewModel.PlayerStats(
+            username = "Alice",
+            balance = 500,
+            totalWins = 0,
+            totalLosses = 0,
+            totalEarnings = 0,
+            totalLost = 0,
+            bailoutCount = 0,
+            totalDebt = 0,
+            lockedBalance = 0,
+        ),
+        isUpdatingPicture = isUpdatingPicture,
+    )
+
+    private fun showContent(state: PlayerDetailViewModel.UiState.Loaded, onChangePicture: () -> Unit = {}) {
+        composeTestRule.setContent {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
+                PlayerDetailContent(state = state, onBailout = {}, onChangePicture = onChangePicture)
+            }
+        }
+    }
+
+    private fun showSheet(
+        hasPicture: Boolean,
+        canTakePhoto: Boolean,
+        onGallery: () -> Unit = {},
+        onTakePhoto: () -> Unit = {},
+        onRemove: () -> Unit = {},
+    ) {
+        composeTestRule.setContent {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
+                ProfilePictureOptionsSheet(
+                    hasProfilePicture = hasPicture,
+                    canTakePhoto = canTakePhoto,
+                    onGallery = onGallery,
+                    onTakePhoto = onTakePhoto,
+                    onRemove = onRemove,
+                    onDismiss = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun content_showsAvatarAndChangePictureButton() {
+        var clicked = false
+        showContent(loadedState()) { clicked = true }
+
+        composeTestRule.onNodeWithText("Change Profile Picture").assertIsDisplayed().performClick()
+        assertThat(clicked).isTrue()
+    }
+
+    @Test
+    fun changePictureButton_disabledWhileUpdating() {
+        showContent(loadedState(isUpdatingPicture = true))
+
+        composeTestRule.onNodeWithText("Change Profile Picture").assertIsNotEnabled()
+    }
+
+    @Test
+    fun changePictureButton_enabledWhenIdle() {
+        showContent(loadedState())
+
+        composeTestRule.onNodeWithText("Change Profile Picture").assertIsEnabled()
+    }
+
+    @Test
+    fun sheet_withPictureAndCamera_showsAllThreeOptions() {
+        showSheet(hasPicture = true, canTakePhoto = true)
+
+        composeTestRule.onNodeWithText("Select from Gallery").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Take Photo").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Remove Photo").assertIsDisplayed()
+    }
+
+    @Test
+    fun sheet_noPicture_hidesRemovePhoto() {
+        showSheet(hasPicture = false, canTakePhoto = true)
+
+        composeTestRule.onNodeWithText("Select from Gallery").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Remove Photo").assertDoesNotExist()
+    }
+
+    @Test
+    fun sheet_noCamera_hidesTakePhoto() {
+        showSheet(hasPicture = true, canTakePhoto = false)
+
+        composeTestRule.onNodeWithText("Select from Gallery").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Take Photo").assertDoesNotExist()
+    }
+
+    @Test
+    fun sheet_optionClicks_invokeCallbacks() {
+        var gallery = 0
+        var photo = 0
+        var remove = 0
+        showSheet(
+            hasPicture = true,
+            canTakePhoto = true,
+            onGallery = { gallery++ },
+            onTakePhoto = { photo++ },
+            onRemove = { remove++ },
+        )
+
+        composeTestRule.onNodeWithText("Select from Gallery").performClick()
+        composeTestRule.onNodeWithText("Take Photo").performClick()
+        composeTestRule.onNodeWithText("Remove Photo").performClick()
+
+        assertThat(listOf(gallery, photo, remove)).containsExactly(1, 1, 1)
     }
 }
