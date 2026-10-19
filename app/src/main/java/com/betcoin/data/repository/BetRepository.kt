@@ -94,8 +94,8 @@ interface BetRepository {
      * The bet must be `ACTIVE` (`InvalidBetStateException`) and
      * [winningOutcomeId] must be one of its outcomes, picked or not. Each
      * participant's `payout` is credited (winners' share of the pot; for
-     * losers their refund from the even-money cap (§5.3), usually 0). If nobody picked [winningOutcomeId] it's a push: every wager is
-     * refunded and no W/L stats change. Sets `winningOutcomeId` and `resolvedAt`.
+     * losers their refund from the even-money cap (§5.3), usually 0). If nobody picked [winningOutcomeId] it's a push: every
+     * wager is refunded and no W/L stats change. Sets `winningOutcomeId` and `resolvedAt`.
      *
      * Implementation must run inside a transaction.
      */

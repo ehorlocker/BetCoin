@@ -70,7 +70,7 @@ object PayoutCalculator {
     val recipients: List<PayoutEntry>
     if (isCapped) {
       for (winner in winners) {
-        payouts[winner.participantId] = 2 * winner.wagerAmount
+        payouts[winner.participantId] = Math.multiplyExact(2L, winner.wagerAmount)
       }
       val refundPool = losingWagers - winningWagers
       for (loser in losers) {

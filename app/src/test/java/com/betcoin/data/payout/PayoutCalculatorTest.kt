@@ -213,7 +213,8 @@ class PayoutCalculatorTest {
 
   @Test
   fun capped_remainderTieOnLargestLoser_goesToLowestParticipantId() {
-    // Losers 60, refundPool 50: each 20*50/60 = 16, remainder 2 is one coin each to the two lowest-id losers.
+    // Losers 60, refundPool 50: each 20*50/60 = 16, remainder 2 is one coin each to the
+    // two lowest-id losers.
     val entries = listOf(
       entry(1, outcomeA, 10),
       entry(4, outcomeB, 20),
