@@ -4,6 +4,7 @@ import com.betcoin.data.model.WrongRecoveryCodeException
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.onboarding.FakeSettingsRepository
+import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,7 +47,7 @@ class AdminViewModelTest {
                 return fake.regenerateRecoveryCode()
             }
         }
-        viewModel = AdminViewModel(wrapped, FakeUserRepository())
+        viewModel = AdminViewModel(wrapped, FakeUserRepository(), FakeBetRepository())
     }
 
     @After
