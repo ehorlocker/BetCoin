@@ -155,9 +155,9 @@ fun NavGraph(
         }
         composable(Routes.BET_HISTORY) {
             BetHistoryScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
+                viewModel = hiltViewModel(),
+                onNavigateBack = { navController.popBackStack() },
+                onBetClick = { betId -> navController.navigate(Routes.betDetail(betId)) },
             )
         }
         composable(Routes.MANAGE_PLAYERS) {
