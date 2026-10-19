@@ -758,6 +758,7 @@ app/src/prod/
 - **Instrumented (in-memory Room):** every `@Transaction` operation in §7, including its failure cases, which must leave the database unchanged. Also the uniqueness and FK behavior from §3.
 - **Compose UI tests:** each screen's states (loading, empty, error) and its main interactions.
 - **Emulator check:** verify UI changes on the `BetCoin_Test` emulator per AGENTS.md before marking a ticket done.
+- **CI:** `.github/workflows/ci.yml` runs on every PR into `develop` and every push to `develop`: it builds both flavors and runs the JVM unit tests and `lintDevDebug`. Instrumented and Compose UI tests need an emulator, so they stay local.
 
 ---
 
