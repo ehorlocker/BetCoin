@@ -1,5 +1,6 @@
 package com.betcoin.ui.admin
 
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
@@ -13,7 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
-import androidx.test.espresso.Espresso
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -131,8 +132,7 @@ class AdminPanelScreenTest {
     fun back_whenIdle_navigatesBack() {
         setContent()
 
-        Espresso.pressBack()
-        composeRule.waitForIdle()
+        pressBack()
 
         assertEquals(1, backCalls)
     }
@@ -141,8 +141,7 @@ class AdminPanelScreenTest {
     fun back_whileRecoveryCodeShown_doesNotLeaveOrDismiss() {
         setContent(AdminUiState(recoveryCode = RecoveryCodeDialogState.Show("ABCD-2345-EFGH")))
 
-        Espresso.pressBack()
-        composeRule.waitForIdle()
+        pressBack()
 
         assertEquals(0, backCalls)
         composeRule.onNodeWithTag(ADMIN_SETTINGS_RECOVERY_CODE_TAG).assertIsDisplayed()
@@ -152,10 +151,18 @@ class AdminPanelScreenTest {
     fun back_whileGenerating_doesNotLeave() {
         setContent(AdminUiState(recoveryCode = RecoveryCodeDialogState.Generating))
 
-        Espresso.pressBack()
-        composeRule.waitForIdle()
+        pressBack()
 
         assertEquals(0, backCalls)
         composeRule.onNodeWithText("Creating recovery code...").assertIsDisplayed()
+    }
+
+    /**
+     * Sends a hardware Back key to the focused window. Espresso.pressBack waits for a settled root view,
+     * which never happens while the Generating dialog's indeterminate indicator keeps requesting layout.
+     */
+    private fun pressBack() {
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        composeRule.waitForIdle()
     }
 }
