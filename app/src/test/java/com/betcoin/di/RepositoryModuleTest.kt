@@ -7,7 +7,10 @@ import com.betcoin.data.repository.local.LocalBetRepository
 import com.betcoin.data.repository.local.LocalSettingsRepository
 import com.betcoin.data.repository.local.LocalUserRepository
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
+import dagger.Binds
 import dagger.Module
+import javax.inject.Singleton
 import org.junit.Test
 
 /**
@@ -64,8 +67,21 @@ class RepositoryModuleTest {
     @Test
     fun repositoryModule_hasThreeBindsMethods() {
         val bindsMethods = RepositoryModule::class.java.declaredMethods.filter {
-            it.name.startsWith("bind")
+            it.isAnnotationPresent(Binds::class.java)
         }
         assertThat(bindsMethods).hasSize(3)
+    }
+
+    @Test
+    fun repositoryModule_everyBindsMethodIsSingleton() {
+        val bindsMethods = RepositoryModule::class.java.declaredMethods.filter {
+            it.isAnnotationPresent(Binds::class.java)
+        }
+        assertThat(bindsMethods).isNotEmpty()
+        bindsMethods.forEach { method ->
+            assertWithMessage(method.name)
+                .that(method.isAnnotationPresent(Singleton::class.java))
+                .isTrue()
+        }
     }
 }

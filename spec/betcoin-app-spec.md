@@ -7,6 +7,7 @@
 
 ### Revision Log
 - **2026-10-17** — Resolved open questions: Step B participants persisted to Room; exiting New Bet discards the pending bet; resolving to an unpicked outcome refunds everyone; bailout eligibility counts locked wagers; leaderboard ranks by net worth (4 columns); delete/rename moved behind Admin Panel; admin PIN recovery code; profile pictures via an `AvatarStore` abstraction; Settings screen with theme picker; system insets; input limits; destructive migrations until v1.0. Fixed the RESOLVED→ACTIVE reopen reversal (it previously refunded losers, creating coins). The dev build indicator is now one app-wide banner instead of a Home-only one. Added a dev-only Dev Tools screen (seed sample data, wipe database, reset admin PIN) and backup rules (prod backed up, dev excluded). Spelled out why there's no in-app database switch.
+- **2026-10-18** — BET-39: corrected `ParticipantWithUser` in §3 (`deletedUsername` lives on the participant), removed the stale §6 implementation-gap note, and synced the §13 tree with the code.
 
 ---
 
@@ -115,7 +116,7 @@ All currency values stored as `Long` (integer BetCoin) to avoid floating-point r
 
 ### Data Classes (non-entity)
 - **BetWithDetails** — `bet: Bet`, `outcomes: List<BetOutcome>`, `participants: List<ParticipantWithUser>`
-- **ParticipantWithUser** — `participant: BetParticipant`, `user: User?`, `deletedUsername: String?`, `outcome: BetOutcome`
+- **ParticipantWithUser** — `participant: BetParticipant` (carries `deletedUsername` for removed players), `user: User?`, `outcome: BetOutcome`
 
 ### Schema Versioning
 - `exportSchema = true`, with schemas checked in under `app/schemas/`.
@@ -458,9 +459,6 @@ ViewModel → Repository Interface → LocalRepository (Room DAOs)
 - Rule violations (insufficient balance, unanimous pick, ACTIVE-bet conflicts, duplicate username, and so on) throw a typed `BetCoinException` subclass (e.g. `InsufficientBalanceException(userId, required, available)`). ViewModels map these to user-facing messages. Nothing is written when a check fails.
 - **Nothing outside `data/` touches Room, DAOs, `Context.filesDir`, or file paths directly.** That includes the avatar storage below, so the whole persistence layer can be swapped at once.
 
-### Current Implementation Gap
-At this revision, `LocalUserRepository` is an in-memory placeholder. It stores PINs in plain text, `verifyPin` always returns `false`, and it isn't backed by Room. `LocalBetRepository` is entirely `TODO()`. Both must be implemented against the DAOs before any PIN-gated or bet flow can work.
-
 ### 6.1 UserRepository (interface)
 | Method | Description |
 |--------|-------------|
@@ -691,26 +689,27 @@ If the app is force-closed (or crashes) while a bet is in PENDING_CONFIRMATION s
 
 ## 13. Project Structure
 
-✅ = exists today (may still be a placeholder; see §6 "Current Implementation Gap"), 🆕 = still to create.
+✅ = exists today, 🆕 = planned but not created yet.
 
 ```
 app/src/main/java/com/betcoin/
 ├── di/
 │   ├── DatabaseModule.kt                 ✅
-│   └── RepositoryModule.kt               ✅ (+ AvatarStore binding 🆕)
+│   └── RepositoryModule.kt               ✅ (@Singleton bindings; AvatarStore binding 🆕)
 ├── data/
 │   ├── database/
 │   │   ├── BetCoinDatabase.kt            ✅
-│   │   ├── converter/BetStatusConverter.kt ✅
+│   │   ├── converter/                    ✅ BetStatusConverter, ThemePreferenceConverter
 │   │   ├── dao/                          ✅ User, Bet, BetOutcome, BetParticipant, AppSettings
 │   │   └── entity/                       ✅ User, Bet, BetOutcome, BetParticipant, AppSettings
 │   ├── model/
 │   │   ├── BetStatus.kt                  ✅
 │   │   ├── BetWithDetails.kt             ✅
 │   │   ├── ParticipantWithUser.kt        ✅
-│   │   ├── ThemePreference.kt            🆕
-│   │   └── BetCoinException.kt           🆕 typed rule violations
-│   ├── payout/PayoutCalculator.kt        🆕 pure function, unit-tested
+│   │   ├── ThemePreference.kt            ✅
+│   │   └── BetCoinException.kt           ✅ typed rule violations
+│   ├── payout/PayoutCalculator.kt        ✅ pure function, unit-tested
+│   ├── security/PinHasher.kt             ✅ jBCrypt PIN hashing
 │   ├── avatar/
 │   │   ├── AvatarStore.kt                🆕 interface
 │   │   └── LocalAvatarStore.kt           🆕 filesDir/avatars
@@ -718,25 +717,28 @@ app/src/main/java/com/betcoin/
 │       ├── UserRepository.kt             ✅ interface
 │       ├── BetRepository.kt              ✅ interface
 │       ├── SettingsRepository.kt         ✅ interface
+│       ├── RecoveryCode.kt               ✅ admin PIN recovery code
 │       └── local/
-│           ├── LocalUserRepository.kt    ✅ in-memory placeholder → Room
-│           ├── LocalBetRepository.kt     ✅ all TODO() → Room
+│           ├── LocalUserRepository.kt    ✅ Room
+│           ├── LocalBetRepository.kt     ✅ Room
 │           └── LocalSettingsRepository.kt ✅ Room + jBCrypt
 ├── ui/
 │   ├── theme/                            ✅ Color, Shape, Theme, Type (light palette 🆕)
-│   ├── components/                       ✅ BetCoinAvatar/Button/Card/Chip/Input, DevModeIndicator (moves to the app root, see §14)
-│   │   └── PinEntryDialog.kt             🆕
-│   ├── onboarding/                       ✅ OnboardingScreen/ViewModel (+ recovery code 🆕)
-│   ├── recovery/                         🆕 RecoveryScreen/ViewModel
+│   ├── components/                       ✅ BetCoinAvatar/Button/Card/Chip/Input, Coins, PinEntryDialog,
+│   │                                        DevBuildBanner.kt (also holds AppRootLayout, the app-wide root, see §14)
+│   ├── onboarding/                       ✅ OnboardingScreen/ViewModel
+│   ├── recovery/                         ✅ RecoveryScreen/ViewModel
 │   ├── home/                             ✅ HomeScreen/ViewModel
-│   ├── players/                          ✅ ManagePlayers, PlayerDetail
+│   ├── players/                          ✅ ManagePlayers, PlayerDetail (Screen + ViewModel each)
 │   ├── admin/                            🆕 AdminScreen/ViewModel
-│   ├── newbet/                           ✅ NewBetScreen (placeholder) + NewBetViewModel 🆕
-│   ├── betdetail/                        🆕 BetDetailScreen/ViewModel
+│   ├── newbet/                           ✅ NewBetScreen/ViewModel
+│   ├── betdetail/                        ✅ BetDetailScreen/ViewModel
 │   ├── leaderboard/                      ✅ LeaderboardScreen/ViewModel
-│   ├── bethistory/                       ✅ BetHistoryScreen (placeholder) + ViewModel 🆕
+│   ├── bethistory/                       ✅ BetHistoryScreen/ViewModel
 │   └── settings/                         🆕 SettingsScreen/ViewModel
-├── navigation/NavGraph.kt                ✅ (Routes object inside)
+├── navigation/
+│   ├── NavGraph.kt                       ✅ (Routes object inside)
+│   └── StartDestinationResolver.kt       ✅
 ├── MainActivity.kt                       ✅
 └── BetCoinApp.kt                         ✅ Application class, @HiltAndroidApp
 ```
@@ -744,9 +746,9 @@ app/src/main/java/com/betcoin/
 Flavor-specific source sets:
 ```
 app/src/dev/
-├── AndroidManifest.xml                   🆕 allowBackup=false override
+├── AndroidManifest.xml                   ✅ allowBackup=false override
 ├── java/com/betcoin/devtools/            🆕 DevToolsEntry impl, DevToolsScreen/ViewModel, SampleDataSeeder
-└── res/                                  ✅ app_name "BetCoin DEV"; 🆕 DEV launcher icon, no-backup rules
+└── res/                                  ✅ app_name "BetCoin DEV", DEV launcher icon, no-backup rules
 app/src/prod/
 └── java/com/betcoin/devtools/            🆕 no-op DevToolsEntry
 ```
