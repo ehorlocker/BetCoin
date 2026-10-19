@@ -10,6 +10,7 @@ import com.betcoin.data.model.ParticipantWithUser
 import com.betcoin.data.repository.BetRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
@@ -23,6 +24,12 @@ class FakePendingBetRepository : BetRepository {
     /** Number of [discardOlderPendingBets] calls. */
     var discardOlderCalls = 0
         private set
+
+    /** When set, [discardOlderPendingBets] throws it. */
+    var discardOlderError: Throwable? = null
+
+    /** When set, the [getPendingBet] flow throws it on collection. */
+    var getPendingBetError: Throwable? = null
 
     /** IDs passed to [discardPendingBet], in call order. */
     val discardedBetIds = mutableListOf<Long>()
@@ -59,10 +66,14 @@ class FakePendingBetRepository : BetRepository {
     private fun List<BetWithDetails>.newest(): BetWithDetails? =
         maxWithOrNull(compareBy({ it.bet.createdAt }, { it.bet.id }))
 
-    override fun getPendingBet(): Flow<BetWithDetails?> = pendingBets.map { it.newest() }
+    override fun getPendingBet(): Flow<BetWithDetails?> {
+        val error = getPendingBetError
+        return if (error != null) flow { throw error } else pendingBets.map { it.newest() }
+    }
 
     override suspend fun discardOlderPendingBets() {
         discardOlderCalls++
+        discardOlderError?.let { throw it }
         pendingBets.value = listOfNotNull(pendingBets.value.newest())
     }
 

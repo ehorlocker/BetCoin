@@ -1,6 +1,9 @@
 package com.betcoin.ui.theme
 
 import com.betcoin.data.model.ThemePreference
+import android.database.sqlite.SQLiteException
+import com.betcoin.navigation.LAUNCH_LOG_TAG
+import com.betcoin.testing.RecordingErrorLogger
 import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -20,11 +23,13 @@ class AppThemeViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var fake: FakeSettingsRepository
+    private lateinit var errorLogger: RecordingErrorLogger
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fake = FakeSettingsRepository()
+        errorLogger = RecordingErrorLogger()
     }
 
     @After
@@ -35,7 +40,7 @@ class AppThemeViewModelTest {
     @Test
     fun themePreference_isNullBeforeFirstEmission_thenStoredValue() = runTest(testDispatcher) {
         fake.themePreference.value = ThemePreference.DARK
-        val viewModel = AppThemeViewModel(fake)
+        val viewModel = AppThemeViewModel(fake, errorLogger)
 
         assertThat(viewModel.themePreference.value).isNull()
 
@@ -46,7 +51,7 @@ class AppThemeViewModelTest {
 
     @Test
     fun themePreference_propagatesRepositoryChange() = runTest(testDispatcher) {
-        val viewModel = AppThemeViewModel(fake)
+        val viewModel = AppThemeViewModel(fake, errorLogger)
         advanceUntilIdle()
         assertThat(viewModel.themePreference.value).isEqualTo(ThemePreference.SYSTEM)
 
@@ -54,5 +59,19 @@ class AppThemeViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.themePreference.value).isEqualTo(ThemePreference.LIGHT)
+    }
+
+    @Test
+    fun themePreference_fallsBackToSystemAndLogs_whenRepositoryReadThrows() = runTest(testDispatcher) {
+        val error = SQLiteException("disk I/O error")
+        fake.themePreferenceError = error
+        val viewModel = AppThemeViewModel(fake, errorLogger)
+
+        advanceUntilIdle()
+
+        assertThat(viewModel.themePreference.value).isEqualTo(ThemePreference.SYSTEM)
+        assertThat(errorLogger.calls).hasSize(1)
+        assertThat(errorLogger.calls[0].tag).isEqualTo(LAUNCH_LOG_TAG)
+        assertThat(errorLogger.calls[0].throwable).isSameInstanceAs(error)
     }
 }
