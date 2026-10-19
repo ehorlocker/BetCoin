@@ -22,6 +22,9 @@ class FakeSettingsRepository : SettingsRepository {
     var isFirstLaunchResult: Boolean = true
     val themePreference = MutableStateFlow(ThemePreference.SYSTEM)
 
+    /** When set, the next [setThemePreference] throws this once and does not store the value. */
+    var failNextSetTheme: Throwable? = null
+
     override suspend fun getAdminPinHash(): String? = storedHash
 
     override suspend fun setAdminPin(pin: String) {
@@ -58,6 +61,10 @@ class FakeSettingsRepository : SettingsRepository {
     override fun getThemePreference(): Flow<ThemePreference> = themePreference
 
     override suspend fun setThemePreference(pref: ThemePreference) {
+        failNextSetTheme?.let {
+            failNextSetTheme = null
+            throw it
+        }
         themePreference.value = pref
     }
 

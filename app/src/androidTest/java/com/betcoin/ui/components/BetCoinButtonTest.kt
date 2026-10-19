@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -21,7 +22,7 @@ class BetCoinButtonTest {
     @Test
     fun primaryButton_displaysText() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinButton(
                     text = "Place Bet",
                     onClick = {},
@@ -38,7 +39,7 @@ class BetCoinButtonTest {
     @Test
     fun secondaryButton_displaysText() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinButton(
                     text = "Cancel",
                     variant = ButtonVariant.Secondary,
@@ -55,7 +56,7 @@ class BetCoinButtonTest {
     @Test
     fun bettingActionButton_displaysText() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinButton(
                     text = "Confirm Bet",
                     variant = ButtonVariant.BettingAction,
@@ -72,7 +73,7 @@ class BetCoinButtonTest {
     @Test
     fun disabledButton_isNotEnabled() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinButton(
                     text = "Disabled",
                     enabled = false,

@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -21,7 +22,7 @@ class BetCoinInputTest {
     @Test
     fun input_displaysPlaceholder() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinInput(
                     value = "",
                     onValueChange = { },
@@ -37,7 +38,7 @@ class BetCoinInputTest {
     @Test
     fun input_displaysValue() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinInput(
                     value = "100",
                     onValueChange = { },
@@ -54,7 +55,7 @@ class BetCoinInputTest {
     fun input_triggersOnValueChange() {
         var currentValue = ""
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinInput(
                     value = currentValue,
                     onValueChange = { newValue: String -> currentValue = newValue },

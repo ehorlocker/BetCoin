@@ -1,5 +1,6 @@
 package com.betcoin.ui.betdetail
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -68,7 +69,7 @@ class BetDetailScreenTest {
         onRepeat: () -> Unit = {},
     ) {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetDetailContent(
                     uiState = state,
                     actionState = actionState,
