@@ -65,11 +65,11 @@ class RepositoryModuleTest {
     }
 
     @Test
-    fun repositoryModule_hasThreeBindsMethods() {
+    fun repositoryModule_hasFourBindsMethods() {
         val bindsMethods = RepositoryModule::class.java.declaredMethods.filter {
             it.isAnnotationPresent(Binds::class.java)
         }
-        assertThat(bindsMethods).hasSize(3)
+        assertThat(bindsMethods).hasSize(4)
     }
 
     @Test
