@@ -3,7 +3,11 @@ package com.betcoin.data.avatar
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import com.betcoin.data.model.InvalidImageException
@@ -13,6 +17,7 @@ import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -86,11 +91,10 @@ class LocalAvatarStore @Inject constructor(
     val height = bounds.outHeight
     if (width <= 0 || height <= 0) throw InvalidImageException()
 
-    // Largest power-of-two sample size that keeps both dimensions at or above the target.
+    // Largest power-of-two sample size that keeps the longest side at or above the target.
+    val longestSide = maxOf(width, height)
     var sampleSize = 1
-    while (width / (sampleSize * 2) >= MAX_SIDE && height / (sampleSize * 2) >= MAX_SIDE) {
-      sampleSize *= 2
-    }
+    while (longestSide / (sampleSize * 2) >= MAX_SIDE) sampleSize *= 2
     val decoded = resolver.openInputStream(source).use { input ->
       if (input == null) throw InvalidImageException()
       BitmapFactory.decodeStream(
@@ -100,29 +104,45 @@ class LocalAvatarStore @Inject constructor(
       )
     } ?: throw InvalidImageException()
 
-    val orientation = resolver.openInputStream(source).use { input ->
-      if (input == null) {
-        ExifInterface.ORIENTATION_NORMAL
-      } else {
-        ExifInterface(input).getAttributeInt(
-          ExifInterface.TAG_ORIENTATION,
-          ExifInterface.ORIENTATION_NORMAL,
-        )
+    try {
+      val orientation = resolver.openInputStream(source).use { input ->
+        if (input == null) {
+          ExifInterface.ORIENTATION_NORMAL
+        } else {
+          ExifInterface(input).getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL,
+          )
+        }
       }
-    }
 
-    val matrix = Matrix()
-    val longest = maxOf(decoded.width, decoded.height)
-    if (longest > MAX_SIDE) {
-      val scale = MAX_SIDE.toFloat() / longest
-      matrix.postScale(scale, scale)
-    }
-    applyOrientation(matrix, orientation)
-    if (matrix.isIdentity) return decoded
+      val matrix = Matrix()
+      val longest = maxOf(decoded.width, decoded.height)
+      if (longest > MAX_SIDE) {
+        val scale = MAX_SIDE.toFloat() / longest
+        matrix.postScale(scale, scale)
+      }
+      applyOrientation(matrix, orientation)
 
-    val result = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
-    if (result !== decoded) decoded.recycle()
-    return result
+      // Draw onto white so transparent areas don't turn black in the JPEG.
+      val bounds = RectF(0f, 0f, decoded.width.toFloat(), decoded.height.toFloat())
+      matrix.mapRect(bounds)
+      val outWidth = maxOf(1, bounds.width().roundToInt())
+      val outHeight = maxOf(1, bounds.height().roundToInt())
+      val result = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
+      try {
+        val canvas = Canvas(result)
+        canvas.drawColor(Color.WHITE)
+        canvas.translate(-bounds.left, -bounds.top)
+        canvas.drawBitmap(decoded, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+      } catch (t: Throwable) {
+        result.recycle()
+        throw t
+      }
+      return result
+    } finally {
+      decoded.recycle()
+    }
   }
 
   private fun applyOrientation(matrix: Matrix, orientation: Int) {

@@ -3,6 +3,9 @@ package com.betcoin.data.avatar
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import androidx.test.core.app.ApplicationProvider
@@ -78,7 +81,11 @@ class LocalAvatarStoreTest {
 
   @Test
   fun save_exifRotated_appliesOrientation() = runBlocking {
-    val source = sampleJpeg(400, 200)
+    val source = File.createTempFile("quadrant", ".jpg", context.cacheDir)
+    val bitmap = Bitmap.createBitmap(400, 200, Bitmap.Config.ARGB_8888)
+    bitmap.eraseColor(Color.BLUE)
+    Canvas(bitmap).drawRect(0f, 0f, 200f, 100f, Paint().apply { color = Color.RED })
+    source.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
     ExifInterface(source).apply {
       setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
       saveAttributes()
@@ -86,8 +93,41 @@ class LocalAvatarStoreTest {
 
     val ref = store.save(Uri.fromFile(source))
 
-    assertThat(boundsOf(savedFile(ref))).isEqualTo(200 to 400)
+    val saved = savedFile(ref)
+    assertThat(boundsOf(saved)).isEqualTo(200 to 400)
+    // ROTATE_90 is clockwise: the red top-left quadrant moves to the top-right.
+    val out = BitmapFactory.decodeFile(saved.absolutePath)
+    assertThat(isNear(out.getPixel(150, 50), Color.RED)).isTrue()
+    assertThat(isNear(out.getPixel(50, 50), Color.BLUE)).isTrue()
+    assertThat(isNear(out.getPixel(150, 350), Color.BLUE)).isTrue()
   }
+
+  @Test
+  fun save_tallNarrowImage_downscalesLongestSideTo512() = runBlocking {
+    val ref = store.save(Uri.fromFile(sampleJpeg(600, 6000)))
+
+    val (w, h) = boundsOf(savedFile(ref))
+    assertThat(h).isEqualTo(512)
+    assertThat(Math.abs(w - 51)).isAtMost(1)
+  }
+
+  @Test
+  fun save_transparentPng_isFlattenedOntoWhite() = runBlocking {
+    val source = File.createTempFile("clear", ".png", context.cacheDir)
+    val bitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+    bitmap.eraseColor(Color.TRANSPARENT)
+    source.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+
+    val ref = store.save(Uri.fromFile(source))
+
+    val out = BitmapFactory.decodeFile(savedFile(ref).absolutePath)
+    assertThat(isNear(out.getPixel(50, 50), Color.WHITE)).isTrue()
+  }
+
+  private fun isNear(actual: Int, expected: Int, tolerance: Int = 40): Boolean =
+    Math.abs(Color.red(actual) - Color.red(expected)) <= tolerance &&
+      Math.abs(Color.green(actual) - Color.green(expected)) <= tolerance &&
+      Math.abs(Color.blue(actual) - Color.blue(expected)) <= tolerance
 
   @Test
   fun save_corruptInput_throwsAndLeavesNothing() {
