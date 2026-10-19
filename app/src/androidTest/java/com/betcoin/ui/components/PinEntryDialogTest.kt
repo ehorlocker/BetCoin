@@ -8,10 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -52,6 +54,35 @@ class PinEntryDialogTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun forgotPin_hiddenByDefault() {
+        showDialog()
+
+        composeTestRule.onAllNodesWithText("Forgot admin PIN?").assertCountEquals(0)
+    }
+
+    @Test
+    fun forgotPin_shownAndClickable_whenCallbackGiven() {
+        var forgot = 0
+        var dismissed = 0
+        composeTestRule.setContent {
+            BetCoinTheme {
+                PinEntryDialog(
+                    label = "Admin",
+                    verifier = { false },
+                    onVerified = {},
+                    onDismiss = { dismissed++ },
+                    onForgotPin = { forgot++ },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Forgot admin PIN?").assertIsDisplayed().performClick()
+
+        assertThat(forgot).isEqualTo(1)
+        assertThat(dismissed).isEqualTo(0)
     }
 
     @Test
