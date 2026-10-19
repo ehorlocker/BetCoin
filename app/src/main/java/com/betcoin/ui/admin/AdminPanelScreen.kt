@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.betcoin.data.database.entity.User
 import com.betcoin.ui.components.PinTextField
 import com.betcoin.ui.components.RecoveryCodeReveal
 
@@ -65,9 +66,25 @@ fun AdminPanelScreen(
     onNavigateBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val players by viewModel.players.collectAsStateWithLifecycle()
+    val playerActions = remember(viewModel) {
+        AdminPlayerActions(
+            onDelete = viewModel::onDeletePlayerClicked,
+            onResetBalance = viewModel::onResetBalanceClicked,
+            onSetBalance = viewModel::onSetBalanceClicked,
+            onEditUsername = viewModel::onEditUsernameClicked,
+            onResetPin = viewModel::onResetPinClicked,
+            onInputChanged = viewModel::onPlayerDialogInputChanged,
+            onConfirmPinChanged = viewModel::onPlayerDialogConfirmPinChanged,
+            onConfirm = viewModel::onPlayerDialogConfirm,
+            onDismiss = viewModel::onPlayerDialogDismiss,
+        )
+    }
 
     AdminPanelContent(
         uiState = uiState,
+        players = players,
+        playerActions = playerActions,
         onNavigateBack = onNavigateBack,
         onChangePinClicked = viewModel::onChangePinClicked,
         onChangePinPinChanged = viewModel::onChangePinPinChanged,
@@ -88,6 +105,8 @@ fun AdminPanelScreen(
 @Composable
 fun AdminPanelContent(
     uiState: AdminUiState,
+    players: List<User>,
+    playerActions: AdminPlayerActions,
     onNavigateBack: () -> Unit,
     onChangePinClicked: () -> Unit,
     onChangePinPinChanged: (String) -> Unit,
@@ -103,7 +122,8 @@ fun AdminPanelContent(
 ) {
     // Leaving while a code is being generated or shown (or a PIN is saving) would cancel the
     // work after the repository may already have committed it; the new code is shown only once.
-    val backEnabled = uiState.recoveryCode == null && uiState.changePin?.isSaving != true
+    val backEnabled = uiState.recoveryCode == null && uiState.changePin?.isSaving != true &&
+        uiState.playerDialog?.isBusy() != true
     BackHandler { if (backEnabled) onNavigateBack() }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -128,11 +148,13 @@ fun AdminPanelContent(
         },
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            adminPlayerSection()
+            adminPlayerSection(players, playerActions)
             adminBetSection()
             appSettingsSection(onChangePinClicked, onRegenerateClicked)
         }
     }
+
+    uiState.playerDialog?.let { AdminPlayerDialog(it, playerActions) }
 
     uiState.changePin?.let { dialog ->
         ChangePinDialog(

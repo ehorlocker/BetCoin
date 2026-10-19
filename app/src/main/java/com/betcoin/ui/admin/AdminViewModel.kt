@@ -122,6 +122,15 @@ sealed interface PlayerDialogState {
     ) : PlayerDialogState
 }
 
+/** `true` while this dialog's action is in flight, so it can't be dismissed or changed. */
+internal fun PlayerDialogState.isBusy(): Boolean = when (this) {
+    is PlayerDialogState.ConfirmDelete -> isWorking
+    is PlayerDialogState.ConfirmResetBalance -> isWorking
+    is PlayerDialogState.SetBalance -> isSaving
+    is PlayerDialogState.EditUsername -> isSaving
+    is PlayerDialogState.ResetPin -> isSaving
+}
+
 /**
  * UI state of the Admin Panel.
  *
@@ -433,14 +442,6 @@ class AdminViewModel @Inject constructor(
         players.value.any { it.id != user.id && it.username.equals(name, ignoreCase = true) } ->
             ERROR_USERNAME_TAKEN
         else -> null
-    }
-
-    private fun PlayerDialogState.isBusy(): Boolean = when (this) {
-        is PlayerDialogState.ConfirmDelete -> isWorking
-        is PlayerDialogState.ConfirmResetBalance -> isWorking
-        is PlayerDialogState.SetBalance -> isSaving
-        is PlayerDialogState.EditUsername -> isSaving
-        is PlayerDialogState.ResetPin -> isSaving
     }
 
     private fun PlayerDialogState.asBusy(): PlayerDialogState = when (this) {

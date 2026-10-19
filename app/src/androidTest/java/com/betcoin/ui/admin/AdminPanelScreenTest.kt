@@ -28,6 +28,8 @@ class AdminPanelScreenTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
+    private val noPlayerActions = AdminPlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {})
+
     private var changePinClicks = 0
     private var regenerateClicks = 0
     private var backCalls = 0
@@ -36,6 +38,8 @@ class AdminPanelScreenTest {
         composeRule.setContent {
             AdminPanelContent(
                 uiState = state,
+                players = emptyList(),
+                playerActions = noPlayerActions,
                 onNavigateBack = { backCalls++ },
                 onChangePinClicked = { changePinClicks++ },
                 onChangePinPinChanged = {},
@@ -80,6 +84,8 @@ class AdminPanelScreenTest {
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
                 AdminPanelContent(
                     uiState = AdminUiState(recoveryCode = RecoveryCodeDialogState.Show("ABCD-2345-EFGH")),
+                    players = emptyList(),
+                    playerActions = noPlayerActions,
                     onNavigateBack = {},
                     onChangePinClicked = {},
                     onChangePinPinChanged = {},
