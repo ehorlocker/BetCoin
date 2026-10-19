@@ -85,8 +85,6 @@ androidComponents {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
 
     // Room
     implementation(libs.room.runtime)
@@ -139,8 +137,5 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.room.testing)
-    androidTestImplementation(libs.arch.core.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler)
 }
