@@ -11,6 +11,7 @@ import com.betcoin.data.model.InvalidBetStateException
 import com.betcoin.data.model.ParticipantWithUser
 import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
+import com.betcoin.data.repository.UserRepository
 import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.common.toUserMessage
@@ -43,6 +44,8 @@ class AdminViewModelBetTest {
     private val calls = mutableListOf<String>()
     private var gate: CompletableDeferred<Unit>? = null
     private var failWith: Throwable? = null
+    private var playerGate: CompletableDeferred<Unit>? = null
+    private val userRepo = FakeUserRepository()
     private lateinit var viewModel: AdminViewModel
 
     private val aliceUser = User(id = 1, username = "Alice", pinHash = FakeUserRepository.PLACEHOLDER_HASH, createdAt = 0L, balance = 500)
@@ -75,7 +78,12 @@ class AdminViewModelBetTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         betsFlow.value = listOf(active, resolved, cancelled)
-        val users = FakeUserRepository().apply { users = listOf(aliceUser, bobUser, caraUser) }
+        userRepo.users = listOf(aliceUser, bobUser, caraUser)
+        val users = object : UserRepository by userRepo {
+            override suspend fun forceBailout(userId: Long) {
+                playerGate?.await()
+            }
+        }
         val repo = object : BetRepository by FakeBetRepository() {
             override fun getAllBets(): Flow<List<BetWithDetails>> = betsFlow
 
@@ -397,5 +405,71 @@ class AdminViewModelBetTest {
         confirm()
         assertThat(state.betDialog).isNull()
         assertThat(state.message).isEqualTo(GENERIC_ERROR_MESSAGE)
+    }
+
+    @Test
+    fun editWager_balanceCheckUsesPlayersFlowNotEmbeddedUser() = runTest(testDispatcher) {
+        collectAll()
+        advanceUntilIdle()
+        // The bet's embedded copy of Alice is stale (balance 50); `players` says 500.
+        val stale = active.copy(
+            participants = listOf(alice.copy(user = aliceUser.copy(balance = 50)), bob, cara),
+        )
+        viewModel.onEditWagerClicked(stale)
+        viewModel.onBetDialogParticipantSelected(alice.participant.id)
+        viewModel.onBetDialogInputChanged("600") // +500 == players balance
+        confirm()
+        assertThat(calls).containsExactly("wager(1000, 600)")
+
+        userRepo.users = listOf(aliceUser.copy(balance = 10), bobUser, caraUser)
+        advanceUntilIdle()
+        viewModel.onEditWagerClicked(stale)
+        viewModel.onBetDialogParticipantSelected(alice.participant.id)
+        viewModel.onBetDialogInputChanged("200") // +100 > players balance 10
+        confirm()
+        assertThat(wagerDialog().error).isEqualTo(AdminViewModel.messageWagerTooHigh("Alice", 100, 10))
+    }
+
+    @Test
+    fun openingPlayerDialog_whileBetDialogBusy_isIgnored() = runTest(testDispatcher) {
+        gate = CompletableDeferred()
+        viewModel.onForceCancelClicked(active)
+        viewModel.onBetDialogConfirm()
+        advanceUntilIdle()
+        viewModel.onDeletePlayerClicked(aliceUser)
+        assertThat(state.playerDialog).isNull()
+        assertThat(state.betDialog?.isBusy()).isTrue()
+        gate!!.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun openingBetDialog_whilePlayerDialogBusy_isIgnored() = runTest(testDispatcher) {
+        playerGate = CompletableDeferred()
+        viewModel.onResetBalanceClicked(aliceUser)
+        viewModel.onPlayerDialogConfirm()
+        advanceUntilIdle()
+        assertThat(state.playerDialog?.isBusy()).isTrue()
+        viewModel.onForceCancelClicked(active)
+        assertThat(state.betDialog).isNull()
+        assertThat(state.playerDialog?.isBusy()).isTrue()
+        playerGate!!.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun openingPlayerDialog_closesIdleBetDialog() = runTest(testDispatcher) {
+        viewModel.onForceCancelClicked(active)
+        viewModel.onDeletePlayerClicked(aliceUser)
+        assertThat(state.betDialog).isNull()
+        assertThat(state.playerDialog).isNotNull()
+    }
+
+    @Test
+    fun openingBetDialog_closesIdlePlayerDialog() = runTest(testDispatcher) {
+        viewModel.onDeletePlayerClicked(aliceUser)
+        viewModel.onForceCancelClicked(active)
+        assertThat(state.playerDialog).isNull()
+        assertThat(state.betDialog).isNotNull()
     }
 }

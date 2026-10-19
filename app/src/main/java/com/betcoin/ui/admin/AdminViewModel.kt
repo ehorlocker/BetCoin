@@ -226,6 +226,10 @@ internal fun BetDialogState.isBusy(): Boolean = when (this) {
     is BetDialogState.EditWager -> isSaving
 }
 
+/** Display name of this participant: the player's name, the preserved old name, or a placeholder. */
+internal fun adminParticipantName(p: ParticipantWithUser): String =
+    p.user?.username ?: p.participant.deletedUsername ?: AdminViewModel.DELETED_PLAYER_NAME
+
 /**
  * UI state of the Admin Panel.
  *
@@ -502,7 +506,11 @@ class AdminViewModel @Inject constructor(
 
     private fun openPlayerDialog(dialog: PlayerDialogState) {
         _uiState.update { state ->
-            if (state.playerDialog?.isBusy() == true) state else state.copy(playerDialog = dialog)
+            if (state.playerDialog?.isBusy() == true || state.betDialog?.isBusy() == true) {
+                state
+            } else {
+                state.copy(playerDialog = dialog, betDialog = null)
+            }
         }
     }
 
@@ -686,7 +694,7 @@ class AdminViewModel @Inject constructor(
                 }
                 {
                     betRepository.adminRemoveParticipant(dialog.bet.bet.id, target.participant.id)
-                    messageParticipantRemoved(participantName(target))
+                    messageParticipantRemoved(adminParticipantName(target))
                 }
             }
             is BetDialogState.EditWager -> {
@@ -712,11 +720,11 @@ class AdminViewModel @Inject constructor(
                         ?: target.user?.balance
                         ?: 0L
                     if (extra > balance) {
-                        setBetDialogError(messageWagerTooHigh(participantName(target), extra, balance))
+                        setBetDialogError(messageWagerTooHigh(adminParticipantName(target), extra, balance))
                         return
                     }
                 }
-                { betRepository.adminEditWager(target.participant.id, wager); messageWagerUpdated(participantName(target), wager) }
+                { betRepository.adminEditWager(target.participant.id, wager); messageWagerUpdated(adminParticipantName(target), wager) }
             }
         }
 
@@ -749,7 +757,7 @@ class AdminViewModel @Inject constructor(
             if (state.betDialog?.isBusy() == true || state.playerDialog?.isBusy() == true) {
                 state
             } else {
-                state.copy(betDialog = dialog)
+                state.copy(betDialog = dialog, playerDialog = null)
             }
         }
     }
@@ -798,7 +806,7 @@ class AdminViewModel @Inject constructor(
         }
         dialog is BetDialogState.EditWager && e is InsufficientBalanceException -> {
             val target = dialog.bet.participants.firstOrNull { it.participant.id == dialog.selectedParticipantId }
-            messageWagerTooHigh(target?.let(::participantName) ?: DELETED_PLAYER_NAME, e.required, e.available)
+            messageWagerTooHigh(target?.let(::adminParticipantName) ?: DELETED_PLAYER_NAME, e.required, e.available)
         }
         else -> e.toUserMessage()
     }
@@ -815,9 +823,6 @@ class AdminViewModel @Inject constructor(
             else -> null
         }
     }
-
-    private fun participantName(p: ParticipantWithUser): String =
-        p.user?.username ?: p.participant.deletedUsername ?: DELETED_PLAYER_NAME
 
     private fun BetDialogState.asBusy(): BetDialogState = when (this) {
         is BetDialogState.ConfirmForceCancel -> copy(isWorking = true)
@@ -840,7 +845,7 @@ class AdminViewModel @Inject constructor(
         const val MAX_BALANCE_DIGITS = 15
         const val MAX_PROMPT_LENGTH = 120
         private const val MIN_PARTICIPANTS = 2
-        private const val DELETED_PLAYER_NAME = "Deleted player"
+        internal const val DELETED_PLAYER_NAME = "Deleted player"
         private const val BAILOUT_AMOUNT = 1_000L
         const val ERROR_BALANCE_INVALID = "Enter a whole number"
         const val ERROR_USERNAME_LENGTH = "Username must be 1–20 characters"
