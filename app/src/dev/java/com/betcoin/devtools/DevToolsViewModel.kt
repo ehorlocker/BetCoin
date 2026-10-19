@@ -141,8 +141,8 @@ class DevToolsViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            event = null
-            _uiState.update { it.copy(message = "Couldn't ${action.failureLabel()}: ${e.message}") }
+            val reason = e.message ?: e::class.simpleName
+            _uiState.update { it.copy(message = "Couldn't ${action.failureLabel()}: $reason") }
         }
         try {
             loadInfo()

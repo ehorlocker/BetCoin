@@ -134,6 +134,8 @@ class DevToolsViewModelTest {
         viewModel.request(DevToolsAction.RESET_ADMIN_PIN)
         viewModel.confirm()
         advanceUntilIdle()
+        advanceTimeBy(2_000)
+        runCurrent()
 
         assertThat(fake.calls).containsExactly("resetAdminPin")
         assertThat(viewModel.uiState.value.message)
@@ -147,10 +149,14 @@ class DevToolsViewModelTest {
         val viewModel = DevToolsViewModel(fake)
         val events = collectEvents(viewModel)
         advanceUntilIdle()
+        fake.info = fake.info.copy(appVersion = "after-failure")
 
         viewModel.request(DevToolsAction.SEED_PENDING_BET)
         viewModel.confirm()
         advanceUntilIdle()
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertThat(viewModel.uiState.value.info?.appVersion).isEqualTo("after-failure")
 
         assertThat(viewModel.uiState.value.message)
             .isEqualTo("Couldn't seed pending bet: Need at least 2 players")
@@ -194,6 +200,8 @@ class DevToolsViewModelTest {
         viewModel.confirm()
         gate.complete(Unit)
         advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.busy).isFalse()
 
         assertThat(fake.calls).containsExactly("resetAdminPin")
     }
