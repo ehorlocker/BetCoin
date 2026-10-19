@@ -229,6 +229,7 @@ fun NavGraph(
         }
         composable(Routes.ADMIN_PIN_RECOVERY) {
             AdminPinRecoveryScreen(
+                viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
                 },

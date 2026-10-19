@@ -72,8 +72,8 @@ fun PinTextField(
  * Shows a freshly generated recovery code once: explanation, the code in monospace, an "I've
  * written this down" checkbox and a button that stays disabled until it is ticked.
  *
- * Lays out its children in the caller's column (it adds none of its own), so callers decide
- * centering and Back handling.
+ * Renders its own centered column, so callers only provide placement via [modifier] and decide
+ * Back handling.
  *
  * @param codeTestTag Test tag of the code text, so each screen can use its own.
  */
