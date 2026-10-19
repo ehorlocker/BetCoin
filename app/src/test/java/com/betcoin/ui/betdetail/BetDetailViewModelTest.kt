@@ -7,19 +7,21 @@ import com.betcoin.data.database.entity.BetParticipant
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.BetWithDetails
-import com.betcoin.data.model.ParticipantWithUser
 import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.InvalidBetStateException
+import com.betcoin.data.model.InvalidInputException
+import com.betcoin.data.model.ParticipantWithUser
+import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
-import com.betcoin.testing.FakeUserRepository
-import kotlinx.coroutines.CompletableDeferred
 import com.betcoin.navigation.Routes
+import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -112,7 +114,7 @@ class BetDetailViewModelTest {
     private fun viewModel(repository: BetRepository, users: UserRepository = FakeUserRepository()) =
         BetDetailViewModel(SavedStateHandle(mapOf(Routes.BET_ID_ARG to BET_ID)), repository, users)
 
-    /** Collects [BetDetailViewModel.uiState] (it's WhileSubscribed) and returns its value. */
+    /** Collects [BetDetailViewModel.uiState] (a no-op now that it's shared eagerly, but keeps the flow active) and returns its value. */
     private fun TestScope.stateOf(viewModel: BetDetailViewModel): BetDetailUiState {
         backgroundScope.launch { viewModel.uiState.collect {} }
         return viewModel.uiState.value
@@ -581,6 +583,64 @@ class BetDetailViewModelTest {
         f.repo.bet.value = null
 
         assertThat(f.state.pickingOutcome).isFalse()
+    }
+
+    @Test
+    fun consentClosesWhenTheBetIsDeleted() = runTest(testDispatcher) {
+        val f = fixture()
+        f.vm.onCancelRequested()
+        assertThat(f.state.consent).isNotNull()
+
+        f.repo.bet.value = null
+
+        assertThat(f.state.consent).isNull()
+    }
+
+    @Test
+    fun errorClearsWhenTheBetStatusChangesUnderneath() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = InsufficientBalanceException(userId = 10, required = 150, available = 20)
+        f.vm.onReopenRequested()
+        f.vm.onAllPinsConfirmed()
+        assertThat(f.state.errorMessage).isNotNull()
+
+        f.repo.bet.value = actionBet(BetStatus.ACTIVE)
+
+        assertThat(f.state.errorMessage).isNull()
+    }
+
+    @Test
+    fun invalidInputErrorMapsToAdminPanelMessage() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.failure = InvalidInputException("participant gone")
+
+        f.vm.onCancelRequested()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.errorMessage)
+            .isEqualTo("A participant was deleted, so this can't be done here. Use the Admin Panel.")
+    }
+
+    @Test
+    fun shortfallForUnknownUserFallsBackToAParticipant() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = InsufficientBalanceException(userId = 99, required = 150, available = 20)
+
+        f.vm.onReopenRequested()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.errorMessage).isEqualTo("A participant needs 150 BetCoin but has 20")
+    }
+
+    @Test
+    fun otherBetCoinExceptionsShowTheirMessage() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.failure = UnanimousPickException()
+
+        f.vm.onCancelRequested()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.errorMessage).isEqualTo("All participants picked the same outcome")
     }
 
     @Test

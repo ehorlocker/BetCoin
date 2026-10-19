@@ -63,19 +63,28 @@ class BetDetailViewModel @Inject constructor(
     val actionState: StateFlow<BetActionState> = _actionState.asStateFlow()
 
     init {
-        // Close the picker or consent once the bet no longer allows the pending action.
+        // Close the picker or consent once the bet no longer allows the pending action, and drop
+        // an error that was about the bet's previous status.
         viewModelScope.launch {
+            var lastStatus: BetStatus? = null
             uiState.collect { state ->
                 if (state is BetDetailUiState.Loading || state is BetDetailUiState.Error) return@collect
+                val detail = (state as? BetDetailUiState.Success)?.detail
+                val statusChanged = lastStatus != null && detail?.status != lastStatus
+                lastStatus = detail?.status ?: lastStatus
                 _actionState.update { current ->
                     if (current.isBusy) return@update current
-                    val detail = (state as? BetDetailUiState.Success)?.detail
-                    val pickerOk = current.pickingOutcome && detail?.status == BetStatus.ACTIVE
-                    val consent = current.consent?.takeIf { detail != null && detail.allows(it.action) }
-                    current.copy(pickingOutcome = pickerOk, consent = consent)
+                    val cleared = if (statusChanged) current.copy(errorMessage = null) else current
+                    cleared.closeStale(detail)
                 }
             }
         }
+    }
+
+    private fun BetActionState.closeStale(detail: BetDetail?): BetActionState {
+        val pickerOk = pickingOutcome && detail?.status == BetStatus.ACTIVE
+        val stillValid = consent?.takeIf { detail != null && detail.allows(it.action) }
+        return copy(pickingOutcome = pickerOk, consent = stillValid)
     }
 
     private fun currentDetail(): BetDetail? = (uiState.value as? BetDetailUiState.Success)?.detail
