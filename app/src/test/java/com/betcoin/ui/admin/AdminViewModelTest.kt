@@ -45,7 +45,7 @@ class AdminViewModelTest {
                 return fake.regenerateRecoveryCode()
             }
         }
-        viewModel = AdminViewModel(wrapped)
+        viewModel = AdminViewModel(wrapped, com.betcoin.testing.FakeUserRepository())
     }
 
     @After
