@@ -1,0 +1,61 @@
+# Instrumented (connectedAndroidTest) and Compose UI tests are out of scope here because they need an emulator;
+# run them locally (see spec/betcoin-app-spec.md section 13, Testing Expectations).
+name: CI
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build, unit tests and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDKs (11 for the toolchain, 21 for the Gradle daemon)
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            11
+            21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
+
+      - name: Build, unit test and lint
+        run: >
+          ./gradlew --stacktrace
+          assembleDevDebug assembleProdDebug
+          testDevDebugUnitTest testProdDebugUnitTest
+          lintDevDebug
+          -Porg.gradle.java.installations.fromEnv=JAVA_HOME_11_X64,JAVA_HOME_21_X64
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            app/build/reports/lint-results-devDebug.*
+          if-no-files-found: ignore
+          retention-days: 14

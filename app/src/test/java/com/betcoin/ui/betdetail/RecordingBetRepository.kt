@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * [BetRepository] for Bet Detail action tests: serves [bet], records resolve/cancel/reopen calls,
+ * [BetRepository] for Bet Detail action tests: serves [bet], records resolve/cancel/reopen/repeat calls,
  * and can throw [failure] or suspend on [gate] when one of them is called.
  */
 class RecordingBetRepository(
@@ -17,13 +17,16 @@ class RecordingBetRepository(
 ) : BetRepository by FakeBetRepository() {
     val bet = MutableStateFlow(initial)
 
-    /** Calls in order, e.g. `resolve(7, 1)`, `cancel(7)`, `reopen(7)`. */
+    /** Calls in order, e.g. `resolve(7, 1)`, `cancel(7)`, `reopen(7)`, `repeat(7)`. */
     val calls = mutableListOf<String>()
 
-    /** Thrown by the next resolve/cancel/reopen call. */
+    /** The id returned by [repeatBet]. */
+    var repeatedId: Long = 99L
+
+    /** Thrown by the next resolve/cancel/reopen/repeat call. */
     var failure: Throwable? = null
 
-    /** When set, resolve/cancel/reopen suspend until it completes. */
+    /** When set, resolve/cancel/reopen/repeat suspend until it completes. */
     var gate: CompletableDeferred<Unit>? = null
 
     override fun getBetWithDetails(betId: Long): Flow<BetWithDetails?> = bet
@@ -33,6 +36,11 @@ class RecordingBetRepository(
     override suspend fun cancelBet(betId: Long) = record("cancel($betId)")
 
     override suspend fun reopenBet(betId: Long) = record("reopen($betId)")
+
+    override suspend fun repeatBet(betId: Long): Long {
+        record("repeat($betId)")
+        return repeatedId
+    }
 
     private suspend fun record(call: String) {
         calls += call

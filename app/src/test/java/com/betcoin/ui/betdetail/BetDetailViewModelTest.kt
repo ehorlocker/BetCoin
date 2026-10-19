@@ -1,5 +1,6 @@
 package com.betcoin.ui.betdetail
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
 import com.betcoin.data.database.entity.Bet
 import com.betcoin.data.database.entity.BetOutcome
@@ -17,6 +18,7 @@ import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
 import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
+import com.betcoin.ui.common.toUserMessage
 import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
@@ -702,6 +704,143 @@ class BetDetailViewModelTest {
         assertThat(f.state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
         assertThat(f.state.consent).isNull()
         assertThat(f.state.isBusy).isFalse()
+    }
+
+    // --- Repeat ---
+
+    @Test
+    fun repeatOnResolvedBetCallsRepeatBetAndExposesNewId() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).containsExactly("repeat(7)")
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+        assertThat(f.state.isBusy).isFalse()
+        assertThat(f.state.errorMessage).isNull()
+    }
+
+    @Test
+    fun repeatOnCancelledBetCallsRepeatBet() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.CANCELLED)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).containsExactly("repeat(7)")
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+        assertThat(f.state.isBusy).isFalse()
+        assertThat(f.state.errorMessage).isNull()
+    }
+
+    @Test
+    fun repeatOnActiveBetIsIgnored() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.ACTIVE)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).isEmpty()
+        assertThat(f.state.repeatedBetId).isNull()
+    }
+
+    @Test
+    fun repeatWhenAPendingBetExistsShowsError() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = InvalidBetStateException(55, BetStatus.PENDING_CONFIRMATION)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isEqualTo("Finish or discard the bet that's still being set up first.")
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun repeatWithIoFailureShowsGenericError() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = IOException("disk")
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun `repeat while consent is open is ignored`() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.vm.onReopenRequested()
+        assertThat(f.state.consent).isNotNull()
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).isEmpty()
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.consent).isNotNull()
+    }
+
+    @Test
+    fun repeatWithBetCoinExceptionShowsItsUserMessage() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        val failure = InvalidInputException("bad input")
+        f.repo.failure = failure
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isEqualTo(failure.toUserMessage())
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun repeatWithSqliteFailureShowsGenericError() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = SQLiteException("db")
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun repeatWhileBusyIsIgnored() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.gate = CompletableDeferred()
+
+        f.vm.onRepeatRequested()
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.isBusy).isTrue()
+        assertThat(f.repo.calls).containsExactly("repeat(7)")
+        f.repo.gate!!.complete(Unit)
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun onRepeatNavigatedClearsRepeatedBetId() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.vm.onRepeatRequested()
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+
+        f.vm.onRepeatNavigated()
+
+        assertThat(f.state.repeatedBetId).isNull()
+    }
+
+    @Test
+    fun repeatClearsAPreviousErrorMessage() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = IOException("disk")
+        f.vm.onRepeatRequested()
+        assertThat(f.state.errorMessage).isNotNull()
+        f.repo.failure = null
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isNull()
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
     }
 
     @Test

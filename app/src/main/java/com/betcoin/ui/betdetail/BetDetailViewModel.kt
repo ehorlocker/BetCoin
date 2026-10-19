@@ -35,9 +35,10 @@ import javax.inject.Inject
  * to a [BetDetailUiState]. Emits [BetDetailUiState.NotFound] when the bet doesn't exist, for
  * example after it is deleted.
  *
- * It also drives the Resolve, Cancel and Reopen actions through [actionState]: the screen shows
+ * It also drives the Resolve, Cancel, Reopen and Repeat actions through [actionState]: the screen shows
  * the outcome picker or the PIN consent sequence from it, verifies each PIN with
- * [verifyParticipantPin], and calls [onAllPinsConfirmed] once everyone has agreed. Action state
+ * [verifyParticipantPin], and calls [onAllPinsConfirmed] once everyone has agreed. Repeat needs no PIN: [onRepeatRequested]
+ * copies the bet into a new one and exposes its id as [BetActionState.repeatedBetId]. Action state
  * is in-memory only and no PIN is ever kept.
  */
 @HiltViewModel
@@ -62,7 +63,7 @@ class BetDetailViewModel @Inject constructor(
 
     private val _actionState = MutableStateFlow(BetActionState())
 
-    /** The picker, consent and busy/error state of the Resolve, Cancel and Reopen actions. */
+    /** The picker, consent and busy/error state of the Resolve, Cancel, Reopen and Repeat actions. */
     val actionState: StateFlow<BetActionState> = _actionState.asStateFlow()
 
     init {
@@ -136,6 +137,36 @@ class BetDetailViewModel @Inject constructor(
         _actionState.update { it.copy(consent = PendingConsent(BetAction.Reopen, "Reopen bet"), errorMessage = null) }
     }
 
+    /**
+     * Starts Repeat: copies this bet into a new pending one and exposes its id as
+     * [BetActionState.repeatedBetId]. Ignored unless RESOLVED or CANCELLED, idle, and no PIN sequence open.
+     */
+    fun onRepeatRequested() {
+        val detail = currentDetail() ?: return
+        if (detail.status != BetStatus.RESOLVED && detail.status != BetStatus.CANCELLED) return
+        if (_actionState.value.isBusy || _actionState.value.consent != null) return
+        _actionState.update { it.copy(isBusy = true, errorMessage = null) }
+        viewModelScope.launch {
+            try {
+                val newBetId = betRepository.repeatBet(betId)
+                _actionState.update { it.copy(isBusy = false, repeatedBetId = newBetId) }
+            } catch (e: InvalidBetStateException) {
+                _actionState.update { it.copy(isBusy = false, errorMessage = PENDING_BET_EXISTS_MESSAGE) }
+            } catch (e: BetCoinException) {
+                _actionState.update { it.copy(isBusy = false, errorMessage = e.toUserMessage()) }
+            } catch (e: IOException) {
+                _actionState.update { it.copy(isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE) }
+            } catch (e: SQLiteException) {
+                _actionState.update { it.copy(isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE) }
+            }
+        }
+    }
+
+    /** The screen navigated to the repeated bet: clears [BetActionState.repeatedBetId]. */
+    fun onRepeatNavigated() {
+        _actionState.update { it.copy(repeatedBetId = null) }
+    }
+
     /** PIN check for one participant of the consent sequence. Never throws, as the PIN dialog requires. */
     suspend fun verifyParticipantPin(userId: Long, pin: String): Boolean =
         try {
@@ -183,6 +214,8 @@ class BetDetailViewModel @Inject constructor(
     }
 }
 
+private const val PENDING_BET_EXISTS_MESSAGE = "Finish or discard the bet that's still being set up first."
+
 /** An action on a bet that needs every participant's PIN. */
 sealed interface BetAction {
     data class Resolve(val outcomeId: Long, val outcomeText: String) : BetAction
@@ -193,12 +226,14 @@ sealed interface BetAction {
 /** [action] is waiting for every participant's PIN; [title] summarises it in each PIN dialog. */
 data class PendingConsent(val action: BetAction, val title: String)
 
-/** State of the Resolve, Cancel and Reopen actions on the Bet Detail screen. */
+/** State of the Resolve, Cancel, Reopen and Repeat actions on the Bet Detail screen. */
 data class BetActionState(
     val pickingOutcome: Boolean = false,
     val consent: PendingConsent? = null,
     val isBusy: Boolean = false,
     val errorMessage: String? = null,
+    /** The new bet created by Repeat; the screen navigates to it, then calls `onRepeatNavigated`. */
+    val repeatedBetId: Long? = null,
 )
 
 private fun BetDetail.allows(action: BetAction): Boolean = when (action) {

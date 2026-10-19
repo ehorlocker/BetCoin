@@ -237,6 +237,7 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
+                onRepeatBet = { newBetId -> navController.navigate(Routes.newBet(newBetId)) },
             )
         }
         composable(Routes.ADMIN_PANEL) {

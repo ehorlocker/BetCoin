@@ -50,8 +50,9 @@ class HomeNewBetGateTest {
                 database.userDao().insert(User(username = "Player$index", pinHash = "hash", createdAt = 0L))
             }
         }
+        val homeViewModel = HomeViewModel(LocalBetRepository(database), LocalUserRepository(database))
         composeTestRule.setContent {
-            HomeScreen(viewModel = HomeViewModel(LocalBetRepository(database), LocalUserRepository(database)))
+            HomeScreen(viewModel = homeViewModel)
         }
         composeTestRule.waitUntil(5_000) {
             composeTestRule.onAllNodesWithText("Players: $count").fetchSemanticsNodes().isNotEmpty()

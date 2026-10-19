@@ -66,6 +66,7 @@ class BetDetailScreenTest {
         onNavigateBack: () -> Unit = {},
         actionState: BetActionState = BetActionState(),
         onOutcomePicked: (Long) -> Unit = {},
+        onRepeat: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             BetCoinTheme(themePreference = ThemePreference.DARK) {
@@ -74,6 +75,7 @@ class BetDetailScreenTest {
                     actionState = actionState,
                     onNavigateBack = onNavigateBack,
                     onOutcomePicked = onOutcomePicked,
+                    onRepeat = onRepeat,
                 )
             }
         }
@@ -301,6 +303,76 @@ class BetDetailScreenTest {
         composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_TAG).assertIsDisplayed().assertIsEnabled()
         composeTestRule.onNodeWithTag(BET_DETAIL_RESOLVE_TAG).assertDoesNotExist()
         composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_REASON_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun resolvedBet_showsRepeatEnabled() {
+        show(
+            BetDetailUiState.Success(
+                detail(BetStatus.RESOLVED, twoRows(ParticipantResult.LOSS), winningOutcomeId = 10),
+            ),
+        )
+
+        scrollTo("Repeat Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REPEAT_TAG).assertIsDisplayed().assertIsEnabled()
+    }
+
+    @Test
+    fun cancelledBet_showsRepeatEnabled() {
+        show(BetDetailUiState.Success(detail(BetStatus.CANCELLED, twoRows(ParticipantResult.REFUNDED))))
+
+        scrollTo("Repeat Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REPEAT_TAG).assertIsDisplayed().assertIsEnabled()
+    }
+
+    @Test
+    fun activeBet_hidesRepeat() {
+        show(BetDetailUiState.Success(detail(BetStatus.ACTIVE, twoRows(ParticipantResult.PENDING))))
+
+        scrollTo("Resolve")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REPEAT_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun repeatClick_invokesCallback() {
+        var repeated = 0
+        show(
+            BetDetailUiState.Success(detail(BetStatus.RESOLVED, twoRows(ParticipantResult.LOSS), winningOutcomeId = 10)),
+            onRepeat = { repeated++ },
+        )
+
+        scrollTo("Repeat Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REPEAT_TAG).performClick()
+
+        assertThat(repeated).isEqualTo(1)
+    }
+
+    @Test
+    fun repeatIsDisabledWhileBusy() {
+        show(
+            BetDetailUiState.Success(detail(BetStatus.RESOLVED, twoRows(ParticipantResult.LOSS), winningOutcomeId = 10)),
+            actionState = BetActionState(isBusy = true),
+        )
+
+        scrollTo("Repeat Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REPEAT_TAG).assertIsNotEnabled()
+    }
+
+    @Test
+    fun repeatStaysEnabledWhenReopenIsBlocked() {
+        show(
+            BetDetailUiState.Success(
+                detail(
+                    BetStatus.CANCELLED,
+                    twoRows(ParticipantResult.REFUNDED),
+                    reopenBlockedReason = "Can't reopen: Kim was deleted",
+                ),
+            ),
+        )
+
+        scrollTo("Repeat Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REPEAT_TAG).assertIsDisplayed().assertIsEnabled()
+        composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_TAG).assertIsNotEnabled()
     }
 
     @Test
