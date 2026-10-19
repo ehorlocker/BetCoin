@@ -1,7 +1,7 @@
 [versions]
 agp = "9.1.1"
 # The Kotlin Gradle plugin version reaches the classpath through the Compose compiler plugin (AGP built-in Kotlin would otherwise use its bundled KGP), so this version sets the Kotlin compiler.
-kotlin = "2.3.21"
+kotlin = "2.4.21"
 ksp = "2.3.12"
 coreKtx = "1.18.0"
 junit = "4.13.2"
