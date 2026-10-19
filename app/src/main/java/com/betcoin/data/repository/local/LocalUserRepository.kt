@@ -95,7 +95,7 @@ class LocalUserRepository @Inject constructor(
             userDao.delete(user)
             user.avatarRef
         }
-        avatarRef?.let { avatarStore.delete(it) }
+        avatarRef?.let { withContext(NonCancellable) { avatarStore.delete(it) } }
     }
 
     override suspend fun resetPin(userId: Long, newPin: String) {
@@ -145,7 +145,9 @@ class LocalUserRepository @Inject constructor(
             withContext(NonCancellable) { avatarStore.delete(newRef) }
             throw e
         }
-        if (oldRef != null && oldRef != newRef) avatarStore.delete(oldRef)
+        if (oldRef != null && oldRef != newRef) {
+            withContext(NonCancellable) { avatarStore.delete(oldRef) }
+        }
     }
 
     override suspend fun clearProfilePicture(userId: Long) {

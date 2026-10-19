@@ -1,5 +1,6 @@
 package com.betcoin.data.repository.local
 
+import android.net.Uri
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -15,7 +16,6 @@ import com.betcoin.data.model.DuplicateUsernameException
 import com.betcoin.data.model.InvalidImageException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
-import android.net.Uri
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -458,6 +458,18 @@ class LocalUserRepositoryTest {
     assertFails<InvalidInputException> { repository.updateProfilePicture(999L, imageUri) }
 
     assertThat(avatarStore.saved).isEmpty()
+  }
+
+  @Test
+  fun updateProfilePicture_userDeletedDuringSave_removesNewFileAndKeepsOld() = runTest {
+    val alice = insertUser("Alice")
+    repository.updateProfilePicture(alice, imageUri)
+    avatarStore.onSave = { database.userDao().delete(database.userDao().getById(alice)!!) }
+
+    assertFails<InvalidInputException> { repository.updateProfilePicture(alice, imageUri) }
+
+    assertThat(avatarStore.saved).containsExactly("fake-1.jpg")
+    assertThat(avatarStore.deleted).containsExactly("fake-2.jpg")
   }
 
   @Test

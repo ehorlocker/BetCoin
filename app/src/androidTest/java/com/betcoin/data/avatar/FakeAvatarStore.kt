@@ -18,6 +18,9 @@ class FakeAvatarStore : AvatarStore {
   /** When true, the next [save] throws [InvalidImageException] (then resets to false). */
   var failNextSave: Boolean = false
 
+  /** Runs inside [save] after the new ref is stored, so tests can interleave other writes. */
+  var onSave: (suspend () -> Unit)? = null
+
   private var counter = 0
 
   override suspend fun save(source: Uri): String {
@@ -27,6 +30,7 @@ class FakeAvatarStore : AvatarStore {
     }
     val ref = "fake-${++counter}.jpg"
     saved += ref
+    onSave?.invoke()
     return ref
   }
 
