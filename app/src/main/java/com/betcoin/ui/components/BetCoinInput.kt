@@ -16,13 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.betcoin.ui.theme.BetCoinInputBackground
-import com.betcoin.ui.theme.BetCoinTertiary
-import com.betcoin.ui.theme.BetCoinOutline
 
 /**
  * A dark input field with a sky-blue focus ring.
@@ -47,7 +43,8 @@ fun BetCoinInput(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    val borderColor = if (isFocused) BetCoinTertiary else BetCoinOutline.copy(alpha = 0.3f)
+    val colors = MaterialTheme.colorScheme
+    val borderColor = if (isFocused) colors.tertiary else colors.outline.copy(alpha = 0.3f)
 
     BasicTextField(
         value = value,
@@ -55,11 +52,11 @@ fun BetCoinInput(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(BetCoinInputBackground)
+            .background(colors.surfaceContainerLowest)
             .border(2.dp, borderColor, RoundedCornerShape(16.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-        cursorBrush = SolidColor(BetCoinTertiary),
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface),
+        cursorBrush = SolidColor(colors.tertiary),
         interactionSource = interactionSource,
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
@@ -68,7 +65,7 @@ fun BetCoinInput(
                 Text(
                     text = placeholder,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = colors.onSurface.copy(alpha = 0.5f),
                 )
             }
             innerTextField()

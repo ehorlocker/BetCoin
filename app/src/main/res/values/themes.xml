@@ -1,5 +1,5 @@
 <resources>
-    <!-- BetCoin is dark-only; the window background matches BetCoinBackground until Compose draws. -->
+    <!-- The window background matches the Compose theme background for the system night mode until Compose draws. -->
     <style name="Theme.BetCoin" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/betcoin_background</item>
     </style>

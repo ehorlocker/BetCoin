@@ -1,5 +1,6 @@
 package com.betcoin.ui.components
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -22,7 +23,7 @@ class BetCoinChipTest {
     @Test
     fun chip_displaysLabel() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinChip(
                     label = "Over 2.5",
                     selected = false,
@@ -38,7 +39,7 @@ class BetCoinChipTest {
     @Test
     fun chip_selected_displaysAndIsSelected() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinChip(
                     label = "Over 2.5",
                     selected = true,
@@ -55,7 +56,7 @@ class BetCoinChipTest {
     @Test
     fun chip_unselected_isNotSelected() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinChip(
                     label = "Under 2.5",
                     selected = false,
@@ -72,7 +73,7 @@ class BetCoinChipTest {
     fun chip_triggersOnClick() {
         var clicked = false
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinChip(
                     label = "Under 2.5",
                     selected = false,

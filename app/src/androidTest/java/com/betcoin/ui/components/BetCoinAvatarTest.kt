@@ -3,6 +3,7 @@ package com.betcoin.ui.components
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.compose.ui.test.assertCountEquals
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -31,7 +32,7 @@ class BetCoinAvatarTest {
     @Test
     fun avatar_displaysInitials() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinAvatar(initials = "JD")
             }
         }
@@ -43,7 +44,7 @@ class BetCoinAvatarTest {
     @Test
     fun avatar_displaysSingleInitial() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinAvatar(initials = "A")
             }
         }
@@ -55,7 +56,7 @@ class BetCoinAvatarTest {
     @Test
     fun avatar_displaysUppercaseInitials() {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetCoinAvatar(initials = "ab")
             }
         }

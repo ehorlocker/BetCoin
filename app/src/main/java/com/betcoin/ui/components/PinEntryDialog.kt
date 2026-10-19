@@ -43,9 +43,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.betcoin.ui.theme.BetCoinInputBackground
-import com.betcoin.ui.theme.BetCoinOutline
-import com.betcoin.ui.theme.BetCoinTertiary
 import kotlinx.coroutines.launch
 
 /** Number of digits in a player or admin PIN (§5.5). */
@@ -204,10 +201,14 @@ private fun PinField(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .background(BetCoinInputBackground, RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLowest, RoundedCornerShape(12.dp))
                             .border(
                                 width = 2.dp,
-                                color = if (active && enabled) BetCoinTertiary else BetCoinOutline.copy(alpha = 0.3f),
+                                color = if (active && enabled) {
+                                    MaterialTheme.colorScheme.tertiary
+                                } else {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                },
                                 shape = RoundedCornerShape(12.dp),
                             ),
                         contentAlignment = Alignment.Center,

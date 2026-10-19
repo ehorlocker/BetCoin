@@ -1,5 +1,6 @@
 package com.betcoin.ui.bethistory
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -44,7 +45,7 @@ class BetHistoryScreenTest {
         onBetClick: (Long) -> Unit = {},
     ) {
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 BetHistoryContent(
                     uiState = uiState,
                     onNavigateBack = onNavigateBack,

@@ -1,5 +1,6 @@
 package com.betcoin.ui.players
 
+import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -35,7 +36,7 @@ class PlayerDetailScreenTest {
             repository,
         )
         composeTestRule.setContent {
-            BetCoinTheme {
+            BetCoinTheme(themePreference = ThemePreference.DARK) {
                 PlayerDetailScreen(viewModel = viewModel)
             }
         }
