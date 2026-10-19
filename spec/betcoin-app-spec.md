@@ -6,7 +6,7 @@
 > **Design system:** [`dark-mode-design.md`](dark-mode-design.md) (Pastel Playroom Dark)  
 
 ### Revision Log
-- **2026-10-19** — BET-35: system bar icon colors follow the resolved theme through a single `systemBarStyle` helper; on dev, the status bar icons contrast with the banner in both themes.
+- **2026-10-19** — BET-35: system bar icon colors follow the resolved theme through a single `systemBarStyle` helper; on dev, the status bar icons contrast with the banner in both themes; the stored theme is also applied as the app night mode on API 31+ so cold start does not flash the device mode, and API 24-25 use a dark navigation scrim.
 - **2026-10-19** — BET-18: Settings screen with theme picker (System default / Light / Dark) and a light color scheme; the stored theme is applied at the app root through an activity-scoped `AppThemeViewModel`, and the Dev Tools row is wired through a flavor `DevToolsEntry` hook.
 - **2026-10-17** — Resolved open questions: Step B participants persisted to Room; exiting New Bet discards the pending bet; resolving to an unpicked outcome refunds everyone; bailout eligibility counts locked wagers; leaderboard ranks by net worth (4 columns); delete/rename moved behind Admin Panel; admin PIN recovery code; profile pictures via an `AvatarStore` abstraction; Settings screen with theme picker; system insets; input limits; destructive migrations until v1.0. Fixed the RESOLVED→ACTIVE reopen reversal (it previously refunded losers, creating coins). The dev build indicator is now one app-wide banner instead of a Home-only one. Added a dev-only Dev Tools screen (seed sample data, wipe database, reset admin PIN) and backup rules (prod backed up, dev excluded). Spelled out why there's no in-app database switch.
 - **2026-10-18** — BET-39: corrected `ParticipantWithUser` in §3 (`deletedUsername` lives on the participant), removed the stale §6 implementation-gap note, and synced the §13 tree with the code.
@@ -319,7 +319,7 @@ If a participant won't confirm, the fallback is the Admin Panel's **Admin Resolv
 
 #### Settings (ungated)
 - Reached from the gear icon on Home. No PIN needed, since nothing here touches players or bets.
-- **Theme**: System default / Light / Dark. Stored in `AppSettings.themePreference` and applied immediately, without a restart. System default follows `isSystemInDarkTheme()`.
+- **Theme**: System default / Light / Dark. Stored in `AppSettings.themePreference` and applied immediately, without a restart. System default follows `isSystemInDarkTheme()`. On API 31+ the choice is also set as the app night mode so the next launch starts in the right theme.
 - Light palette: a light counterpart of [`dark-mode-design.md`](dark-mode-design.md), using the same color roles.
 - App version, plus the build flavor on dev builds.
 - **Dev Tools** row, shown on the dev flavor only (§14 "Dev Tools Screen")

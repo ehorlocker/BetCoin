@@ -1,5 +1,5 @@
 <resources>
-    <!-- The window background matches the Compose theme background for the system night mode until Compose draws. -->
+    <!-- The window background matches the Compose theme background for the system night mode until Compose draws; on API 31+ the stored theme is applied as the app night mode, so this follows the stored theme. -->
     <style name="Theme.BetCoin" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/betcoin_background</item>
     </style>
