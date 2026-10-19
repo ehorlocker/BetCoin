@@ -1,5 +1,5 @@
-# Instrumented (connectedAndroidTest) and Compose UI tests are out of scope here
-# because they need an emulator. Run them locally on the BetCoin_Test AVD per AGENTS.md.
+# Instrumented (connectedAndroidTest) and Compose UI tests are out of scope here because they need an emulator;
+# run them locally (see spec/betcoin-app-spec.md section 13, Testing Expectations).
 name: CI
 
 on:
