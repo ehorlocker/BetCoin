@@ -8,6 +8,7 @@ import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.common.toUserMessage
 import com.betcoin.ui.components.formatCoins
+import com.betcoin.ui.home.FakeBetRepository
 import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
@@ -87,7 +88,7 @@ class AdminViewModelPlayerTest {
                 failWith?.let { throw it }
             }
         }
-        viewModel = AdminViewModel(FakeSettingsRepository(), wrapped)
+        viewModel = AdminViewModel(FakeSettingsRepository(), wrapped, FakeBetRepository())
     }
 
     @After

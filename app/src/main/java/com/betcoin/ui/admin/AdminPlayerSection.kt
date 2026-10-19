@@ -96,7 +96,7 @@ fun LazyListScope.adminPlayerSection(players: List<User>, actions: AdminPlayerAc
     if (players.isEmpty()) {
         item { AdminPlaceholderLine("No players yet") }
     } else {
-        items(players, key = { it.id }) { player -> AdminPlayerRow(player, actions) }
+        items(players, key = { "player_${it.id}" }) { player -> AdminPlayerRow(player, actions) }
     }
 }
 
