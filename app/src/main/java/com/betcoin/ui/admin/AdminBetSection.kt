@@ -97,7 +97,7 @@ fun LazyListScope.adminBetSection(bets: List<BetWithDetails>, actions: AdminBetA
     if (bets.isEmpty()) {
         item { AdminPlaceholderLine("No bets yet") }
     } else {
-        items(bets, key = { it.bet.id }) { bet -> AdminBetRow(bet, actions) }
+        items(bets, key = { "bet_${it.bet.id}" }) { bet -> AdminBetRow(bet, actions) }
     }
 }
 

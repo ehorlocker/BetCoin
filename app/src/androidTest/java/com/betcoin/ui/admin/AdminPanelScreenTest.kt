@@ -229,6 +229,15 @@ class AdminPanelScreenTest {
     }
 
     @Test
+    fun playerAndBetWithSameId_bothRowsRender() {
+        val user = User(id = 1, username = "Alice", pinHash = "x", createdAt = 0L)
+        setContent(players = listOf(user), bets = listOf(bet(1, BetStatus.ACTIVE)))
+
+        composeRule.onNodeWithTag(ADMIN_PLAYER_ROW_TAG_PREFIX + 1).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag(ADMIN_BET_ROW_TAG_PREFIX + 1).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun betSection_empty_showsPlaceholder() {
         setContent()
 
