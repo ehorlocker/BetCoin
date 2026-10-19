@@ -3,7 +3,9 @@ package com.betcoin.ui.onboarding
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.betcoin.data.model.BetCoinException
 import com.betcoin.data.repository.SettingsRepository
+import com.betcoin.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,23 +86,34 @@ class OnboardingViewModel @Inject constructor(
             else -> null
         }
         if (error != null) {
-            _uiState.value = state.copy(error = error)
+            _uiState.update { current -> (current as? OnboardingUiState.EnterPin)?.copy(error = error) ?: current }
             return
         }
 
-        _uiState.value = state.copy(error = null, isSaving = true)
+        _uiState.update { current ->
+            (current as? OnboardingUiState.EnterPin)?.copy(error = null, isSaving = true) ?: current
+        }
         viewModelScope.launch {
             // Retrying after a code failure sets the same PIN again, which is harmless.
-            var failureMessage = ERROR_SAVE_FAILED
-            _uiState.value = try {
+            var ioFailureMessage = ERROR_SAVE_FAILED
+            try {
                 settingsRepository.setAdminPin(state.pin)
-                failureMessage = ERROR_CODE_FAILED
-                OnboardingUiState.ShowRecoveryCode(settingsRepository.regenerateRecoveryCode())
+                ioFailureMessage = ERROR_CODE_FAILED
+                val code = settingsRepository.regenerateRecoveryCode()
+                _uiState.update { OnboardingUiState.ShowRecoveryCode(code) }
+            } catch (e: BetCoinException) {
+                showSaveError(e.toUserMessage())
             } catch (e: IOException) {
-                state.copy(error = failureMessage, isSaving = false)
+                showSaveError(ioFailureMessage)
             } catch (e: SQLiteException) {
-                state.copy(error = failureMessage, isSaving = false)
+                showSaveError(ioFailureMessage)
             }
+        }
+    }
+
+    private fun showSaveError(message: String) {
+        _uiState.update { current ->
+            (current as? OnboardingUiState.EnterPin)?.copy(error = message, isSaving = false) ?: current
         }
     }
 
@@ -115,7 +128,7 @@ class OnboardingViewModel @Inject constructor(
     fun onContinue() {
         val state = _uiState.value
         if (state is OnboardingUiState.ShowRecoveryCode && state.acknowledged) {
-            _onboardingComplete.value = true
+            _onboardingComplete.update { true }
         }
     }
 

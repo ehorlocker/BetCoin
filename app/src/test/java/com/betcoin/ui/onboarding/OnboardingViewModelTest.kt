@@ -1,7 +1,9 @@
 package com.betcoin.ui.onboarding
 
+import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.repository.RecoveryCode
 import com.betcoin.data.repository.SettingsRepository
+import com.betcoin.ui.common.toUserMessage
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -198,6 +200,43 @@ class OnboardingViewModelTest {
         viewModel.onSavePin()
         advanceUntilIdle()
         assertThat(viewModel.uiState.value).isInstanceOf(OnboardingUiState.ShowRecoveryCode::class.java)
+    }
+
+    @Test
+    fun onSavePin_businessRuleFails_showsMappedMessageAndStaysOnPinEntry() = runTest {
+        val rejecting = object : SettingsRepository by fakeSettingsRepository {
+            override suspend fun setAdminPin(pin: String) = throw InvalidInputException("bad pin")
+        }
+        viewModel = OnboardingViewModel(rejecting)
+        enterPins("1234", "1234")
+
+        viewModel.onSavePin()
+        advanceUntilIdle()
+
+        assertThat(enterPinState.error).isEqualTo(InvalidInputException("x").toUserMessage())
+        assertThat(enterPinState.error).doesNotContain("bad pin")
+        assertThat(enterPinState.isSaving).isFalse()
+    }
+
+    @Test
+    fun unexpectedExceptionIsNotTurnedIntoMessage() {
+        val failing = object : SettingsRepository by fakeSettingsRepository {
+            override suspend fun setAdminPin(pin: String) = throw IllegalStateException("bug")
+        }
+        viewModel = OnboardingViewModel(failing)
+
+        // The exception is not caught by the ViewModel, so runTest reports it as uncaught.
+        val thrown = runCatching {
+            runTest {
+                enterPins("1234", "1234")
+                viewModel.onSavePin()
+                advanceUntilIdle()
+            }
+        }.exceptionOrNull()
+
+        assertThat(thrown).isInstanceOf(IllegalStateException::class.java)
+        assertThat(enterPinState.isSaving).isTrue()
+        assertThat(enterPinState.error).isNull()
     }
 
     // --- Recovery code gate ---
