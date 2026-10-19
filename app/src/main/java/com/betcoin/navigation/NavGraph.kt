@@ -13,6 +13,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.betcoin.BuildConfig
 import com.betcoin.devtools.DevToolsEntry
 import com.betcoin.ui.admin.AdminGateViewModel
 import com.betcoin.ui.admin.AdminPanelScreen
@@ -27,6 +28,8 @@ import com.betcoin.ui.onboarding.OnboardingScreen
 import com.betcoin.ui.players.ManagePlayersScreen
 import com.betcoin.ui.players.PlayerDetailScreen
 import com.betcoin.ui.recovery.RecoveryScreen
+import com.betcoin.ui.settings.SettingsScreen
+import com.betcoin.ui.settings.appVersionLabel
 
 /**
  * Navigation routes used in the BetCoin app.
@@ -51,6 +54,7 @@ object Routes {
     const val MANAGE_PLAYERS = "manage_players"
     const val ADMIN_PANEL = "admin_panel"
     const val ADMIN_PIN_RECOVERY = "admin_pin_recovery"
+    const val SETTINGS = "settings"
 
     /** Navigation argument holding the player's user ID. */
     const val PLAYER_ID_ARG = "playerId"
@@ -118,6 +122,17 @@ fun NavGraph(
                 onManagePlayers = {
                     navController.navigate(Routes.MANAGE_PLAYERS)
                 },
+                onSettings = {
+                    navController.navigate(Routes.SETTINGS)
+                },
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                viewModel = hiltViewModel(),
+                versionLabel = appVersionLabel(BuildConfig.VERSION_NAME, BuildConfig.FLAVOR),
+                onBack = { navController.popBackStack() },
+                devToolsRow = { devToolsEntry.SettingsRow(navController) },
             )
         }
         composable(Routes.RECOVERY) { backStackEntry ->
