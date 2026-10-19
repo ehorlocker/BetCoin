@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 /** The tabs of the Bet History screen, with their labels and per-tab empty-state copy. */
@@ -81,7 +82,7 @@ class BetHistoryViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BetHistoryUiState())
 
     fun selectFilter(filter: BetHistoryFilter) {
-        this.filter.value = filter
+        this.filter.update { filter }
     }
 
     private fun BetWithDetails.toRow() = BetHistoryRow(
