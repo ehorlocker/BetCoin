@@ -704,6 +704,105 @@ class BetDetailViewModelTest {
         assertThat(f.state.isBusy).isFalse()
     }
 
+    // --- Repeat ---
+
+    @Test
+    fun repeatOnResolvedBetCallsRepeatBetAndExposesNewId() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).containsExactly("repeat(7)")
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+        assertThat(f.state.isBusy).isFalse()
+        assertThat(f.state.errorMessage).isNull()
+    }
+
+    @Test
+    fun repeatOnCancelledBetCallsRepeatBet() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.CANCELLED)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).containsExactly("repeat(7)")
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+        assertThat(f.state.isBusy).isFalse()
+        assertThat(f.state.errorMessage).isNull()
+    }
+
+    @Test
+    fun repeatOnActiveBetIsIgnored() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.ACTIVE)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.repo.calls).isEmpty()
+        assertThat(f.state.repeatedBetId).isNull()
+    }
+
+    @Test
+    fun repeatWhenAPendingBetExistsShowsError() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = InvalidBetStateException(55, BetStatus.PENDING_CONFIRMATION)
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isEqualTo("Finish or discard the bet that's still being set up first.")
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun repeatWithIoFailureShowsGenericError() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = IOException("disk")
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(f.state.repeatedBetId).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun repeatWhileBusyIsIgnored() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.gate = CompletableDeferred()
+
+        f.vm.onRepeatRequested()
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.isBusy).isTrue()
+        assertThat(f.repo.calls).containsExactly("repeat(7)")
+        f.repo.gate!!.complete(Unit)
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun onRepeatNavigatedClearsRepeatedBetId() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.vm.onRepeatRequested()
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+
+        f.vm.onRepeatNavigated()
+
+        assertThat(f.state.repeatedBetId).isNull()
+    }
+
+    @Test
+    fun repeatClearsAPreviousErrorMessage() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = IOException("disk")
+        f.vm.onRepeatRequested()
+        assertThat(f.state.errorMessage).isNotNull()
+        f.repo.failure = null
+
+        f.vm.onRepeatRequested()
+
+        assertThat(f.state.errorMessage).isNull()
+        assertThat(f.state.repeatedBetId).isEqualTo(99L)
+    }
+
     @Test
     fun formatNet_usesPlusMinusSignsAndPlusMinusZero() {
         assertThat(formatNet(150)).isEqualTo("+150")
