@@ -60,6 +60,10 @@ class FakeUserRepository : UserRepository {
             }
         }
 
+    /** Number of collectors currently subscribed to [getAllUsers]. */
+    val allUsersSubscriberCount: Int
+        get() = _users.subscriptionCount.value
+
     override fun getAllUsers(): Flow<List<User>> = _users
 
     override fun getLeaderboard(): Flow<List<User>> = _users.map { list ->

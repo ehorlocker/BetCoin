@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 /**
@@ -22,22 +22,13 @@ class HomeViewModel @Inject constructor(
     private val userRepository: UserRepository,
 ) : ViewModel() {
 
-    private val _activeBetCount = MutableStateFlow(0)
-    val activeBetCount: StateFlow<Int> = _activeBetCount
+    /** Number of active bets. Collected only while the UI is subscribed (plus a 5 s grace period). */
+    val activeBetCount: StateFlow<Int> = betRepository.getActiveBets()
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    private val _userCount = MutableStateFlow(0)
-    val userCount: StateFlow<Int> = _userCount
-
-    init {
-        viewModelScope.launch {
-            betRepository.getActiveBets().collectLatest { bets ->
-                _activeBetCount.value = bets.size
-            }
-        }
-        viewModelScope.launch {
-            userRepository.getAllUsers().collectLatest { users ->
-                _userCount.value = users.size
-            }
-        }
-    }
+    /** Number of registered users. Collected only while the UI is subscribed (plus a 5 s grace period). */
+    val userCount: StateFlow<Int> = userRepository.getAllUsers()
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 }
