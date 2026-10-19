@@ -1,5 +1,6 @@
 package com.betcoin.ui.players
 
+import android.net.Uri
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.DuplicateUsernameException
 import com.betcoin.data.model.NotEligibleForBailoutException
@@ -92,6 +93,9 @@ class PlayersTestRepository : UserRepository {
     override suspend fun updateBalance(userId: Long, delta: Long) = unsupported()
     override suspend fun setBalance(userId: Long, newBalance: Long) = unsupported()
     override suspend fun updateUsername(userId: Long, newUsername: String) = unsupported()
+
+    override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) = unsupported()
+    override suspend fun clearProfilePicture(userId: Long) = unsupported()
 
     private fun unsupported(): Nothing = throw UnsupportedOperationException("Not used by these screens")
 }

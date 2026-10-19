@@ -1,5 +1,6 @@
 package com.betcoin.ui.home
 
+import android.net.Uri
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -69,6 +70,8 @@ class HomeScreenTest {
             override suspend fun updateBalance(userId: Long, delta: Long) {}
             override suspend fun setBalance(userId: Long, newBalance: Long) {}
             override suspend fun updateUsername(userId: Long, newUsername: String) {}
+            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
+            override suspend fun clearProfilePicture(userId: Long) {}
         }
 
         val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
@@ -126,6 +129,8 @@ class HomeScreenTest {
             override suspend fun updateBalance(userId: Long, delta: Long) {}
             override suspend fun setBalance(userId: Long, newBalance: Long) {}
             override suspend fun updateUsername(userId: Long, newUsername: String) {}
+            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
+            override suspend fun clearProfilePicture(userId: Long) {}
         }
 
         var newBetClicked = false
@@ -183,6 +188,8 @@ class HomeScreenTest {
             override suspend fun updateBalance(userId: Long, delta: Long) {}
             override suspend fun setBalance(userId: Long, newBalance: Long) {}
             override suspend fun updateUsername(userId: Long, newUsername: String) {}
+            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
+            override suspend fun clearProfilePicture(userId: Long) {}
         }
 
         var leaderboardClicked = false
@@ -240,6 +247,8 @@ class HomeScreenTest {
             override suspend fun updateBalance(userId: Long, delta: Long) {}
             override suspend fun setBalance(userId: Long, newBalance: Long) {}
             override suspend fun updateUsername(userId: Long, newUsername: String) {}
+            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
+            override suspend fun clearProfilePicture(userId: Long) {}
         }
 
         var betHistoryClicked = false

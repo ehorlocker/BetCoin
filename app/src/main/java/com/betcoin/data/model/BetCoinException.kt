@@ -43,3 +43,6 @@ class InvalidInputException(message: String) : BetCoinException(message)
 
 /** The entered admin recovery code doesn't match the stored hash. */
 class WrongRecoveryCodeException : BetCoinException("Wrong recovery code")
+
+/** The picked image couldn't be read or decoded, so no avatar was stored. */
+class InvalidImageException : BetCoinException("Couldn't use that image")

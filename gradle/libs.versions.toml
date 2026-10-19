@@ -17,6 +17,8 @@ navigationCompose = "2.10.2"
 activityCompose = "1.13.0"
 hiltNavigationCompose = "1.4.0"
 jbcrypt = "0.4"
+coil = "3.3.0"
+exifinterface = "1.4.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +56,9 @@ lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-ru
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 jbcrypt = { group = "org.mindrot", name = "jbcrypt", version.ref = "jbcrypt" }
+# Images
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

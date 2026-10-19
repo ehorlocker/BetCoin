@@ -1,5 +1,6 @@
 package com.betcoin.data.repository
 
+import android.net.Uri
 import com.betcoin.data.database.entity.User
 import kotlinx.coroutines.flow.Flow
 
@@ -76,7 +77,8 @@ interface UserRepository {
      * Refuses to delete if the user is a participant in any ACTIVE bet. Before
      * deletion, snapshots the username into
      * [BetParticipant.deletedUsername][com.betcoin.data.database.entity.BetParticipant.deletedUsername]
-     * and nulls the foreign key on all related participants, all in one transaction.
+     * and nulls the foreign key on all related participants, all in one transaction. Once that
+     * transaction has committed, the user's profile picture file (if any) is deleted.
      *
      * @throws com.betcoin.data.model.ActiveBetConflictException if the user is in an ACTIVE bet.
      */
@@ -106,4 +108,24 @@ interface UserRepository {
      * @throws com.betcoin.data.model.DuplicateUsernameException if another user has the name.
      */
     suspend fun updateUsername(userId: Long, newUsername: String)
+
+    /**
+     * Sets the user's profile picture from the image at [imageUri].
+     *
+     * The image is downscaled and stored first; then the user's avatar reference is switched to
+     * it and the previous picture (if any) is deleted. If anything fails, the previous picture
+     * is kept and no new file is left behind.
+     *
+     * @throws com.betcoin.data.model.InvalidImageException if the image can't be read or decoded.
+     * @throws com.betcoin.data.model.InvalidInputException if the user doesn't exist.
+     */
+    suspend fun updateProfilePicture(userId: Long, imageUri: Uri)
+
+    /**
+     * Removes the user's profile picture: deletes the stored file and clears the avatar
+     * reference. Does nothing if the user has no picture.
+     *
+     * @throws com.betcoin.data.model.InvalidInputException if the user doesn't exist.
+     */
+    suspend fun clearProfilePicture(userId: Long)
 }

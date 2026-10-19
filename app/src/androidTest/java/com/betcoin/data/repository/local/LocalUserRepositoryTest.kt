@@ -1,8 +1,10 @@
 package com.betcoin.data.repository.local
 
+import android.net.Uri
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.Bet
 import com.betcoin.data.database.entity.BetOutcome
@@ -11,6 +13,7 @@ import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.ActiveBetConflictException
 import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.DuplicateUsernameException
+import com.betcoin.data.model.InvalidImageException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
 import com.google.common.truth.Truth.assertThat
@@ -32,6 +35,7 @@ class LocalUserRepositoryTest {
 
   private lateinit var database: BetCoinDatabase
   private lateinit var repository: LocalUserRepository
+  private val avatarStore = FakeAvatarStore()
 
   @Before
   fun setUp() {
@@ -39,7 +43,7 @@ class LocalUserRepositoryTest {
     database = Room.inMemoryDatabaseBuilder(context, BetCoinDatabase::class.java)
       .allowMainThreadQueries()
       .build()
-    repository = LocalUserRepository(database)
+    repository = LocalUserRepository(database, avatarStore)
   }
 
   @After
@@ -408,5 +412,112 @@ class LocalUserRepositoryTest {
     assertFails<InvalidInputException> { repository.updateUsername(alice, " ") }
     assertFails<InvalidInputException> { repository.updateUsername(alice, "b".repeat(21)) }
     assertThat(snapshot()).isEqualTo(before)
+  }
+
+  // --- profile picture ---
+
+  private val imageUri: Uri = Uri.parse("content://test/1")
+
+  private suspend fun avatarRefOf(userId: Long): String? = database.userDao().getById(userId)!!.avatarRef
+
+  @Test
+  fun updateProfilePicture_storesNewRef() = runTest {
+    val alice = insertUser("Alice")
+
+    repository.updateProfilePicture(alice, imageUri)
+
+    assertThat(avatarRefOf(alice)).isEqualTo("fake-1.jpg")
+    assertThat(avatarStore.saved).containsExactly("fake-1.jpg")
+  }
+
+  @Test
+  fun updateProfilePicture_replacesAndDeletesOld() = runTest {
+    val alice = insertUser("Alice")
+
+    repository.updateProfilePicture(alice, imageUri)
+    repository.updateProfilePicture(alice, imageUri)
+
+    assertThat(avatarRefOf(alice)).isEqualTo("fake-2.jpg")
+    assertThat(avatarStore.deleted).containsExactly("fake-1.jpg")
+  }
+
+  @Test
+  fun updateProfilePicture_saveFails_keepsExistingRef() = runTest {
+    val alice = insertUser("Alice")
+    repository.updateProfilePicture(alice, imageUri)
+    avatarStore.failNextSave = true
+
+    assertFails<InvalidImageException> { repository.updateProfilePicture(alice, imageUri) }
+
+    assertThat(avatarRefOf(alice)).isEqualTo("fake-1.jpg")
+    assertThat(avatarStore.deleted).isEmpty()
+  }
+
+  @Test
+  fun updateProfilePicture_unknownUser_throwsAndKeepsNoNewFile() = runTest {
+    assertFails<InvalidInputException> { repository.updateProfilePicture(999L, imageUri) }
+
+    assertThat(avatarStore.saved).isEmpty()
+  }
+
+  @Test
+  fun updateProfilePicture_userDeletedDuringSave_removesNewFileAndKeepsOld() = runTest {
+    val alice = insertUser("Alice")
+    repository.updateProfilePicture(alice, imageUri)
+    avatarStore.onSave = { database.userDao().delete(database.userDao().getById(alice)!!) }
+
+    assertFails<InvalidInputException> { repository.updateProfilePicture(alice, imageUri) }
+
+    assertThat(avatarStore.saved).containsExactly("fake-1.jpg")
+    assertThat(avatarStore.deleted).containsExactly("fake-2.jpg")
+  }
+
+  @Test
+  fun clearProfilePicture_deletesAndNullsRef() = runTest {
+    val alice = insertUser("Alice")
+    repository.updateProfilePicture(alice, imageUri)
+
+    repository.clearProfilePicture(alice)
+
+    assertThat(avatarRefOf(alice)).isNull()
+    assertThat(avatarStore.deleted).containsExactly("fake-1.jpg")
+  }
+
+  @Test
+  fun clearProfilePicture_noAvatar_isNoOp() = runTest {
+    val alice = insertUser("Alice")
+
+    repository.clearProfilePicture(alice)
+
+    assertThat(avatarRefOf(alice)).isNull()
+    assertThat(avatarStore.deleted).isEmpty()
+  }
+
+  @Test
+  fun clearProfilePicture_unknownUser_throws() = runTest {
+    assertFails<InvalidInputException> { repository.clearProfilePicture(999L) }
+  }
+
+  @Test
+  fun deleteUser_deletesAvatarAfterCommit() = runTest {
+    val alice = insertUser("Alice")
+    repository.updateProfilePicture(alice, imageUri)
+
+    repository.deleteUser(alice)
+
+    assertThat(database.userDao().getById(alice)).isNull()
+    assertThat(avatarStore.deleted).containsExactly("fake-1.jpg")
+  }
+
+  @Test
+  fun deleteUser_activeBet_keepsAvatar() = runTest {
+    val alice = insertUser("Alice")
+    repository.updateProfilePicture(alice, imageUri)
+    insertBet(BetStatus.ACTIVE, alice to 100L)
+
+    assertFails<ActiveBetConflictException> { repository.deleteUser(alice) }
+
+    assertThat(avatarStore.deleted).isEmpty()
+    assertThat(avatarRefOf(alice)).isEqualTo("fake-1.jpg")
   }
 }
