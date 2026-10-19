@@ -20,6 +20,13 @@ class FakeSettingsRepository : SettingsRepository {
     var storedHash: String? = null
     var storedRecoveryCodeHash: String? = null
     var isFirstLaunchResult: Boolean = true
+
+    /** When set, [isFirstLaunch] throws it. */
+    var isFirstLaunchError: Throwable? = null
+
+    /** Number of [isFirstLaunch] calls. */
+    var isFirstLaunchCalls = 0
+        private set
     val themePreference = MutableStateFlow(ThemePreference.SYSTEM)
 
     override suspend fun getAdminPinHash(): String? = storedHash
@@ -35,7 +42,11 @@ class FakeSettingsRepository : SettingsRepository {
         return BCrypt.checkpw(pin, hash)
     }
 
-    override suspend fun isFirstLaunch(): Boolean = isFirstLaunchResult
+    override suspend fun isFirstLaunch(): Boolean {
+        isFirstLaunchCalls++
+        isFirstLaunchError?.let { throw it }
+        return isFirstLaunchResult
+    }
 
     override suspend fun regenerateRecoveryCode(): String {
         check(storedHash != null) { "Set the admin PIN before generating a recovery code" }
