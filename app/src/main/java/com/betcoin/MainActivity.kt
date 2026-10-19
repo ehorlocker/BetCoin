@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
             val darkTheme = themePreference.isDarkTheme()
 
             // Persist the stored theme as the app night mode so the next cold start matches it.
+            // On API 31+ a change also recreates the activity (ViewModels survive, plain remember does not).
             LaunchedEffect(themePreference) {
                 applyApplicationNightMode(this@MainActivity, themePreference)
             }

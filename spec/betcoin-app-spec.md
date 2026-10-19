@@ -319,7 +319,7 @@ If a participant won't confirm, the fallback is the Admin Panel's **Admin Resolv
 
 #### Settings (ungated)
 - Reached from the gear icon on Home. No PIN needed, since nothing here touches players or bets.
-- **Theme**: System default / Light / Dark. Stored in `AppSettings.themePreference` and applied immediately, without a restart. System default follows `isSystemInDarkTheme()`. On API 31+ the choice is also set as the app night mode so the next launch starts in the right theme.
+- **Theme**: System default / Light / Dark. Stored in `AppSettings.themePreference` and applied immediately, without a restart (on API 31+ the activity is recreated in place; the app process is not restarted). System default follows `isSystemInDarkTheme()`. On API 31+ the choice is also set as the app night mode so the next launch starts in the right theme.
 - Light palette: a light counterpart of [`dark-mode-design.md`](dark-mode-design.md), using the same color roles.
 - App version, plus the build flavor on dev builds.
 - **Dev Tools** row, shown on the dev flavor only (§14 "Dev Tools Screen")

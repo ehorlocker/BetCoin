@@ -22,6 +22,10 @@ fun ThemePreference.toApplicationNightMode(): Int = when (this) {
  * window background (`values-night`) and the initial `SystemBarStyle.auto` bars match the stored
  * theme instead of flashing the device mode. On API < 31 the flash remains. With it set,
  * `isSystemInDarkTheme()` reports the app mode, which matches the resolved theme.
+ *
+ * On API 31+ a change also applies at once to the running app and recreates the activity (there
+ * is no `configChanges=uiMode`). Navigation and ViewModels survive; plain `remember` state (for
+ * example a showing snackbar) does not, so keep root state saveable.
  */
 fun applyApplicationNightMode(context: Context, preference: ThemePreference) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
