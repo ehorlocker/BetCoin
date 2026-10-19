@@ -10,6 +10,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 /**
  * Hilt module that binds repository interfaces to their local (Room-backed)
@@ -21,11 +22,14 @@ import dagger.hilt.components.SingletonComponent
 abstract class RepositoryModule {
 
     @Binds
+    @Singleton
     abstract fun bindUserRepository(impl: LocalUserRepository): UserRepository
 
     @Binds
+    @Singleton
     abstract fun bindBetRepository(impl: LocalBetRepository): BetRepository
 
     @Binds
+    @Singleton
     abstract fun bindSettingsRepository(impl: LocalSettingsRepository): SettingsRepository
 }
