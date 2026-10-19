@@ -19,6 +19,11 @@ class RoutesTest {
     }
 
     @Test
+    fun recoveryRoute_isCorrectValue() {
+        assertThat(Routes.RECOVERY).isEqualTo("recovery")
+    }
+
+    @Test
     fun managePlayersRoute_isCorrectValue() {
         assertThat(Routes.MANAGE_PLAYERS).isEqualTo("manage_players")
     }

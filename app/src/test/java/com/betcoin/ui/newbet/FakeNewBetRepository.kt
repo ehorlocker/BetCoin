@@ -101,6 +101,8 @@ class FakeNewBetRepository(private val users: FakeUserRepository) : BetRepositor
             )
         }.mapNotNull { it }
 
+    override suspend fun discardOlderPendingBets() {}
+
     override suspend fun discardPendingBet(betId: Long) {
         requirePending(betId)
         discardedBetIds += betId

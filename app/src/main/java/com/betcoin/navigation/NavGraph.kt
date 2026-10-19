@@ -3,6 +3,7 @@ package com.betcoin.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,6 +17,7 @@ import com.betcoin.ui.newbet.NewBetScreen
 import com.betcoin.ui.onboarding.OnboardingScreen
 import com.betcoin.ui.players.ManagePlayersScreen
 import com.betcoin.ui.players.PlayerDetailScreen
+import com.betcoin.ui.recovery.RecoveryScreen
 
 /**
  * Navigation routes used in the BetCoin app.
@@ -23,6 +25,9 @@ import com.betcoin.ui.players.PlayerDetailScreen
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
+
+    /** Shown at launch when an interrupted New Bet flow left a pending bet behind. */
+    const val RECOVERY = "recovery"
     const val NEW_BET = "new_bet"
 
     /** Optional New Bet argument: an existing pending bet to open at Step B (Recovery, Repeat). */
@@ -59,7 +64,8 @@ object Routes {
  *
  * @param navController the [NavHostController] that manages navigation
  * @param startDestination the initial route — [Routes.ONBOARDING] for first launch,
- *   [Routes.HOME] otherwise
+ *   [Routes.RECOVERY] when an interrupted bet is pending, [Routes.HOME] otherwise
+ *   (see [StartDestinationResolver])
  * @param modifier optional [Modifier] applied to the NavHost
  */
 @Composable
@@ -97,6 +103,25 @@ fun NavGraph(
                 },
                 onManagePlayers = {
                     navController.navigate(Routes.MANAGE_PLAYERS)
+                },
+            )
+        }
+        composable(Routes.RECOVERY) { backStackEntry ->
+            RecoveryScreen(
+                viewModel = hiltViewModel(),
+                onReturnToBet = { betId ->
+                    // Ignore repeat taps while Recovery is exiting (would duplicate the back stack).
+                    if (backStackEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.RECOVERY) { inclusive = true }
+                        }
+                        navController.navigate(Routes.newBet(betId))
+                    }
+                },
+                onGoHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.RECOVERY) { inclusive = true }
+                    }
                 },
             )
         }
