@@ -279,13 +279,6 @@ private fun Actions(
                 ) {
                     Text("Reopen Bet")
                 }
-                OutlinedButton(
-                    onClick = onRepeat,
-                    enabled = idle,
-                    modifier = Modifier.fillMaxWidth().testTag(BET_DETAIL_REPEAT_TAG),
-                ) {
-                    Text("Repeat Bet")
-                }
                 detail.reopenBlockedReason?.let { reason ->
                     Text(
                         text = reason,
@@ -293,6 +286,13 @@ private fun Actions(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag(BET_DETAIL_REOPEN_REASON_TAG),
                     )
+                }
+                OutlinedButton(
+                    onClick = onRepeat,
+                    enabled = idle,
+                    modifier = Modifier.fillMaxWidth().testTag(BET_DETAIL_REPEAT_TAG),
+                ) {
+                    Text("Repeat Bet")
                 }
             }
             BetStatus.PENDING_CONFIRMATION -> Unit
