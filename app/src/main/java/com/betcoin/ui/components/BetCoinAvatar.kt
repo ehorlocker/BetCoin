@@ -3,6 +3,7 @@ package com.betcoin.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -12,7 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.betcoin.ui.theme.BetCoinSecondary
 import com.betcoin.ui.theme.BetCoinTertiary
 import com.betcoin.ui.theme.BetCoinPrimary
@@ -45,12 +49,16 @@ internal fun avatarColorFor(initials: String): Color {
  * @param initials The initials to display (e.g., "JD").
  * @param modifier Modifier for the avatar.
  * @param size The size of the avatar in dp.
+ * @param imageModel Optional opaque image model (e.g. from `AvatarStore.load`). The picture is
+ *   shown while it loads successfully; the initials are shown when null, while loading, and
+ *   when the image can't be loaded.
  */
 @Composable
 fun BetCoinAvatar(
     initials: String,
     modifier: Modifier = Modifier,
     size: Int = 48,
+    imageModel: Any? = null,
 ) {
     val backgroundColor = avatarColorFor(initials)
 
@@ -62,11 +70,26 @@ fun BetCoinAvatar(
             .border(2.dp, BetCoinPrimary, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = initials.uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            color = Color.White,
-        )
+        val initialsText: @Composable () -> Unit = {
+            Text(
+                text = initials.uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+            )
+        }
+        if (imageModel == null) {
+            initialsText()
+        } else {
+            SubcomposeAsyncImage(
+                model = imageModel,
+                contentDescription = "Profile picture",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                loading = { initialsText() },
+                error = { initialsText() },
+                success = { SubcomposeAsyncImageContent() },
+            )
+        }
     }
 }
 
