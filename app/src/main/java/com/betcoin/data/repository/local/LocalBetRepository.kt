@@ -24,8 +24,6 @@ import javax.inject.Inject
  *
  * Every mutation checks all of its rules inside a Room transaction before writing anything, so a
  * thrown [com.betcoin.data.model.BetCoinException] leaves the database unchanged.
- *
- * Admin operations are implemented in BET-11.
  */
 class LocalBetRepository @Inject constructor(
     private val database: BetCoinDatabase,
@@ -216,7 +214,8 @@ class LocalBetRepository @Inject constructor(
         }
     }
 
-    override suspend fun forceCancelBet(betId: Long): Unit = TODO()
+    /** Same rules and exceptions as [cancelBet]; consent is the caller's concern. */
+    override suspend fun forceCancelBet(betId: Long) = cancelBet(betId)
 
     override suspend fun reopenBet(betId: Long) {
         database.withTransaction {
@@ -317,11 +316,75 @@ class LocalBetRepository @Inject constructor(
         participant.id to user
     }
 
-    override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long): Unit = TODO()
-    override suspend fun updateBetPrompt(betId: Long, newPrompt: String): Unit = TODO()
-    override suspend fun adminRemoveParticipant(betId: Long, participantId: Long): Unit = TODO()
-    override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long): Unit = TODO()
-    override suspend fun deleteBet(betId: Long): Unit = TODO()
+    /** Same rules and exceptions as [resolveBet]; PIN checks are the caller's concern. */
+    override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) =
+        resolveBet(betId, winningOutcomeId)
+
+    override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {
+        val trimmedPrompt = newPrompt.trim()
+        if (trimmedPrompt.length !in PROMPT_LENGTH) {
+            throw InvalidInputException("Prompt must be 1–120 characters")
+        }
+        database.withTransaction {
+            val bet = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
+            betDao.update(bet.copy(prompt = trimmedPrompt))
+        }
+    }
+
+    override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {
+        database.withTransaction {
+            requireBetInStatus(betId, BetStatus.ACTIVE)
+            val participant = participantDao.getById(participantId)
+            if (participant == null || participant.betId != betId) {
+                throw InvalidInputException("Participant $participantId not found in bet $betId")
+            }
+            val remaining = participantDao.getByBetId(betId).filter { it.id != participantId }
+            if (remaining.size < MIN_PARTICIPANTS) {
+                throw InvalidInputException("A bet needs at least 2 participants; force cancel it instead")
+            }
+            if (remaining.distinctBy { it.outcomeId }.size == 1) {
+                throw UnanimousPickException()
+            }
+            val userId = participant.userId
+                ?: throw InvalidInputException("User for participant $participantId no longer exists")
+            val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
+            userDao.updateBalance(user.id, user.balance + participant.wagerAmount)
+            participantDao.delete(participant)
+        }
+    }
+
+    override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {
+        database.withTransaction {
+            val participant = participantDao.getById(participantId)
+                ?: throw InvalidInputException("Participant $participantId not found")
+            requireBetInStatus(participant.betId, BetStatus.ACTIVE)
+            if (newWagerAmount < 1) {
+                throw InvalidInputException("Wager must be at least 1")
+            }
+            val userId = participant.userId
+                ?: throw InvalidInputException("User for participant $participantId no longer exists")
+            val user = userDao.getById(userId) ?: throw InvalidInputException("User $userId not found")
+            val diff = newWagerAmount - participant.wagerAmount
+            // Only increases can be unaffordable; a decrease is always allowed.
+            if (diff > 0 && diff > user.balance) {
+                throw InsufficientBalanceException(user.id, diff, user.balance)
+            }
+            userDao.updateBalance(user.id, user.balance - diff)
+            participantDao.update(participant.copy(wagerAmount = newWagerAmount))
+        }
+    }
+
+    override suspend fun deleteBet(betId: Long) {
+        database.withTransaction {
+            val bet = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
+            if (bet.status != BetStatus.RESOLVED && bet.status != BetStatus.CANCELLED) {
+                throw InvalidBetStateException(betId, bet.status)
+            }
+            participantDao.deleteByBetId(betId)
+            outcomeDao.deleteByBetId(betId)
+            betDao.delete(bet)
+        }
+    }
 
     override suspend fun repeatBet(betId: Long): Long = database.withTransaction {
         val original = betDao.getById(betId) ?: throw InvalidInputException("Bet $betId not found")
