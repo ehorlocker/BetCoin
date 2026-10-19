@@ -222,6 +222,7 @@ fun NavGraph(
         }
         composable(Routes.ADMIN_PANEL) {
             AdminPanelScreen(
+                viewModel = hiltViewModel(),
                 onNavigateBack = {
                     navController.popBackStack()
                 },
