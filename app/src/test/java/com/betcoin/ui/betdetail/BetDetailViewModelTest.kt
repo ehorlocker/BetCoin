@@ -8,7 +8,12 @@ import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.BetWithDetails
 import com.betcoin.data.model.ParticipantWithUser
+import com.betcoin.data.model.InsufficientBalanceException
+import com.betcoin.data.model.InvalidBetStateException
 import com.betcoin.data.repository.BetRepository
+import com.betcoin.data.repository.UserRepository
+import com.betcoin.testing.FakeUserRepository
+import kotlinx.coroutines.CompletableDeferred
 import com.betcoin.navigation.Routes
 import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
@@ -104,8 +109,8 @@ class BetDetailViewModelTest {
         participants = participants,
     )
 
-    private fun viewModel(repository: BetRepository) =
-        BetDetailViewModel(SavedStateHandle(mapOf(Routes.BET_ID_ARG to BET_ID)), repository)
+    private fun viewModel(repository: BetRepository, users: UserRepository = FakeUserRepository()) =
+        BetDetailViewModel(SavedStateHandle(mapOf(Routes.BET_ID_ARG to BET_ID)), repository, users)
 
     /** Collects [BetDetailViewModel.uiState] (it's WhileSubscribed) and returns its value. */
     private fun TestScope.stateOf(viewModel: BetDetailViewModel): BetDetailUiState {
@@ -179,8 +184,8 @@ class BetDetailViewModelTest {
             OutcomeRow(id = 11, text = "Kay", isWinner = false),
         ).inOrder()
         assertThat(detail.participants).containsExactly(
-            ParticipantRow(1, "Alice", false, "Jay", 150, ParticipantResult.PENDING, net = null),
-            ParticipantRow(2, "Bob", false, "Kay", 200, ParticipantResult.PENDING, net = null),
+            ParticipantRow(1, 1, "Alice", false, "Jay", 150, ParticipantResult.PENDING, net = null),
+            ParticipantRow(2, 2, "Bob", false, "Kay", 200, ParticipantResult.PENDING, net = null),
         ).inOrder()
         assertThat(detail.potSize).isEqualTo(350)
         assertThat(detail.winningOutcome).isNull()
@@ -256,6 +261,326 @@ class BetDetailViewModelTest {
         assertThat(detail.participants.map { it.name to it.isDeletedUser })
             .containsExactly("Carol" to true, DELETED_PLAYER to true)
             .inOrder()
+    }
+
+    @Test
+    fun participantRow_carriesTheUserIdOrNullWhenDeleted() = runTest(testDispatcher) {
+        val detail = detailOf(
+            bet(
+                BetStatus.RESOLVED,
+                listOf(participant(1, alice, jay, 150, payout = 350), participant(2, null, kay, 200, payout = 0)),
+                winningOutcomeId = jay.id,
+            ),
+        )
+
+        assertThat(detail.participants.map { it.userId }).containsExactly(1L, null).inOrder()
+    }
+
+    // --- Actions: bet 7 with outcomes Jay(1), Kim(2), Draw(3), users Jay(10) and Kim(11) ---
+
+    private val aJay = BetOutcome(id = 1, betId = BET_ID, outcomeText = "Jay")
+    private val aKim = BetOutcome(id = 2, betId = BET_ID, outcomeText = "Kim")
+    private val aDraw = BetOutcome(id = 3, betId = BET_ID, outcomeText = "Draw")
+    private val jayUser = User(id = 10, username = "Jay", pinHash = "hash", createdAt = 0L)
+    private val kimUser = User(id = 11, username = "Kim", pinHash = "hash", createdAt = 0L)
+
+    private fun actionBet(
+        status: BetStatus,
+        kimDeleted: Boolean = false,
+        jayDeleted: Boolean = false,
+    ): BetWithDetails {
+        fun row(id: Long, user: User, outcome: BetOutcome, wager: Long, deleted: Boolean) =
+            ParticipantWithUser(
+                participant = BetParticipant(
+                    id = id,
+                    betId = BET_ID,
+                    userId = if (deleted) null else user.id,
+                    outcomeId = outcome.id,
+                    wagerAmount = wager,
+                    deletedUsername = if (deleted) user.username else null,
+                ),
+                user = if (deleted) null else user,
+                outcome = outcome,
+            )
+        return BetWithDetails(
+            bet = Bet(
+                id = BET_ID,
+                prompt = "Who wins?",
+                status = status,
+                winningOutcomeId = if (status == BetStatus.RESOLVED) aJay.id else null,
+                createdAt = CREATED_AT,
+            ),
+            outcomes = listOf(aJay, aKim, aDraw),
+            participants = listOf(
+                row(1, jayUser, aJay, 100, jayDeleted),
+                row(2, kimUser, aKim, 50, kimDeleted),
+            ),
+        )
+    }
+
+    private class Fixture(val repo: RecordingBetRepository, val vm: BetDetailViewModel) {
+        val state get() = vm.actionState.value
+    }
+
+    private fun fixture(
+        status: BetStatus = BetStatus.ACTIVE,
+        users: UserRepository = FakeUserRepository(),
+        kimDeleted: Boolean = false,
+        jayDeleted: Boolean = false,
+    ): Fixture {
+        val repo = RecordingBetRepository(actionBet(status, kimDeleted, jayDeleted))
+        return Fixture(repo, viewModel(repo, users))
+    }
+
+    @Test
+    fun resolve_picksOutcomeThenConsentThenCallsResolveBet() = runTest(testDispatcher) {
+        val f = fixture()
+
+        f.vm.onResolveRequested()
+        assertThat(f.state.pickingOutcome).isTrue()
+        f.vm.onOutcomePicked(1)
+        assertThat(f.state.pickingOutcome).isFalse()
+        assertThat(f.state.consent).isEqualTo(PendingConsent(BetAction.Resolve(1, "Jay"), "Resolve: Jay wins"))
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.repo.calls).containsExactly("resolve(7, 1)")
+        assertThat(f.state.consent).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun resolve_toUnpickedOutcomeIsAPushAndStillCallsResolveBet() = runTest(testDispatcher) {
+        val f = fixture()
+
+        f.vm.onResolveRequested()
+        f.vm.onOutcomePicked(3)
+        assertThat(f.state.consent?.title).isEqualTo("Resolve: Draw wins")
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.repo.calls).containsExactly("resolve(7, 3)")
+    }
+
+    @Test
+    fun dismissingTheOutcomePickerStartsNothing() = runTest(testDispatcher) {
+        val f = fixture()
+
+        f.vm.onResolveRequested()
+        f.vm.onOutcomePickerDismissed()
+
+        assertThat(f.state.pickingOutcome).isFalse()
+        assertThat(f.state.consent).isNull()
+        assertThat(f.repo.calls).isEmpty()
+    }
+
+    @Test
+    fun cancel_runsConsentThenCancelBet() = runTest(testDispatcher) {
+        val f = fixture()
+
+        f.vm.onCancelRequested()
+        assertThat(f.state.consent)
+            .isEqualTo(PendingConsent(BetAction.Cancel, "Cancel bet: all wagers refunded"))
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.repo.calls).containsExactly("cancel(7)")
+        assertThat(f.state.consent).isNull()
+    }
+
+    @Test
+    fun abortingConsentChangesNothing() = runTest(testDispatcher) {
+        val active = fixture()
+        active.vm.onResolveRequested()
+        active.vm.onOutcomePicked(1)
+        active.vm.onConsentAborted()
+        assertThat(active.state).isEqualTo(BetActionState())
+        active.vm.onCancelRequested()
+        active.vm.onConsentAborted()
+        assertThat(active.state).isEqualTo(BetActionState())
+        assertThat(active.repo.calls).isEmpty()
+
+        val resolved = fixture(BetStatus.RESOLVED)
+        resolved.vm.onReopenRequested()
+        assertThat(resolved.state.consent).isNotNull()
+        resolved.vm.onConsentAborted()
+        assertThat(resolved.state).isEqualTo(BetActionState())
+        assertThat(resolved.repo.calls).isEmpty()
+    }
+
+    @Test
+    fun reopen_resolvedBetCallsReopenBet() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+
+        f.vm.onReopenRequested()
+        assertThat(f.state.consent).isEqualTo(PendingConsent(BetAction.Reopen, "Reopen bet"))
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.repo.calls).containsExactly("reopen(7)")
+    }
+
+    @Test
+    fun reopen_cancelledBetCallsReopenBet() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.CANCELLED)
+
+        f.vm.onReopenRequested()
+        assertThat(f.state.consent?.title).isEqualTo("Reopen bet")
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.repo.calls).containsExactly("reopen(7)")
+    }
+
+    @Test
+    fun resolveAndCancelAreIgnoredWhenNotActive() = runTest(testDispatcher) {
+        for (status in listOf(BetStatus.RESOLVED, BetStatus.CANCELLED)) {
+            val f = fixture(status)
+            f.vm.onResolveRequested()
+            f.vm.onCancelRequested()
+            assertThat(f.state).isEqualTo(BetActionState())
+        }
+    }
+
+    @Test
+    fun reopenIsIgnoredWhenActive() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.ACTIVE)
+
+        f.vm.onReopenRequested()
+
+        assertThat(f.state).isEqualTo(BetActionState())
+    }
+
+    @Test
+    fun reopenIsBlockedWithAReasonWhenAParticipantWasDeleted() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED, kimDeleted = true)
+
+        f.vm.onReopenRequested()
+
+        assertThat(f.state.consent).isNull()
+        val detail = (f.vm.uiState.value as BetDetailUiState.Success).detail
+        assertThat(detail.reopenBlockedReason).isEqualTo("Can't reopen: Kim was deleted")
+    }
+
+    @Test
+    fun reopenBlockedReasonListsEveryDeletedParticipant() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.CANCELLED, kimDeleted = true, jayDeleted = true)
+
+        val detail = (f.vm.uiState.value as BetDetailUiState.Success).detail
+        assertThat(detail.reopenBlockedReason).isEqualTo("Can't reopen: Jay, Kim were deleted")
+    }
+
+    @Test
+    fun reopenBlockedReasonIsNullForActiveBetsAndWhenNobodyWasDeleted() = runTest(testDispatcher) {
+        for ((status, kimDeleted) in listOf(BetStatus.ACTIVE to true, BetStatus.RESOLVED to false)) {
+            val detail = (fixture(status, kimDeleted = kimDeleted).vm.uiState.value as BetDetailUiState.Success).detail
+            assertThat(detail.reopenBlockedReason).isNull()
+        }
+    }
+
+    @Test
+    fun reopenShortfallShowsMessageFromException() = runTest(testDispatcher) {
+        val f = fixture(BetStatus.RESOLVED)
+        f.repo.failure = InsufficientBalanceException(userId = 10, required = 150, available = 20)
+
+        f.vm.onReopenRequested()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.errorMessage).isEqualTo("Jay needs 150 BetCoin but has 20")
+        assertThat(f.state.consent).isNull()
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun invalidStateErrorMapsToMessage() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.failure = InvalidBetStateException(7, BetStatus.RESOLVED)
+
+        f.vm.onCancelRequested()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.errorMessage).isEqualTo("This bet has changed. Nothing was updated.")
+        assertThat(f.state.consent).isNull()
+    }
+
+    @Test
+    fun newActionClearsPreviousError() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.failure = InvalidBetStateException(7, BetStatus.RESOLVED)
+        f.vm.onCancelRequested()
+        f.vm.onAllPinsConfirmed()
+        assertThat(f.state.errorMessage).isNotNull()
+
+        f.vm.onCancelRequested()
+
+        assertThat(f.state.errorMessage).isNull()
+    }
+
+    @Test
+    fun onAllPinsConfirmedTwiceCallsTheRepositoryOnce() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.gate = CompletableDeferred()
+        f.vm.onCancelRequested()
+
+        f.vm.onAllPinsConfirmed()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.isBusy).isTrue()
+        assertThat(f.repo.calls).containsExactly("cancel(7)")
+        f.repo.gate!!.complete(Unit)
+        assertThat(f.state.isBusy).isFalse()
+    }
+
+    @Test
+    fun requestsAreIgnoredWhileBusy() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.gate = CompletableDeferred()
+        f.vm.onCancelRequested()
+        f.vm.onAllPinsConfirmed()
+        val busyState = f.state
+
+        f.vm.onCancelRequested()
+        f.vm.onResolveRequested()
+
+        assertThat(f.state).isEqualTo(busyState)
+        f.repo.gate!!.complete(Unit)
+    }
+
+    @Test
+    fun verifyParticipantPin_trueForCorrectPinFalseForWrong() = runTest(testDispatcher) {
+        val users = FakeUserRepository().apply { nextCreatedUserId = 10 }
+        users.createUser("Jay", "1234")
+        val f = fixture(users = users)
+
+        assertThat(f.vm.verifyParticipantPin(10, "1234")).isTrue()
+        assertThat(f.vm.verifyParticipantPin(10, "9999")).isFalse()
+    }
+
+    @Test
+    fun verifyParticipantPin_falseWhenTheRepositoryThrows() = runTest(testDispatcher) {
+        val users = object : UserRepository by FakeUserRepository() {
+            override suspend fun verifyPin(userId: Long, pin: String): Boolean = error("db down")
+        }
+        val f = fixture(users = users)
+
+        assertThat(f.vm.verifyParticipantPin(10, "1234")).isFalse()
+    }
+
+    @Test
+    fun consentClosesWhenBetStatusChangesUnderneath() = runTest(testDispatcher) {
+        val f = fixture()
+        f.vm.onCancelRequested()
+        assertThat(f.state.consent).isNotNull()
+
+        f.repo.bet.value = actionBet(BetStatus.CANCELLED)
+
+        assertThat(f.state.consent).isNull()
+    }
+
+    @Test
+    fun outcomePickerAndConsentCloseWhenTheBetIsDeleted() = runTest(testDispatcher) {
+        val f = fixture()
+        f.vm.onResolveRequested()
+        assertThat(f.state.pickingOutcome).isTrue()
+
+        f.repo.bet.value = null
+
+        assertThat(f.state.pickingOutcome).isFalse()
     }
 
     @Test
