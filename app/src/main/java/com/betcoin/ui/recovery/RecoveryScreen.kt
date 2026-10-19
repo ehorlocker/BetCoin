@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -62,12 +61,14 @@ fun RecoveryScreen(
     onDiscard: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier) { scaffoldPadding ->
+    Scaffold(
+        modifier = modifier,
+        contentWindowInsets = WindowInsets.safeDrawing,
+    ) { scaffoldPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldPadding)
-                .windowInsetsPadding(WindowInsets.safeDrawing),
+                .padding(scaffoldPadding),
         ) {
             when (uiState) {
                 is RecoveryUiState.Pending -> PendingContent(uiState, onReturnToBet, onDiscard)

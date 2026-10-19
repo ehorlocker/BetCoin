@@ -3,6 +3,7 @@ package com.betcoin.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -105,14 +106,17 @@ fun NavGraph(
                 },
             )
         }
-        composable(Routes.RECOVERY) {
+        composable(Routes.RECOVERY) { backStackEntry ->
             RecoveryScreen(
                 viewModel = hiltViewModel(),
                 onReturnToBet = { betId ->
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.RECOVERY) { inclusive = true }
+                    // Ignore repeat taps while Recovery is exiting (would duplicate the back stack).
+                    if (backStackEntry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.RECOVERY) { inclusive = true }
+                        }
+                        navController.navigate(Routes.newBet(betId))
                     }
-                    navController.navigate(Routes.newBet(betId))
                 },
                 onGoHome = {
                     navController.navigate(Routes.HOME) {
