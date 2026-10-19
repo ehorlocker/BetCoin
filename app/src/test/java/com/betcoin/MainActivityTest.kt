@@ -35,9 +35,9 @@ class MainActivityTest {
     }
 
     @Test
-    fun mainActivity_hasSettingsRepositoryField() {
-        val field = MainActivity::class.java.getDeclaredField("settingsRepository")
+    fun mainActivity_hasStartDestinationResolverField() {
+        val field = MainActivity::class.java.getDeclaredField("startDestinationResolver")
         assertThat(field).isNotNull()
-        assertThat(field.type.name).contains("SettingsRepository")
+        assertThat(field.type.name).contains("StartDestinationResolver")
     }
 }

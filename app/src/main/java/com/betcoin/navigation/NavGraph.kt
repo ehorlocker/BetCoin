@@ -23,6 +23,9 @@ import com.betcoin.ui.players.PlayerDetailScreen
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
+
+    /** Shown at launch when an interrupted New Bet flow left a pending bet behind. */
+    const val RECOVERY = "recovery"
     const val NEW_BET = "new_bet"
 
     /** Optional New Bet argument: an existing pending bet to open at Step B (Recovery, Repeat). */
@@ -59,7 +62,8 @@ object Routes {
  *
  * @param navController the [NavHostController] that manages navigation
  * @param startDestination the initial route — [Routes.ONBOARDING] for first launch,
- *   [Routes.HOME] otherwise
+ *   [Routes.RECOVERY] when an interrupted bet is pending, [Routes.HOME] otherwise
+ *   (see [StartDestinationResolver])
  * @param modifier optional [Modifier] applied to the NavHost
  */
 @Composable
