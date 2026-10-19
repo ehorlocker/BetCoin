@@ -3,6 +3,8 @@ package com.betcoin.navigation
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.util.ErrorLogger
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -30,9 +32,10 @@ class StartDestinationResolver @Inject constructor(
         if (settingsRepository.isFirstLaunch()) return Routes.ONBOARDING
         try {
             betRepository.discardOlderPendingBets()
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
+            // A stray CancellationException (e.g. a timeout inside the repository) is a failure
+            // like any other; if the calling scope was cancelled this rethrows instead.
+            if (e is CancellationException) currentCoroutineContext().ensureActive()
             errorLogger.logError(LAUNCH_LOG_TAG, "Failed to discard older pending bets at launch", e)
         }
         return if (betRepository.getPendingBet().first() != null) Routes.RECOVERY else Routes.HOME
