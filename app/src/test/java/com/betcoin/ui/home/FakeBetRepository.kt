@@ -7,6 +7,7 @@ import com.betcoin.data.model.BetWithDetails
 import com.betcoin.data.model.ParticipantWithUser
 import com.betcoin.data.repository.BetRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 
 private fun mockBetWithDetails(): BetWithDetails = BetWithDetails(
@@ -24,11 +25,17 @@ private fun mockBetWithDetails(): BetWithDetails = BetWithDetails(
  * Fake implementation of [BetRepository] for testing.
  */
 class FakeBetRepository : BetRepository {
-    var activeBetCount: Int = 0
+    private val activeBets = MutableStateFlow<List<BetWithDetails>>(emptyList())
 
-    override fun getActiveBets(): Flow<List<BetWithDetails>> {
-        return flowOf(List(activeBetCount) { mockBetWithDetails() })
-    }
+    var activeBetCount: Int
+        get() = activeBets.value.size
+        set(value) { activeBets.value = List(value) { mockBetWithDetails() } }
+
+    /** Number of collectors currently subscribed to [getActiveBets]. */
+    val activeBetsSubscriberCount: Int
+        get() = activeBets.subscriptionCount.value
+
+    override fun getActiveBets(): Flow<List<BetWithDetails>> = activeBets
 
     override fun getAllBets(): Flow<List<BetWithDetails>> = flowOf(emptyList())
     override fun getPendingBet(): Flow<BetWithDetails?> = flowOf(null)

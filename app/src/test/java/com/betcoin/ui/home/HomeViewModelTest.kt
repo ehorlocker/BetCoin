@@ -6,8 +6,9 @@ import com.betcoin.testing.FakeUserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -45,6 +46,7 @@ class HomeViewModelTest {
     fun activeBetCount_emitsCorrectValue() = runTest {
         fakeBetRepository.activeBetCount = 3
         viewModel = HomeViewModel(fakeBetRepository, fakeUserRepository)
+        backgroundScope.launch(testDispatcher) { viewModel.activeBetCount.collect {} }
         advanceUntilIdle()
 
         assertThat(viewModel.activeBetCount.value).isEqualTo(3)
@@ -54,6 +56,7 @@ class HomeViewModelTest {
     fun userCount_emitsCorrectValue() = runTest {
         fakeUserRepository.userCount = 5
         viewModel = HomeViewModel(fakeBetRepository, fakeUserRepository)
+        backgroundScope.launch(testDispatcher) { viewModel.userCount.collect {} }
         advanceUntilIdle()
 
         assertThat(viewModel.userCount.value).isEqualTo(5)
@@ -63,8 +66,29 @@ class HomeViewModelTest {
     fun activeBetCount_zero_emitsZero() = runTest {
         fakeBetRepository.activeBetCount = 0
         viewModel = HomeViewModel(fakeBetRepository, fakeUserRepository)
+        backgroundScope.launch(testDispatcher) { viewModel.activeBetCount.collect {} }
         advanceUntilIdle()
 
         assertThat(viewModel.activeBetCount.value).isEqualTo(0)
+    }
+
+    @Test
+    fun stopsCollectingWhenUnsubscribed() = runTest {
+        viewModel = HomeViewModel(fakeBetRepository, fakeUserRepository)
+        assertThat(fakeBetRepository.activeBetsSubscriberCount).isEqualTo(0)
+        assertThat(fakeUserRepository.allUsersSubscriberCount).isEqualTo(0)
+
+        val betJob = backgroundScope.launch(testDispatcher) { viewModel.activeBetCount.collect {} }
+        val userJob = backgroundScope.launch(testDispatcher) { viewModel.userCount.collect {} }
+        advanceUntilIdle()
+        assertThat(fakeBetRepository.activeBetsSubscriberCount).isEqualTo(1)
+        assertThat(fakeUserRepository.allUsersSubscriberCount).isEqualTo(1)
+
+        betJob.cancel()
+        userJob.cancel()
+        advanceTimeBy(5_001)
+        advanceUntilIdle()
+        assertThat(fakeBetRepository.activeBetsSubscriberCount).isEqualTo(0)
+        assertThat(fakeUserRepository.allUsersSubscriberCount).isEqualTo(0)
     }
 }

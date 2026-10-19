@@ -28,7 +28,7 @@ class FakePendingBetRepository : BetRepository {
     val discardedBetIds = mutableListOf<Long>()
 
     /** When set, [discardPendingBet] throws it instead of discarding. */
-    var discardError: BetCoinException? = null
+    var discardError: Throwable? = null
 
     /** Builds a pending bet with [participantCount] participants. */
     fun pendingBet(id: Long, prompt: String, participantCount: Int, createdAt: Long = id): BetWithDetails {

@@ -5,6 +5,7 @@ import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.navigation.Routes
 import com.betcoin.testing.FakeUserRepository
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Tests for [NewBetViewModel]: Step A validation and createBet, Step B participants with PIN
@@ -199,6 +201,20 @@ class NewBetViewModelTest {
         advanceUntilIdle()
 
         assertThat(bets.createBetCalls).isEqualTo(0)
+        assertThat(state.step).isEqualTo(NewBetStep.A)
+    }
+
+    @Test
+    fun next_onIoFailure_showsGenericErrorAndStopsBusy() = runTest {
+        createViewModel()
+        fillStepA()
+        bets.createBetError = IOException("disk")
+
+        viewModel.onNext()
+        advanceUntilIdle()
+
+        assertThat(state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(state.isBusy).isFalse()
         assertThat(state.step).isEqualTo(NewBetStep.A)
     }
 
@@ -434,6 +450,21 @@ class NewBetViewModelTest {
         assertThat(state.exited).isTrue()
     }
 
+    @Test
+    fun discardConfirmed_onIoFailure_staysOnScreenWithGenericError() = runTest {
+        openStepBWithPlayers()
+        viewModel.onBackRequested()
+        bets.discardError = IOException("disk")
+
+        viewModel.onDiscardConfirmed()
+        advanceUntilIdle()
+
+        assertThat(state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(state.isBusy).isFalse()
+        assertThat(state.showDiscardDialog).isFalse()
+        assertThat(state.exited).isFalse()
+    }
+
     // --- Step C ---
 
     /** Opens Step C with Alice on Jay (100) and Bob on Austin (50) unless [bobOutcome] says otherwise. */
@@ -534,6 +565,34 @@ class NewBetViewModelTest {
         assertThat(viewModel.verifyParticipantPin(alice, "1111")).isTrue()
         assertThat(viewModel.verifyParticipantPin(alice, "2222")).isFalse()
         assertThat(viewModel.verifyParticipantPin(bob, "2222")).isTrue()
+    }
+
+    @Test
+    fun verifyParticipantPin_falseOnIoFailureAndPropagatesUnexpectedExceptions() = runTest {
+        val (alice, _) = openStepC()
+
+        users.shouldThrowOnVerifyPin = IOException("disk")
+        assertThat(viewModel.verifyParticipantPin(alice, "1111")).isFalse()
+
+        users.shouldThrowOnVerifyPin = IllegalStateException("bug")
+        val result = runCatching { viewModel.verifyParticipantPin(alice, "1111") }
+        assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+    }
+
+    @Test
+    fun verifyPin_falseOnIoFailureAndPropagatesUnexpectedExceptions() = runTest {
+        val (alice, _) = openStepBWithPlayers()
+        viewModel.onUserSelected(alice)
+        viewModel.onOutcomeSelected(state.betOutcomes[0].id)
+        viewModel.onWagerChanged("250")
+        viewModel.onAddParticipant()
+
+        users.shouldThrowOnVerifyPin = IOException("disk")
+        assertThat(viewModel.verifyPin("1111")).isFalse()
+
+        users.shouldThrowOnVerifyPin = IllegalStateException("bug")
+        val result = runCatching { viewModel.verifyPin("1111") }
+        assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test

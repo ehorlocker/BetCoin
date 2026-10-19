@@ -21,7 +21,7 @@ class RecordingBetRepository(
     val calls = mutableListOf<String>()
 
     /** Thrown by the next resolve/cancel/reopen call. */
-    var failure: BetCoinException? = null
+    var failure: Throwable? = null
 
     /** When set, resolve/cancel/reopen suspend until it completes. */
     var gate: CompletableDeferred<Unit>? = null

@@ -1,5 +1,6 @@
 package com.betcoin.ui.newbet
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,8 +15,9 @@ import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
+import com.betcoin.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.util.Locale
 import javax.inject.Inject
 
@@ -253,7 +256,11 @@ class NewBetViewModel @Inject constructor(
                 savedStateHandle[Routes.NEW_BET_BET_ID_ARG] = betId
                 form.update { it.copy(betId = betId, isBusy = false) }
             } catch (e: BetCoinException) {
-                form.update { it.copy(isBusy = false, errorMessage = e.toMessage()) }
+                form.update { it.copy(isBusy = false, errorMessage = e.toUserMessage()) }
+            } catch (e: IOException) {
+                form.update { it.copy(isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE) }
+            } catch (e: SQLiteException) {
+                form.update { it.copy(isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE) }
             }
         }
     }
@@ -287,9 +294,11 @@ class NewBetViewModel @Inject constructor(
         val join = form.value.pendingJoin ?: return false
         return try {
             userRepository.verifyPin(join.user.id, pin)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (e: BetCoinException) {
+            false
+        } catch (e: IOException) {
+            false
+        } catch (e: SQLiteException) {
             false
         }
     }
@@ -305,7 +314,11 @@ class NewBetViewModel @Inject constructor(
                     it.copy(isBusy = false, selectedUserId = null, selectedOutcomeId = null, wager = "")
                 }
             } catch (e: BetCoinException) {
-                form.update { it.copy(isBusy = false, errorMessage = e.toMessage()) }
+                form.update { it.copy(isBusy = false, errorMessage = e.toUserMessage()) }
+            } catch (e: IOException) {
+                form.update { it.copy(isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE) }
+            } catch (e: SQLiteException) {
+                form.update { it.copy(isBusy = false, errorMessage = GENERIC_ERROR_MESSAGE) }
             }
         }
     }
@@ -319,7 +332,11 @@ class NewBetViewModel @Inject constructor(
             try {
                 betRepository.removeParticipant(participantId)
             } catch (e: BetCoinException) {
-                form.update { it.copy(errorMessage = e.toMessage()) }
+                form.update { it.copy(errorMessage = e.toUserMessage()) }
+            } catch (e: IOException) {
+                form.update { it.copy(errorMessage = GENERIC_ERROR_MESSAGE) }
+            } catch (e: SQLiteException) {
+                form.update { it.copy(errorMessage = GENERIC_ERROR_MESSAGE) }
             }
         }
     }
@@ -344,9 +361,11 @@ class NewBetViewModel @Inject constructor(
     suspend fun verifyParticipantPin(userId: Long, pin: String): Boolean =
         try {
             userRepository.verifyPin(userId, pin)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (e: BetCoinException) {
+            false
+        } catch (e: IOException) {
+            false
+        } catch (e: SQLiteException) {
             false
         }
 
@@ -368,6 +387,14 @@ class NewBetViewModel @Inject constructor(
             } catch (e: BetCoinException) {
                 val message = e.toLockMessage(uiState.value.participants)
                 form.update { it.copy(isBusy = false, confirmingLock = false, errorMessage = message) }
+            } catch (e: IOException) {
+                form.update {
+                    it.copy(isBusy = false, confirmingLock = false, errorMessage = GENERIC_ERROR_MESSAGE)
+                }
+            } catch (e: SQLiteException) {
+                form.update {
+                    it.copy(isBusy = false, confirmingLock = false, errorMessage = GENERIC_ERROR_MESSAGE)
+                }
             }
         }
     }
@@ -415,10 +442,21 @@ class NewBetViewModel @Inject constructor(
                 betRepository.discardPendingBet(betId)
             } catch (e: BetCoinException) {
                 // The bet is already gone or no longer pending, so there's nothing left to discard.
+            } catch (e: IOException) {
+                discardFailed()
+                return@launch
+            } catch (e: SQLiteException) {
+                discardFailed()
+                return@launch
             }
             savedStateHandle.remove<Long>(Routes.NEW_BET_BET_ID_ARG)
             form.update { it.copy(isBusy = false, showDiscardDialog = false, exited = true) }
         }
+    }
+
+    /** Stays on the screen so the user can retry the discard. */
+    private fun discardFailed() {
+        form.update { it.copy(isBusy = false, showDiscardDialog = false, errorMessage = GENERIC_ERROR_MESSAGE) }
     }
 
     private fun BetCoinException.toLockMessage(participants: List<ParticipantWithUser>): String = when (this) {
@@ -429,13 +467,7 @@ class NewBetViewModel @Inject constructor(
             balanceChangedMessage(name, required, available)
         }
         is InvalidBetStateException -> "This bet can't be locked any more"
-        else -> message ?: "Something went wrong"
-    }
-
-    private fun BetCoinException.toMessage(): String = when (this) {
-        is InsufficientBalanceException -> "Not enough BetCoin: needs $required, has $available"
-        is InvalidBetStateException -> "This bet can't be changed any more"
-        else -> message ?: "Something went wrong"
+        else -> toUserMessage()
     }
 
     companion object {

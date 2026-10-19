@@ -8,6 +8,7 @@ import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.data.repository.local.LocalUserRepository
 import com.betcoin.data.security.PinHasher
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -27,6 +28,10 @@ class FakeUserRepository : UserRepository {
     var shouldThrowOnDelete: Throwable? = null
     var shouldThrowOnBailout: Throwable? = null
     var shouldThrowOnRename: Throwable? = null
+    var shouldThrowOnVerifyPin: Throwable? = null
+
+    /** When set, [createUser] suspends on it before doing anything, so tests can interleave other writes. */
+    var createUserGate: CompletableDeferred<Unit>? = null
     var nextCreatedUserId: Long = 1L
 
     /** IDs of users treated as participants in an ACTIVE bet (blocks [deleteUser]). */
@@ -55,6 +60,10 @@ class FakeUserRepository : UserRepository {
             }
         }
 
+    /** Number of collectors currently subscribed to [getAllUsers]. */
+    val allUsersSubscriberCount: Int
+        get() = _users.subscriptionCount.value
+
     override fun getAllUsers(): Flow<List<User>> = _users
 
     override fun getLeaderboard(): Flow<List<User>> = _users.map { list ->
@@ -69,6 +78,7 @@ class FakeUserRepository : UserRepository {
         _lockedBalances.map { it[userId] ?: 0L }
 
     override suspend fun createUser(username: String, pin: String): Long {
+        createUserGate?.await()
         shouldThrowOnCreate?.let { throw it }
         val name = validUsername(username)
         requireValidPin(pin)
@@ -85,6 +95,7 @@ class FakeUserRepository : UserRepository {
     }
 
     override suspend fun verifyPin(userId: Long, pin: String): Boolean {
+        shouldThrowOnVerifyPin?.let { throw it }
         val user = users.find { it.id == userId } ?: return false
         return PinHasher.verifyBlocking(pin, user.pinHash)
     }

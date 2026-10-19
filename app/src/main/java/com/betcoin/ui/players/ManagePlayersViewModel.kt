@@ -1,14 +1,17 @@
 package com.betcoin.ui.players
 
+import android.database.sqlite.SQLiteException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetCoinException
-import com.betcoin.data.model.DuplicateUsernameException
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.data.security.PinHasher
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
+import com.betcoin.ui.common.toUserMessage
 import com.betcoin.ui.components.PIN_LENGTH
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -101,7 +104,11 @@ class ManagePlayersViewModel @Inject constructor(
                     it.copy(addPlayerForm = null, snackbarMessage = "Player $username created")
                 }
             } catch (e: BetCoinException) {
-                updateForm { it.copy(isSaving = false, error = messageFor(e)) }
+                updateForm { it.copy(isSaving = false, error = e.toUserMessage()) }
+            } catch (e: IOException) {
+                updateForm { it.copy(isSaving = false, error = GENERIC_ERROR_MESSAGE) }
+            } catch (e: SQLiteException) {
+                updateForm { it.copy(isSaving = false, error = GENERIC_ERROR_MESSAGE) }
             }
         }
     }
@@ -124,11 +131,6 @@ class ManagePlayersViewModel @Inject constructor(
         !PinHasher.isValidPin(pin) -> "PIN must be exactly 4 digits"
         pin != confirmPin -> "PINs don't match"
         else -> null
-    }
-
-    private fun messageFor(e: BetCoinException): String = when (e) {
-        is DuplicateUsernameException -> "Username already exists"
-        else -> e.message ?: "Couldn't create player"
     }
 
     private companion object {

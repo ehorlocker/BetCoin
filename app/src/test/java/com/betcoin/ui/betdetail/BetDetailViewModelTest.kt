@@ -16,6 +16,7 @@ import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
 import com.betcoin.testing.FakeUserRepository
+import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
@@ -34,6 +35,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 /** Observes one bet; every other [BetRepository] method comes from [FakeBetRepository]. */
 private class SingleBetRepository(
@@ -590,11 +592,23 @@ class BetDetailViewModelTest {
     @Test
     fun verifyParticipantPin_falseWhenTheRepositoryThrows() = runTest(testDispatcher) {
         val users = object : UserRepository by FakeUserRepository() {
-            override suspend fun verifyPin(userId: Long, pin: String): Boolean = error("db down")
+            override suspend fun verifyPin(userId: Long, pin: String): Boolean = throw IOException("db down")
         }
         val f = fixture(users = users)
 
         assertThat(f.vm.verifyParticipantPin(10, "1234")).isFalse()
+    }
+
+    @Test
+    fun verifyParticipantPin_propagatesUnexpectedExceptions() = runTest(testDispatcher) {
+        val users = object : UserRepository by FakeUserRepository() {
+            override suspend fun verifyPin(userId: Long, pin: String): Boolean = error("bug")
+        }
+        val f = fixture(users = users)
+
+        val result = runCatching { f.vm.verifyParticipantPin(10, "1234") }
+
+        assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test
@@ -667,14 +681,27 @@ class BetDetailViewModelTest {
     }
 
     @Test
-    fun otherBetCoinExceptionsShowTheirMessage() = runTest(testDispatcher) {
+    fun otherBetCoinExceptionsShowTheMapperMessage() = runTest(testDispatcher) {
         val f = fixture()
         f.repo.failure = UnanimousPickException()
 
         f.vm.onCancelRequested()
         f.vm.onAllPinsConfirmed()
 
-        assertThat(f.state.errorMessage).isEqualTo("All participants picked the same outcome")
+        assertThat(f.state.errorMessage).isEqualTo("Everyone picked the same outcome. Change at least one pick.")
+    }
+
+    @Test
+    fun ioFailureShowsTheGenericMessageAndClosesConsent() = runTest(testDispatcher) {
+        val f = fixture()
+        f.repo.failure = IOException("disk")
+
+        f.vm.onCancelRequested()
+        f.vm.onAllPinsConfirmed()
+
+        assertThat(f.state.errorMessage).isEqualTo(GENERIC_ERROR_MESSAGE)
+        assertThat(f.state.consent).isNull()
+        assertThat(f.state.isBusy).isFalse()
     }
 
     @Test
