@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -73,6 +74,8 @@ const val PIN_INPUT_TAG = "pin_entry_input"
  * @param onDismiss Called when the user cancels.
  * @param title Optional action summary shown above the prompt, e.g. "Resolve: Jay wins".
  * @param progress Optional position in a sequence, e.g. "1 of 3".
+ * @param onForgotPin When non-null, a "Forgot admin PIN?" button is shown at the start of the
+ *   Cancel row and calls this. Used only for the admin PIN.
  */
 @Composable
 fun PinEntryDialog(
@@ -83,6 +86,7 @@ fun PinEntryDialog(
     modifier: Modifier = Modifier,
     title: String? = null,
     progress: String? = null,
+    onForgotPin: (() -> Unit)? = null,
 ) {
     var pin by remember { mutableStateOf("") }
     var wrongPin by remember { mutableStateOf(false) }
@@ -155,11 +159,17 @@ fun PinEntryDialog(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Cancel")
+                    if (onForgotPin != null) {
+                        TextButton(onClick = onForgotPin) { Text("Forgot admin PIN?") }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
                 }
             }
         }
