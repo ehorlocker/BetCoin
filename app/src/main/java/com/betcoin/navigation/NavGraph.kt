@@ -16,6 +16,7 @@ import com.betcoin.ui.newbet.NewBetScreen
 import com.betcoin.ui.onboarding.OnboardingScreen
 import com.betcoin.ui.players.ManagePlayersScreen
 import com.betcoin.ui.players.PlayerDetailScreen
+import com.betcoin.ui.recovery.RecoveryScreen
 
 /**
  * Navigation routes used in the BetCoin app.
@@ -101,6 +102,22 @@ fun NavGraph(
                 },
                 onManagePlayers = {
                     navController.navigate(Routes.MANAGE_PLAYERS)
+                },
+            )
+        }
+        composable(Routes.RECOVERY) {
+            RecoveryScreen(
+                viewModel = hiltViewModel(),
+                onReturnToBet = { betId ->
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.RECOVERY) { inclusive = true }
+                    }
+                    navController.navigate(Routes.newBet(betId))
+                },
+                onGoHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.RECOVERY) { inclusive = true }
+                    }
                 },
             )
         }
