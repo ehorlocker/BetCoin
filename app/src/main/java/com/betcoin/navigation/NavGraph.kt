@@ -13,6 +13,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.betcoin.devtools.DevToolsEntry
 import com.betcoin.ui.admin.AdminGateViewModel
 import com.betcoin.ui.admin.AdminPanelScreen
 import com.betcoin.ui.admin.AdminPinGate
@@ -76,12 +77,14 @@ object Routes {
  * @param startDestination the initial route — [Routes.ONBOARDING] for first launch,
  *   [Routes.RECOVERY] when an interrupted bet is pending, [Routes.HOME] otherwise
  *   (see [StartDestinationResolver])
+ * @param devToolsEntry flavor-specific Dev Tools hook; registers its destinations (dev only)
  * @param modifier optional [Modifier] applied to the NavHost
  */
 @Composable
 fun NavGraph(
     navController: NavHostController,
     startDestination: String,
+    devToolsEntry: DevToolsEntry,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -89,6 +92,7 @@ fun NavGraph(
         startDestination = startDestination,
         modifier = modifier,
     ) {
+        with(devToolsEntry) { devToolsDestinations(navController) }
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
                 viewModel = hiltViewModel(),

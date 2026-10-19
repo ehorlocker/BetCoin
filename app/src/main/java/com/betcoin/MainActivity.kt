@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,11 +19,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.betcoin.data.model.ThemePreference
+import com.betcoin.data.repository.SettingsRepository
+import com.betcoin.devtools.DevToolsEntry
 import com.betcoin.navigation.NavGraph
 import com.betcoin.navigation.StartDestinationResolver
 import com.betcoin.ui.components.AppRootLayout
 import com.betcoin.ui.theme.BetCoinTheme
+import com.betcoin.ui.theme.isDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -39,16 +45,37 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var startDestinationResolver: StartDestinationResolver
 
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var devToolsEntry: DevToolsEntry
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // BetCoin is dark-only, so system bar icons stay light whatever the system theme.
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-        )
-
         setContent {
-            BetCoinTheme {
+            val themePreference by settingsRepository.getThemePreference()
+                .collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)
+            val darkTheme = themePreference.isDarkTheme()
+
+            // System bar icon style follows the resolved theme.
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = if (darkTheme) {
+                        SystemBarStyle.dark(Color.TRANSPARENT)
+                    } else {
+                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                    },
+                    navigationBarStyle = if (darkTheme) {
+                        SystemBarStyle.dark(Color.TRANSPARENT)
+                    } else {
+                        SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                    },
+                )
+                onDispose {}
+            }
+
+            BetCoinTheme(themePreference) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
@@ -67,6 +94,7 @@ class MainActivity : ComponentActivity() {
                             NavGraph(
                                 navController = navController,
                                 startDestination = startDestination!!,
+                                devToolsEntry = devToolsEntry,
                             )
                         } else {
                             Box(
