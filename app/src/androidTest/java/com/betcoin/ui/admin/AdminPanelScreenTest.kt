@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -25,12 +26,13 @@ class AdminPanelScreenTest {
 
     private var changePinClicks = 0
     private var regenerateClicks = 0
+    private var backCalls = 0
 
     private fun setContent(state: AdminUiState = AdminUiState()) {
         composeRule.setContent {
             AdminPanelContent(
                 uiState = state,
-                onNavigateBack = {},
+                onNavigateBack = { backCalls++ },
                 onChangePinClicked = { changePinClicks++ },
                 onChangePinPinChanged = {},
                 onChangePinConfirmChanged = {},
@@ -94,5 +96,37 @@ class AdminPanelScreenTest {
         setContent(AdminUiState(changePin = ChangePinDialogState(error = "PINs don't match")))
 
         composeRule.onNodeWithText("PINs don't match").assertIsDisplayed()
+    }
+
+    @Test
+    fun back_whenIdle_navigatesBack() {
+        setContent()
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        assertEquals(1, backCalls)
+    }
+
+    @Test
+    fun back_whileRecoveryCodeShown_doesNotLeaveOrDismiss() {
+        setContent(AdminUiState(recoveryCode = RecoveryCodeDialogState.Show("ABCD-2345-EFGH")))
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        assertEquals(0, backCalls)
+        composeRule.onNodeWithTag(ADMIN_SETTINGS_RECOVERY_CODE_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun back_whileGenerating_doesNotLeave() {
+        setContent(AdminUiState(recoveryCode = RecoveryCodeDialogState.Generating))
+
+        Espresso.pressBack()
+        composeRule.waitForIdle()
+
+        assertEquals(0, backCalls)
+        composeRule.onNodeWithText("Creating recovery code...").assertIsDisplayed()
     }
 }
