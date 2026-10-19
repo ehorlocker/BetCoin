@@ -16,6 +16,7 @@ val BetCoinSuccess = Color(0xFF7EF2D5)
 val BetCoinError = Color(0xFFFFB4AB)
 
 // Surfaces
+// Must match betcoin_background in res/values-night/colors.xml (window background before Compose draws).
 val BetCoinBackground = Color(0xFF111316)
 val BetCoinInputBackground = Color(0xFF0A0C0E) // Darker than background per spec
 val BetCoinSurface = Color(0xFF1E2023)
@@ -127,6 +128,7 @@ val BetCoinLightTertiary = Color(0xFF004E5F)
 val BetCoinLightOnTertiary = Color(0xFFFFFFFF)
 val BetCoinLightTertiaryContainer = Color(0xFFB3EBFF)
 val BetCoinLightOnTertiaryContainer = Color(0xFF001F27)
+// Must match betcoin_background in res/values/colors.xml (window background before Compose draws).
 val BetCoinLightBackground = Color(0xFFF9F9FD)
 val BetCoinLightOnBackground = Color(0xFF1A1C1F)
 val BetCoinLightSurface = Color(0xFFF9F9FD)
