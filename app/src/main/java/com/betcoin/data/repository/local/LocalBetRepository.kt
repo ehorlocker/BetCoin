@@ -194,8 +194,9 @@ class LocalBetRepository @Inject constructor(
                             totalEarnings = user.totalEarnings + payout - participant.wagerAmount,
                         )
                         else -> user.copy(
+                            balance = user.balance + payout,
                             totalLosses = user.totalLosses + 1,
-                            totalLost = user.totalLost + participant.wagerAmount,
+                            totalLost = user.totalLost + participant.wagerAmount - payout,
                         )
                     }
                 )
@@ -242,8 +243,9 @@ class LocalBetRepository @Inject constructor(
     }
 
     /**
-     * Takes back every payout (losers' is 0) and reverses the §5.8 stats that [resolveBet]
-     * applied, so the bet's coins are locked in the pot again. Must run inside a transaction.
+     * Takes back every payout (losers' is their cap refund, 0 when uncapped) and reverses the
+     * §5.8 stats that [resolveBet] applied, so the bet's coins are locked in the pot again.
+     * Must run inside a transaction.
      */
     private suspend fun reopenResolved(bet: Bet) {
         val winningOutcomeId =
@@ -278,8 +280,9 @@ class LocalBetRepository @Inject constructor(
                         totalEarnings = user.totalEarnings - (payout - participant.wagerAmount),
                     )
                     else -> user.copy(
+                        balance = user.balance - payout,
                         totalLosses = user.totalLosses - 1,
-                        totalLost = user.totalLost - participant.wagerAmount,
+                        totalLost = user.totalLost - (participant.wagerAmount - payout),
                     )
                 }
             )

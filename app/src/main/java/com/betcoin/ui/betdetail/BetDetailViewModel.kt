@@ -225,6 +225,8 @@ data class BetDetail(
     val winningOutcome: String?,
     /** True for a RESOLVED bet where no one picked the winning outcome (§5.3). */
     val isPush: Boolean,
+    /** True for a RESOLVED, non-push bet where a loser got a refund from the even-money cap (§5.3). */
+    val isCapped: Boolean,
     /** Why Reopen is unavailable (a participant was deleted), or null when it isn't blocked. */
     val reopenBlockedReason: String?,
 )
@@ -312,6 +314,8 @@ internal fun BetWithDetails.toBetDetail(): BetDetail {
         potSize = participants.sumOf { it.participant.wagerAmount },
         winningOutcome = outcomes.firstOrNull { it.id == winningId }?.outcomeText,
         isPush = isPush,
+        isCapped = resolved && !isPush &&
+            participants.any { it.participant.outcomeId != winningId && (it.participant.payout ?: 0) > 0 },
         reopenBlockedReason = reopenBlockedReason,
     )
 }
