@@ -75,6 +75,7 @@ fun AdminPanelScreen(
             onEditUsername = viewModel::onEditUsernameClicked,
             onResetPin = viewModel::onResetPinClicked,
             onInputChanged = viewModel::onPlayerDialogInputChanged,
+            onToggleSign = viewModel::onSetBalanceSignToggled,
             onConfirmPinChanged = viewModel::onPlayerDialogConfirmPinChanged,
             onConfirm = viewModel::onPlayerDialogConfirm,
             onDismiss = viewModel::onPlayerDialogDismiss,

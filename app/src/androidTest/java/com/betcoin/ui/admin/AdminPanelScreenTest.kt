@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
+import com.betcoin.data.database.entity.User
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -28,18 +29,22 @@ class AdminPanelScreenTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
-    private val noPlayerActions = AdminPlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val noPlayerActions = AdminPlayerActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private var changePinClicks = 0
     private var regenerateClicks = 0
     private var backCalls = 0
 
-    private fun setContent(state: AdminUiState = AdminUiState()) {
+    private fun setContent(
+        state: AdminUiState = AdminUiState(),
+        players: List<User> = emptyList(),
+        playerActions: AdminPlayerActions = noPlayerActions,
+    ) {
         composeRule.setContent {
             AdminPanelContent(
                 uiState = state,
-                players = emptyList(),
-                playerActions = noPlayerActions,
+                players = players,
+                playerActions = playerActions,
                 onNavigateBack = { backCalls++ },
                 onChangePinClicked = { changePinClicks++ },
                 onChangePinPinChanged = {},
@@ -54,6 +59,32 @@ class AdminPanelScreenTest {
                 onMessageShown = {},
             )
         }
+    }
+
+    @Test
+    fun playerRow_menuDelete_callsOnDelete() {
+        val user = User(id = 7, username = "Alice", pinHash = "x", createdAt = 0L)
+        var deleted: User? = null
+        setContent(
+            players = listOf(user),
+            playerActions = noPlayerActions.copy(onDelete = { deleted = it }),
+        )
+
+        composeRule.onNodeWithTag(ADMIN_PLAYER_ROW_TAG_PREFIX + user.id).performScrollTo().performClick()
+        composeRule.onNodeWithText("Delete Player").performClick()
+
+        assertEquals(user, deleted)
+    }
+
+    @Test
+    fun deleteDialogWorking_confirmDisabled() {
+        val user = User(id = 7, username = "Alice", pinHash = "x", createdAt = 0L)
+        setContent(
+            state = AdminUiState(playerDialog = PlayerDialogState.ConfirmDelete(user, isWorking = true)),
+            players = listOf(user),
+        )
+
+        composeRule.onNodeWithTag(ADMIN_PLAYER_DIALOG_CONFIRM_TAG).assertIsNotEnabled()
     }
 
     @Test

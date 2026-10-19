@@ -25,6 +25,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,9 @@ const val ADMIN_PLAYER_DIALOG_INPUT_TAG = "admin_player_dialog_input"
 /** Test tag of the confirm button of every player dialog. */
 const val ADMIN_PLAYER_DIALOG_CONFIRM_TAG = "admin_player_dialog_confirm"
 
+/** Test tag of the sign toggle in the Set Balance dialog. */
+const val ADMIN_PLAYER_DIALOG_SIGN_TAG = "admin_player_dialog_sign"
+
 /** Test tag of the cancel button of every player dialog. */
 const val ADMIN_PLAYER_DIALOG_CANCEL_TAG = "admin_player_dialog_cancel"
 
@@ -75,6 +81,7 @@ data class AdminPlayerActions(
     val onEditUsername: (User) -> Unit,
     val onResetPin: (User) -> Unit,
     val onInputChanged: (String) -> Unit,
+    val onToggleSign: () -> Unit,
     val onConfirmPinChanged: (String) -> Unit,
     val onConfirm: () -> Unit,
     val onDismiss: () -> Unit,
@@ -95,7 +102,7 @@ fun LazyListScope.adminPlayerSection(players: List<User>, actions: AdminPlayerAc
 
 @Composable
 private fun AdminPlayerRow(player: User, actions: AdminPlayerActions) {
-    var menuOpen by rememberSaveable(player.id) { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     Box {
         ListItem(
             leadingContent = { BetCoinAvatar(initials = initialsOf(player.username), size = 40) },
@@ -103,7 +110,7 @@ private fun AdminPlayerRow(player: User, actions: AdminPlayerActions) {
             supportingContent = { Text("${formatCoins(player.balance)} BetCoin") },
             modifier = Modifier
                 .testTag(ADMIN_PLAYER_ROW_TAG_PREFIX + player.id)
-                .clickable { menuOpen = true },
+                .clickable(onClickLabel = "Player actions", role = Role.Button) { menuOpen = true },
         )
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             PlayerMenuItem("Edit Username", ADMIN_PLAYER_MENU_EDIT_USERNAME_TAG) {
@@ -167,6 +174,15 @@ fun AdminPlayerDialog(state: PlayerDialogState, actions: AdminPlayerActions) {
                 enabled = !state.isSaving,
                 onValueChange = actions.onInputChanged,
                 onDone = actions.onConfirm,
+                trailingContent = {
+                    TextButton(
+                        onClick = actions.onToggleSign,
+                        enabled = !state.isSaving,
+                        modifier = Modifier
+                            .testTag(ADMIN_PLAYER_DIALOG_SIGN_TAG)
+                            .semantics { contentDescription = "Toggle negative" },
+                    ) { Text("±") }
+                },
             )
         }
         is PlayerDialogState.EditUsername -> FormPlayerDialog(
@@ -280,6 +296,7 @@ private fun PlayerTextField(
     enabled: Boolean,
     onValueChange: (String) -> Unit,
     onDone: () -> Unit,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
     OutlinedTextField(
         value = value,
@@ -288,6 +305,7 @@ private fun PlayerTextField(
         singleLine = true,
         enabled = enabled,
         isError = error != null,
+        trailingIcon = trailingContent,
         supportingText = error?.let { message -> { Text(message, color = MaterialTheme.colorScheme.error) } },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone() }),

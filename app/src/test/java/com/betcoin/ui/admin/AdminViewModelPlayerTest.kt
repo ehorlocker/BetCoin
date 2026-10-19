@@ -146,7 +146,7 @@ class AdminViewModelPlayerTest {
         assertThat(updated.bailoutCount).isEqualTo(alice.bailoutCount + 1)
         assertThat(updated.totalDebt).isEqualTo(alice.totalDebt + 1000)
         assertThat(state.playerDialog).isNull()
-        assertThat(state.message).isEqualTo("Alice got a 1,000 BetCoin bailout")
+        assertThat(state.message).isEqualTo("Alice got a ${formatCoins(1000)} BetCoin bailout")
     }
 
     @Test
@@ -460,6 +460,30 @@ class AdminViewModelPlayerTest {
         viewModel.onResetBalanceClicked(bob)
 
         assertThat(state.playerDialog).isInstanceOf(PlayerDialogState.ConfirmDelete::class.java)
+        gate!!.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun setBalance_signToggle_flipsAndSanitizes() = runTest(testDispatcher) {
+        viewModel.onSetBalanceClicked(alice)
+        viewModel.onPlayerDialogInputChanged("250")
+        viewModel.onSetBalanceSignToggled()
+        assertThat((state.playerDialog as PlayerDialogState.SetBalance).input).isEqualTo("-250")
+        viewModel.onSetBalanceSignToggled()
+        assertThat((state.playerDialog as PlayerDialogState.SetBalance).input).isEqualTo("250")
+        viewModel.onPlayerDialogInputChanged("250-")
+        assertThat((state.playerDialog as PlayerDialogState.SetBalance).input).isEqualTo("250")
+    }
+
+    @Test
+    fun setBalance_signToggle_ignoredWhileSaving() = runTest(testDispatcher) {
+        gate = CompletableDeferred()
+        viewModel.onSetBalanceClicked(alice)
+        viewModel.onPlayerDialogInputChanged("5")
+        viewModel.onPlayerDialogConfirm()
+        viewModel.onSetBalanceSignToggled()
+        assertThat((state.playerDialog as PlayerDialogState.SetBalance).input).isEqualTo("5")
         gate!!.complete(Unit)
         advanceUntilIdle()
     }

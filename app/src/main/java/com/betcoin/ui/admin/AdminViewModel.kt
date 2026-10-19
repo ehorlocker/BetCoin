@@ -315,6 +315,16 @@ class AdminViewModel @Inject constructor(
         }
     }
 
+    /** Flips the leading `-` of the Set Balance input. Ignored for other dialogs and while saving. */
+    fun onSetBalanceSignToggled() = updatePlayerDialog { dialog ->
+        if (dialog is PlayerDialogState.SetBalance) {
+            val input = if (dialog.input.startsWith("-")) dialog.input.removePrefix("-") else "-${dialog.input}"
+            dialog.copy(input = sanitizeBalance(input), error = null)
+        } else {
+            dialog
+        }
+    }
+
     /** Updates the PIN confirmation of the Reset PIN form. Ignored while saving. */
     fun onPlayerDialogConfirmPinChanged(value: String) = updatePlayerDialog { dialog ->
         if (dialog is PlayerDialogState.ResetPin) dialog.copy(confirmPin = sanitize(value), error = null) else dialog
@@ -468,6 +478,7 @@ class AdminViewModel @Inject constructor(
         const val ERROR_PIN_MISMATCH = "PINs don't match"
         const val MAX_USERNAME_LENGTH = 20
         const val MAX_BALANCE_DIGITS = 15
+        private const val BAILOUT_AMOUNT = 1_000L
         const val ERROR_BALANCE_INVALID = "Enter a whole number"
         const val ERROR_USERNAME_LENGTH = "Username must be 1–20 characters"
         const val ERROR_USERNAME_TAKEN = "Username already exists"
@@ -477,7 +488,7 @@ class AdminViewModel @Inject constructor(
         const val MESSAGE_REGENERATE_FAILED = "Couldn't create the recovery code. Try again."
 
         fun messageDeleted(name: String) = "Deleted $name"
-        fun messageBailout(name: String) = "$name got a 1,000 BetCoin bailout"
+        fun messageBailout(name: String) = "$name got a ${formatCoins(BAILOUT_AMOUNT)} BetCoin bailout"
         fun messageBalanceSet(name: String, balance: Long) = "$name's balance set to ${formatCoins(balance)}"
         fun messageRenamed(newName: String) = "Renamed to $newName"
         fun messagePinReset(name: String) = "$name's PIN reset"
