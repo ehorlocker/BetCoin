@@ -30,6 +30,7 @@ class HomeScreenTest {
             override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
             override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
             override suspend fun discardPendingBet(betId: Long) {}
+            override suspend fun discardOlderPendingBets() {}
             override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
                 bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
                 outcomes = emptyList(),
@@ -85,6 +86,7 @@ class HomeScreenTest {
             override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
             override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
             override suspend fun discardPendingBet(betId: Long) {}
+            override suspend fun discardOlderPendingBets() {}
             override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
                 bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
                 outcomes = emptyList(),
@@ -143,6 +145,7 @@ class HomeScreenTest {
             override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
             override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
             override suspend fun discardPendingBet(betId: Long) {}
+            override suspend fun discardOlderPendingBets() {}
             override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
                 bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
                 outcomes = emptyList(),
@@ -198,6 +201,7 @@ class HomeScreenTest {
             override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
             override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
             override suspend fun discardPendingBet(betId: Long) {}
+            override suspend fun discardOlderPendingBets() {}
             override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
                 bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
                 outcomes = emptyList(),

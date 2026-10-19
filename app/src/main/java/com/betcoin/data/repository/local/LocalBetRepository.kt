@@ -123,6 +123,19 @@ class LocalBetRepository @Inject constructor(
         }
     }
 
+    override suspend fun discardOlderPendingBets() {
+        database.withTransaction {
+            betDao.getPendingBets()
+                .sortedWith(compareByDescending<Bet> { it.createdAt }.thenByDescending { it.id })
+                .drop(1)
+                .forEach { bet ->
+                    participantDao.deleteByBetId(bet.id)
+                    outcomeDao.deleteByBetId(bet.id)
+                    betDao.delete(bet)
+                }
+        }
+    }
+
     override suspend fun lockBet(betId: Long) {
         database.withTransaction {
             val bet = requirePendingBet(betId)

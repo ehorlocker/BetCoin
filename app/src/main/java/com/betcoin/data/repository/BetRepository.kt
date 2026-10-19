@@ -69,6 +69,13 @@ interface BetRepository {
     suspend fun discardPendingBet(betId: Long)
 
     /**
+     * Deletes every `PENDING_CONFIRMATION` bet except the newest (`created_at DESC, id DESC`),
+     * together with their outcomes and participants, in one transaction.
+     * No-op when there are 0 or 1 pending bets.
+     */
+    suspend fun discardOlderPendingBets()
+
+    /**
      * Locks the bet: validates participants, deducts wagers from balances,
      * and transitions status to `ACTIVE`.
      *

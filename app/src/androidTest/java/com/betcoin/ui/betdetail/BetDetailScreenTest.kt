@@ -1,6 +1,9 @@
 package com.betcoin.ui.betdetail
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
@@ -39,6 +42,7 @@ class BetDetailScreenTest {
         winningOutcomeId: Long? = null,
         isPush: Boolean = false,
         isCapped: Boolean = false,
+        reopenBlockedReason: String? = null,
     ) = BetDetail(
         prompt = "Who wins the race?",
         status = status,
@@ -50,18 +54,34 @@ class BetDetailScreenTest {
         winningOutcome = outcomes.firstOrNull { it.id == winningOutcomeId }?.text,
         isPush = isPush,
         isCapped = isCapped,
+        reopenBlockedReason = reopenBlockedReason,
     )
 
     private fun row(id: Long, name: String, pick: String, wager: Long, result: ParticipantResult, net: Long? = null) =
-        ParticipantRow(id, name, isDeletedUser = false, pick = pick, wager = wager, result = result, net = net)
+        ParticipantRow(id, userId = id, name = name, isDeletedUser = false, pick = pick, wager = wager, result = result, net = net)
 
-    private fun show(state: BetDetailUiState, onNavigateBack: () -> Unit = {}) {
+    private fun show(
+        state: BetDetailUiState,
+        onNavigateBack: () -> Unit = {},
+        actionState: BetActionState = BetActionState(),
+        onOutcomePicked: (Long) -> Unit = {},
+    ) {
         composeTestRule.setContent {
             BetCoinTheme {
-                BetDetailContent(uiState = state, onNavigateBack = onNavigateBack)
+                BetDetailContent(
+                    uiState = state,
+                    actionState = actionState,
+                    onNavigateBack = onNavigateBack,
+                    onOutcomePicked = onOutcomePicked,
+                )
             }
         }
     }
+
+    private fun twoRows(result: ParticipantResult) = listOf(
+        row(1, "Alice", "Jay", 150, result),
+        row(2, "Bob", "Kay", 200, result),
+    )
 
     /** Asserts the node tagged [tag] has a descendant showing [text]. */
     private fun assertTagContains(tag: String, text: String) {
@@ -256,5 +276,75 @@ class BetDetailScreenTest {
         composeTestRule.onNodeWithText("Back").performClick()
 
         assertThat(navigatedBack).isTrue()
+    }
+
+    @Test
+    fun activeBet_showsResolveAndCancel() {
+        show(BetDetailUiState.Success(detail(BetStatus.ACTIVE, twoRows(ParticipantResult.PENDING))))
+
+        scrollTo("Resolve")
+        composeTestRule.onNodeWithTag(BET_DETAIL_RESOLVE_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(BET_DETAIL_CANCEL_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun resolvedBet_showsReopenEnabled() {
+        show(
+            BetDetailUiState.Success(
+                detail(BetStatus.RESOLVED, twoRows(ParticipantResult.LOSS), winningOutcomeId = 10),
+            ),
+        )
+
+        scrollTo("Reopen Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_TAG).assertIsDisplayed().assertIsEnabled()
+        composeTestRule.onNodeWithTag(BET_DETAIL_RESOLVE_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_REASON_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun deletedParticipant_disablesReopenWithReason() {
+        show(
+            BetDetailUiState.Success(
+                detail(
+                    BetStatus.CANCELLED,
+                    twoRows(ParticipantResult.REFUNDED),
+                    reopenBlockedReason = "Can't reopen: Kim was deleted",
+                ),
+            ),
+        )
+
+        scrollTo("Reopen Bet")
+        composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_TAG).assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Can't reopen: Kim was deleted").assertIsDisplayed()
+    }
+
+    @Test
+    fun outcomePicker_continueSendsPickedId() {
+        var picked: Long? = null
+        show(
+            BetDetailUiState.Success(detail(BetStatus.ACTIVE, twoRows(ParticipantResult.PENDING))),
+            actionState = BetActionState(pickingOutcome = true),
+            onOutcomePicked = { picked = it },
+        )
+
+        composeTestRule.onNodeWithText("Pick the winning outcome").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Continue").assertIsNotEnabled()
+        composeTestRule.onNode(hasText("Kay") and hasClickAction()).performClick()
+        composeTestRule.onNodeWithText("Continue").assertIsEnabled().performClick()
+
+        assertThat(picked).isEqualTo(11L)
+    }
+
+    @Test
+    fun actionError_isShown() {
+        show(
+            BetDetailUiState.Success(detail(BetStatus.ACTIVE, twoRows(ParticipantResult.PENDING))),
+            actionState = BetActionState(errorMessage = "This bet has changed. Nothing was updated."),
+        )
+
+        scrollTo("Resolve")
+        composeTestRule.onNodeWithTag(BET_DETAIL_ACTION_ERROR_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText("This bet has changed. Nothing was updated.").assertIsDisplayed()
     }
 }
