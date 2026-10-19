@@ -111,6 +111,7 @@ class BetForeignKeyInstrumentedTest {
 
     betDao.delete(bet)
 
+    assertThat(betDao.getById(bet.id)).isNull()
     assertThat(betOutcomeDao.getByBetId(bet.id)).isEmpty()
     assertThat(betParticipantDao.getByBetId(bet.id)).isEmpty()
     assertThat(betOutcomeDao.getByBetId(other.id)).hasSize(1)

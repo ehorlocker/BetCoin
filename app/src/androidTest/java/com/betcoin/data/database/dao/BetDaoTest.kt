@@ -83,6 +83,11 @@ class BetDaoTest {
     wagerAmount = wagerAmount,
   )
 
+  private suspend fun insertUser(username: String): User {
+    val user = createUser(username)
+    return user.copy(id = userDao.insert(user))
+  }
+
   /** Inserts [bet] and returns it with its generated id. */
   private suspend fun insertBet(bet: Bet): Bet = bet.copy(id = betDao.insert(bet))
 
@@ -113,26 +118,26 @@ class BetDaoTest {
 
   @Test
   fun getByStatus_returnsOnlyMatchingStatus_newestFirst() = runTest {
-    val first = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
+    val newest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 3_000L))
     insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 2_000L))
-    val third = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 3_000L))
+    val oldest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
 
     val result = betDao.getByStatus(BetStatus.ACTIVE).first()
 
-    assertThat(result.map { it.id }).containsExactly(third.id, first.id).inOrder()
+    assertThat(result.map { it.id }).containsExactly(newest.id, oldest.id).inOrder()
   }
 
   // --- getAll ---
 
   @Test
   fun getAll_returnsAllBetsNewestFirst() = runTest {
-    val first = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
-    val second = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 2_000L))
-    val third = insertBet(createBet(status = BetStatus.CANCELLED, createdAt = 3_000L))
+    val middle = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 2_000L))
+    val newest = insertBet(createBet(status = BetStatus.CANCELLED, createdAt = 3_000L))
+    val oldest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
 
     val result = betDao.getAll().first()
 
-    assertThat(result.map { it.id }).containsExactly(third.id, second.id, first.id).inOrder()
+    assertThat(result.map { it.id }).containsExactly(newest.id, middle.id, oldest.id).inOrder()
   }
 
   // --- getPendingBets ---
@@ -184,8 +189,8 @@ class BetDaoTest {
     val bet = insertBet(createBet())
     val yesId = betOutcomeDao.insert(createOutcome(bet.id, "Yes"))
     val noId = betOutcomeDao.insert(createOutcome(bet.id, "No"))
-    val aliceId = userDao.insert(createUser("alice"))
-    val bobId = userDao.insert(createUser("bob"))
+    val aliceId = insertUser("alice").id
+    val bobId = insertUser("bob").id
     betParticipantDao.insert(createParticipant(bet.id, aliceId, yesId))
     betParticipantDao.insert(createParticipant(bet.id, bobId, noId))
 
@@ -193,7 +198,8 @@ class BetDaoTest {
 
     assertThat(details).isNotNull()
     assertThat(details!!.bet).isEqualTo(bet)
-    assertThat(details.outcomes).hasSize(2)
+    assertThat(details.outcomes.map { it.id to it.outcomeText })
+      .containsExactly(yesId to "Yes", noId to "No")
     assertThat(details.participants).hasSize(2)
     val byUsername = details.participants.associateBy { it.user!!.username }
     assertThat(byUsername["alice"]!!.outcome.outcomeText).isEqualTo("Yes")
@@ -209,7 +215,7 @@ class BetDaoTest {
   fun getByIdWithDetails_deletedUser_hasNullUserAndKeepsDeletedUsername() = runTest {
     val bet = insertBet(createBet())
     val outcomeId = betOutcomeDao.insert(createOutcome(bet.id, "Yes"))
-    val user = createUser("alice").copy(id = userDao.insert(createUser("alice")))
+    val user = insertUser("alice")
     betParticipantDao.insert(createParticipant(bet.id, user.id, outcomeId))
 
     betParticipantDao.detachUser(user.id, "alice")
@@ -226,41 +232,43 @@ class BetDaoTest {
 
   @Test
   fun getAllWithDetails_newestFirst() = runTest {
-    val first = insertBet(createBet(createdAt = 1_000L))
-    val second = insertBet(createBet(createdAt = 2_000L))
+    val newest = insertBet(createBet(createdAt = 2_000L))
+    val oldest = insertBet(createBet(createdAt = 1_000L))
 
     val result = betDao.getAllWithDetails().first()
 
-    assertThat(result.map { it.bet.id }).containsExactly(second.id, first.id).inOrder()
+    assertThat(result.map { it.bet.id }).containsExactly(newest.id, oldest.id).inOrder()
   }
 
   // --- getByStatusWithDetails ---
 
   @Test
   fun getByStatusWithDetails_filtersAndOrdersNewestFirst() = runTest {
-    val first = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 1_000L))
+    val newest = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 3_000L))
     insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 2_000L))
-    val third = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 3_000L))
+    val oldest = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 1_000L))
 
     val result = betDao.getByStatusWithDetails(BetStatus.RESOLVED).first()
 
-    assertThat(result.map { it.bet.id }).containsExactly(third.id, first.id).inOrder()
+    assertThat(result.map { it.bet.id }).containsExactly(newest.id, oldest.id).inOrder()
   }
 
   // --- getAllExcludingStatusWithDetails ---
 
   @Test
   fun getAllExcludingStatusWithDetails_excludesStatus_newestFirst_tiesByIdDesc() = runTest {
-    val oldest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
+    // Inserted first but newest: created_at must be the primary sort key, id only the tiebreaker.
+    val newest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 5_000L))
     val tieLow = insertBet(createBet(status = BetStatus.RESOLVED, createdAt = 2_000L))
     val tieHigh = insertBet(createBet(status = BetStatus.CANCELLED, createdAt = 2_000L))
-    insertBet(createBet(status = BetStatus.PENDING_CONFIRMATION, createdAt = 3_000L))
+    val oldest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
+    insertBet(createBet(status = BetStatus.PENDING_CONFIRMATION, createdAt = 9_000L))
 
     val result =
       betDao.getAllExcludingStatusWithDetails(BetStatus.PENDING_CONFIRMATION).first()
 
     assertThat(result.map { it.bet.id })
-      .containsExactly(tieHigh.id, tieLow.id, oldest.id)
+      .containsExactly(newest.id, tieHigh.id, tieLow.id, oldest.id)
       .inOrder()
   }
 
@@ -276,6 +284,17 @@ class BetDaoTest {
     val result = betDao.getNewestByStatusWithDetails(BetStatus.ACTIVE).first()
 
     assertThat(result!!.bet.id).isEqualTo(tieHigh.id)
+  }
+
+  @Test
+  fun getNewestByStatusWithDetails_prefersNewestCreatedAtOverLaterInsert() = runTest {
+    val newest = insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 3_000L))
+    insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 1_000L))
+    insertBet(createBet(status = BetStatus.ACTIVE, createdAt = 2_000L))
+
+    val result = betDao.getNewestByStatusWithDetails(BetStatus.ACTIVE).first()
+
+    assertThat(result!!.bet.id).isEqualTo(newest.id)
   }
 
   @Test
