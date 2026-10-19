@@ -327,6 +327,7 @@ private fun ResolutionInfo(detail: BetDetail) {
             detail.winningOutcome?.let { "Winning outcome: $it" },
             detail.resolvedAt?.let { "Resolved ${formatDate(it)}" },
             "No winners — all wagers refunded".takeIf { detail.isPush },
+            "Unmatched wagers refunded".takeIf { detail.isCapped },
         ),
     )
 }
