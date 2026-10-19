@@ -1,5 +1,7 @@
 package com.betcoin.ui.players
 
+import com.betcoin.data.avatar.FakeAvatarStore
+import com.betcoin.data.avatar.FakeCameraCaptureStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
@@ -34,6 +36,8 @@ class PlayerDetailScreenTest {
         val viewModel = PlayerDetailViewModel(
             SavedStateHandle(mapOf(Routes.PLAYER_ID_ARG to playerId)),
             repository,
+            FakeAvatarStore(),
+            FakeCameraCaptureStore(),
         )
         composeTestRule.setContent {
             BetCoinTheme(themePreference = ThemePreference.DARK) {
