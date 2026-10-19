@@ -8,23 +8,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.betcoin.devtools.DevToolsEntry
 import com.betcoin.navigation.NavGraph
-import com.betcoin.navigation.StartDestinationResolver
+import com.betcoin.navigation.LaunchErrorScreen
+import com.betcoin.navigation.LaunchUiState
+import com.betcoin.navigation.LaunchViewModel
 import com.betcoin.ui.components.AppRootLayout
 import com.betcoin.ui.theme.AppThemeViewModel
 import com.betcoin.ui.theme.BetCoinTheme
@@ -38,12 +39,17 @@ import javax.inject.Inject
  *
  * Runs edge-to-edge (spec §4.1.1) and wraps everything in [AppRootLayout], which draws the
  * dev build banner on the dev flavor.
+ *
+ * The start destination comes from [LaunchViewModel]: a spinner while it resolves, the
+ * [NavGraph] once ready, and [LaunchErrorScreen] with Retry if resolving failed.
+ *
+ * The theme comes from [AppThemeViewModel]: nothing is drawn until the stored preference is
+ * known, and the system bar icon style follows the resolved light/dark theme.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var startDestinationResolver: StartDestinationResolver
+    private val launchViewModel: LaunchViewModel by viewModels()
 
     @Inject
     lateinit var devToolsEntry: DevToolsEntry
@@ -86,27 +92,23 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppRootLayout {
                         val navController = rememberNavController()
-                        var startDestination by rememberSaveable { mutableStateOf<String?>(null) }
+                        val state by launchViewModel.uiState.collectAsStateWithLifecycle()
 
-                        LaunchedEffect(Unit) {
-                            if (startDestination == null) {
-                                startDestination = startDestinationResolver.resolve()
-                            }
-                        }
-
-                        if (startDestination != null) {
-                            NavGraph(
-                                navController = navController,
-                                startDestination = startDestination!!,
-                                devToolsEntry = devToolsEntry,
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
+                        when (val current = state) {
+                            LaunchUiState.Loading -> Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .windowInsetsPadding(WindowInsets.safeDrawing),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 CircularProgressIndicator()
                             }
+                            is LaunchUiState.Ready -> NavGraph(
+                                navController = navController,
+                                startDestination = current.startDestination,
+                                devToolsEntry = devToolsEntry,
+                            )
+                            LaunchUiState.Error -> LaunchErrorScreen(onRetry = launchViewModel::retry)
                         }
                     }
                 }

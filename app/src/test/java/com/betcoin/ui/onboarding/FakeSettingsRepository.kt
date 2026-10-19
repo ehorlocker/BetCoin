@@ -7,6 +7,7 @@ import com.betcoin.data.repository.RecoveryCode
 import com.betcoin.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import org.mindrot.jbcrypt.BCrypt
 
 /**
@@ -20,7 +21,20 @@ class FakeSettingsRepository : SettingsRepository {
     var storedHash: String? = null
     var storedRecoveryCodeHash: String? = null
     var isFirstLaunchResult: Boolean = true
+
+    /** When set, [isFirstLaunch] throws it. */
+    var isFirstLaunchError: Throwable? = null
+
+    /** When set, [isFirstLaunch] suspends until it completes. */
+    var isFirstLaunchGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    /** Number of [isFirstLaunch] calls. */
+    var isFirstLaunchCalls = 0
+        private set
     val themePreference = MutableStateFlow(ThemePreference.SYSTEM)
+
+    /** When set, the [getThemePreference] flow throws it instead of emitting. */
+    var themePreferenceError: Throwable? = null
 
     /** When set, the next [setThemePreference] throws this once and does not store the value. */
     var failNextSetTheme: Throwable? = null
@@ -38,7 +52,12 @@ class FakeSettingsRepository : SettingsRepository {
         return BCrypt.checkpw(pin, hash)
     }
 
-    override suspend fun isFirstLaunch(): Boolean = isFirstLaunchResult
+    override suspend fun isFirstLaunch(): Boolean {
+        isFirstLaunchCalls++
+        isFirstLaunchGate?.await()
+        isFirstLaunchError?.let { throw it }
+        return isFirstLaunchResult
+    }
 
     override suspend fun regenerateRecoveryCode(): String {
         check(storedHash != null) { "Set the admin PIN before generating a recovery code" }
@@ -58,7 +77,8 @@ class FakeSettingsRepository : SettingsRepository {
         return regenerateRecoveryCode()
     }
 
-    override fun getThemePreference(): Flow<ThemePreference> = themePreference
+    override fun getThemePreference(): Flow<ThemePreference> =
+        themePreferenceError?.let { error -> flow { throw error } } ?: themePreference
 
     override suspend fun setThemePreference(pref: ThemePreference) {
         failNextSetTheme?.let {
