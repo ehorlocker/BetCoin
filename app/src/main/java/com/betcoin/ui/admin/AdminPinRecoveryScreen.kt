@@ -90,8 +90,9 @@ fun AdminPinRecoveryContent(
     onContinue: () -> Unit,
 ) {
     // Once the new code is shown the PIN is already reset and the code is never shown again,
-    // so Back can't leave that step.
-    val backEnabled = uiState !is AdminPinRecoveryUiState.ShowNewCode
+    // so Back can't leave that step; likewise while the reset is saving.
+    val backEnabled = uiState !is AdminPinRecoveryUiState.ShowNewCode &&
+        !(uiState is AdminPinRecoveryUiState.EnterNewPin && uiState.isSaving)
     BackHandler { if (backEnabled) onBack() }
 
     Scaffold(

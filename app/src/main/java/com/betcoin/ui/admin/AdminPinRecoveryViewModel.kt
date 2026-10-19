@@ -157,13 +157,17 @@ class AdminPinRecoveryViewModel @Inject constructor(
     /**
      * Steps back from the PIN step to the code step, keeping the typed code.
      *
-     * @return `true` if the step changed; `false` if the screen itself should close
+     * @return `true` if Back was handled here (step changed, or ignored while saving); `false` if the screen itself should close
      */
     fun onBack(): Boolean {
         val state = _uiState.value
-        if (state is AdminPinRecoveryUiState.EnterNewPin && !state.isSaving) {
-            _uiState.value = AdminPinRecoveryUiState.EnterCode(code = heldCode.orEmpty())
-            heldCode = null
+        if (state is AdminPinRecoveryUiState.EnterNewPin) {
+            // While saving, Back is swallowed: leaving would cancel the reset after it may have
+            // committed, and the new recovery code would never be shown.
+            if (!state.isSaving) {
+                _uiState.value = AdminPinRecoveryUiState.EnterCode(code = heldCode.orEmpty())
+                heldCode = null
+            }
             return true
         }
         return false

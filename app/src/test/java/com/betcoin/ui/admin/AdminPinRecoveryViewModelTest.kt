@@ -173,4 +173,17 @@ class AdminPinRecoveryViewModelTest {
     fun onBack_fromEnterCode_returnsFalse() {
         assertThat(viewModel.onBack()).isFalse()
     }
+
+    @Test
+    fun onBack_whileSaving_returnsTrue_andStaysOnPinStep() = runTest(testDispatcher) {
+        submitCode(originalCode)
+        savePin("5678")
+
+        assertThat(enterPin.isSaving).isTrue()
+        assertThat(viewModel.onBack()).isTrue()
+        assertThat(viewModel.uiState.value).isInstanceOf(AdminPinRecoveryUiState.EnterNewPin::class.java)
+
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value).isInstanceOf(AdminPinRecoveryUiState.ShowNewCode::class.java)
+    }
 }
