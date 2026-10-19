@@ -589,14 +589,14 @@ class LocalBetRepositoryTest {
     val (a, b) = outcomeIds(betId)
     repository.addParticipant(betId, alice, a, 1L)
     repository.addParticipant(betId, bob, a, 2L)
-    repository.addParticipant(betId, carol, b, 4L)
+    repository.addParticipant(betId, carol, b, 2L)
     repository.lockBet(betId)
 
     repository.resolveBet(betId, a)
 
-    // Pot 7 over winning wagers 3: Alice 7/3 = 2, Bob 14/3 = 4, remainder 1 to Bob.
-    assertThat(payoutOf(betId, alice)).isEqualTo(2L)
-    assertThat(payoutOf(betId, bob)).isEqualTo(5L)
+    // Pot 5 over winning wagers 3: Alice 5/3 = 1, Bob 10/3 = 3, remainder 1 to Bob.
+    assertThat(payoutOf(betId, alice)).isEqualTo(1L)
+    assertThat(payoutOf(betId, bob)).isEqualTo(4L)
     assertThat(totalBalance()).isEqualTo(3000L)
   }
 
@@ -810,11 +810,111 @@ class LocalBetRepositoryTest {
     repository.reopenBet(bet.betId)
     repository.resolveBet(bet.betId, bet.outcomeB)
     assertThat(totalBalance()).isEqualTo(3000L)
-    assertThat(balanceOf(bet.bob)).isEqualTo(1400L)
+    // Bob's 200 against 400 of losing wagers hits the cap: he gets 400, losers get 200 back.
+    assertThat(balanceOf(bet.bob)).isEqualTo(1200L)
     assertThat(userOf(bet.bob).totalWins).isEqualTo(1)
     assertThat(userOf(bet.bob).totalLosses).isEqualTo(0)
     assertThat(userOf(bet.alice).totalWins).isEqualTo(0)
     assertThat(userOf(bet.alice).totalLosses).isEqualTo(1)
+  }
+
+  // --- capped payouts (BET-42) ---
+
+  /** A (1000) wagers 200 on X, B (1000) wagers 100 on Y; locked, so A has 800 and B 900. */
+  private suspend fun lockedBetWhereLosersOutweighWinners(): Triple<ActiveBet, Long, Long> {
+    val a = insertUser("CapA")
+    val b = insertUser("CapB")
+    val betId = repository.createBet("Capped?", listOf("X", "Y"))
+    val (x, y) = outcomeIds(betId)
+    repository.addParticipant(betId, a, x, 200L)
+    repository.addParticipant(betId, b, y, 100L)
+    repository.lockBet(betId)
+    return Triple(ActiveBet(betId, a, b, 0L, x, y, 0L), a, b)
+  }
+
+  @Test
+  fun resolveBet_cappedRefundsLoserAndRecordsNetLoss() = runTest {
+    val (bet, a, b) = lockedBetWhereLosersOutweighWinners()
+
+    repository.resolveBet(bet.betId, bet.outcomeB)
+
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.RESOLVED)
+    assertThat(payoutOf(bet.betId, a)).isEqualTo(100L)
+    assertThat(payoutOf(bet.betId, b)).isEqualTo(200L)
+    val winner = userOf(b)
+    assertThat(winner.balance).isEqualTo(1100L)
+    assertThat(winner.totalWins).isEqualTo(1)
+    assertThat(winner.totalEarnings).isEqualTo(100L)
+    val loser = userOf(a)
+    assertThat(loser.balance).isEqualTo(900L)
+    assertThat(loser.totalLosses).isEqualTo(1)
+    assertThat(loser.totalLost).isEqualTo(100L)
+  }
+
+  @Test
+  fun adminResolveBet_cappedRefundsLoser() = runTest {
+    val (bet, a, b) = lockedBetWhereLosersOutweighWinners()
+
+    repository.adminResolveBet(bet.betId, bet.outcomeB)
+
+    assertThat(balanceOf(a)).isEqualTo(900L)
+    assertThat(balanceOf(b)).isEqualTo(1100L)
+    assertThat(userOf(a).totalLost).isEqualTo(100L)
+  }
+
+  @Test
+  fun reopenBet_fromCappedResolvedTakesBackRefundAndRevertsStatsExactly() = runTest {
+    val (bet, a, b) = lockedBetWhereLosersOutweighWinners()
+    val afterLock = snapshot()
+    repository.resolveBet(bet.betId, bet.outcomeB)
+
+    repository.reopenBet(bet.betId)
+
+    assertThat(snapshot()).isEqualTo(afterLock)
+    assertThat(balanceOf(a)).isEqualTo(800L)
+    assertThat(balanceOf(b)).isEqualTo(900L)
+    for (userId in listOf(a, b)) {
+      val user = userOf(userId)
+      assertThat(user.totalWins).isEqualTo(0)
+      assertThat(user.totalEarnings).isEqualTo(0L)
+      assertThat(user.totalLosses).isEqualTo(0)
+      assertThat(user.totalLost).isEqualTo(0L)
+    }
+    assertThat(payoutOf(bet.betId, a)).isNull()
+    assertThat(payoutOf(bet.betId, b)).isNull()
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.ACTIVE)
+  }
+
+  @Test
+  fun reopenBet_fromCappedResolvedRejectsLoserWhoSpentRefund() = runTest {
+    val (bet, a, _) = lockedBetWhereLosersOutweighWinners()
+    repository.resolveBet(bet.betId, bet.outcomeB)
+    // A's refund is 100 but A has spent down to 50.
+    database.userDao().updateBalance(a, 50L)
+
+    val error = assertRejected<InsufficientBalanceException> { repository.reopenBet(bet.betId) }
+    assertThat(error.userId).isEqualTo(a)
+    assertThat(error.required).isEqualTo(100L)
+    assertThat(error.available).isEqualTo(50L)
+    assertThat(details(bet.betId).bet.status).isEqualTo(BetStatus.RESOLVED)
+    assertThat(payoutOf(bet.betId, a)).isEqualTo(100L)
+  }
+
+  @Test
+  fun resolveThenReopenThenResolve_cappedLeavesTotalCoinsUnchanged() = runTest {
+    val (bet, _, _) = lockedBetWhereLosersOutweighWinners()
+    // Total of balances plus the 300 locked in the pot.
+    val total = totalBalance() + 300L
+    assertThat(total).isEqualTo(2000L)
+
+    repository.resolveBet(bet.betId, bet.outcomeB)
+    assertThat(totalBalance()).isEqualTo(total)
+
+    repository.reopenBet(bet.betId)
+    assertThat(totalBalance()).isEqualTo(total - 300L)
+
+    repository.resolveBet(bet.betId, bet.outcomeA)
+    assertThat(totalBalance()).isEqualTo(total)
   }
 
   // --- reopenBet (CANCELLED) ---
