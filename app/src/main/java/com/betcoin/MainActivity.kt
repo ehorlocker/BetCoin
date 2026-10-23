@@ -1,9 +1,8 @@
 package com.betcoin
 
-import android.graphics.Color
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -16,7 +15,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,8 +28,6 @@ import com.betcoin.navigation.LaunchViewModel
 import com.betcoin.ui.components.AppRootLayout
 import com.betcoin.ui.theme.AppThemeViewModel
 import com.betcoin.ui.theme.BetCoinTheme
-import com.betcoin.ui.theme.LegacyDarkScrim
-import com.betcoin.ui.theme.applyApplicationNightMode
 import com.betcoin.ui.theme.isDarkTheme
 import com.betcoin.ui.theme.systemBarStyle
 import dagger.hilt.android.AndroidEntryPoint
@@ -65,21 +61,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Until the stored preference is known, follow the device mode.
+        val deviceDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, LegacyDarkScrim),
-            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, LegacyDarkScrim),
+            statusBarStyle = systemBarStyle(deviceDark),
+            navigationBarStyle = systemBarStyle(deviceDark),
         )
         setContent {
             // Render nothing until the stored preference is known, so the wrong theme never flashes.
             val themePreference = appThemeViewModel.themePreference
                 .collectAsStateWithLifecycle().value ?: return@setContent
             val darkTheme = themePreference.isDarkTheme()
-
-            // Persist the stored theme as the app night mode so the next cold start matches it.
-            // On API 31+ a change also recreates the activity (ViewModels survive, plain remember does not).
-            LaunchedEffect(themePreference) {
-                applyApplicationNightMode(this@MainActivity, themePreference)
-            }
 
             // System bar icon style follows the resolved theme.
             DisposableEffect(darkTheme) {
