@@ -117,6 +117,9 @@ appId: com.betcoin.dev
       containsDescendants:
         - text: ACTIVE
     timeout: 15000
+- assertVisible:
+    id: bet_detail_prompt
+    text: '.*Who wins the race.*'
 - scrollUntilVisible:
     element:
       id: bet_detail_resolve

@@ -370,6 +370,7 @@ private fun Header(detail: BetDetail) {
         Text(
             text = detail.prompt,
             style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.testTag("bet_detail_prompt"),
         )
         StatusBadge(detail.status)
         Text(
