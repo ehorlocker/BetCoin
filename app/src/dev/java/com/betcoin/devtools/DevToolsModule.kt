@@ -10,4 +10,7 @@ import dagger.hilt.components.SingletonComponent
 abstract class DevToolsModule {
     @Binds
     abstract fun bindDevToolsEntry(impl: DevDevToolsEntry): DevToolsEntry
+
+    @Binds
+    abstract fun bindDevToolsActions(impl: DefaultDevToolsActions): DevToolsActions
 }
