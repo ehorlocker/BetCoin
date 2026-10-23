@@ -69,9 +69,10 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          # en-US so formatted numbers like "1,007" match the journeys' regexes.
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -change-locale en-US
           script: |
+            # The journeys' number regexes expect en-US formatting ("1,007"), the image's default.
+            # (-change-locale restarts the framework while the action is still configuring it.)
+            adb shell getprop | grep -E 'locale\]: \[en-US\]'
             adb install app/build/outputs/apk/dev/debug/app-dev-debug.apk
             maestro test .maestro/journeys/ --test-output-dir build/maestro --debug-output build/maestro
 
