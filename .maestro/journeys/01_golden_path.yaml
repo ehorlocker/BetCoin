@@ -173,11 +173,13 @@ appId: com.betcoin.dev
       PIN: "3333"
 
 # --- Final Bet Detail: Resolved, X won, net +7 / −3 / −4 (U+2212 minus) ---
-- extendedWaitUntil:
-    visible:
+# The list is still scrolled down to the Resolve button, so scroll back up to the header.
+- scrollUntilVisible:
+    element:
       id: status_badge
       containsDescendants:
         - text: RESOLVED
+    direction: UP
     timeout: 15000
 - scrollUntilVisible:
     element:
