@@ -16,6 +16,9 @@ import com.betcoin.data.database.entity.BetOutcome
 import com.betcoin.data.database.entity.BetParticipant
 import com.betcoin.data.database.entity.User
 
+/** Current schema version (spec §3 Schema Versioning). */
+const val DB_VERSION = 2
+
 /**
  * The Room database for the BetCoin application.
  *
@@ -34,7 +37,7 @@ import com.betcoin.data.database.entity.User
     BetParticipant::class,
     AppSettings::class,
   ],
-  version = 2,
+  version = DB_VERSION,
   exportSchema = true,
 )
 @TypeConverters(BetStatusConverter::class, ThemePreferenceConverter::class)

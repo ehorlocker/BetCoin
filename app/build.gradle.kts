@@ -57,11 +57,32 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets {
+        // Export the checked-in Room schemas into the androidTest assets so
+        // MigrationTestHelper can load them (spec §3 Schema Versioning).
+        getByName("androidTest") {
+            assets.srcDir("$projectDir/schemas")
+        }
+    }
 }
 
 ksp {
     // Exported Room schemas are checked in (spec §3 Schema Versioning).
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Room's migration bundle (room-migration, used by MigrationTestHelper) is compiled against
+// kotlinx-serialization 1.8.1, but navigation transitively pins the family to 1.7.3. That skew
+// throws AbstractMethodError when the schema JSON is deserialized, so align the whole family.
+val kotlinxSerialization = libs.versions.kotlinxSerialization.get()
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlinx" &&
+            requested.name.startsWith("kotlinx-serialization")
+        ) {
+            useVersion(kotlinxSerialization)
+        }
+    }
 }
 
 // Passes each variant's merged manifest to its unit tests, so the dev flavor's
