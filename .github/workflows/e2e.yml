@@ -4,7 +4,7 @@ name: E2E
 
 on:
   push:
-    branches: [develop, feature/BET-53-maestro-e2e]
+    branches: [develop]
   pull_request:
     branches: [main]
   workflow_dispatch:

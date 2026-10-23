@@ -782,6 +782,12 @@ app/src/prod/
 - **Emulator check:** verify UI changes on the `BetCoin_Test` emulator per AGENTS.md before marking a ticket done.
 - **CI:** `.github/workflows/ci.yml` runs on every PR into `develop` and every push to `develop`: it builds both flavors and runs the JVM unit tests and `lintDevDebug`. Instrumented and Compose UI tests need an emulator, so they stay local.
 
+#### End-to-end (Maestro)
+- **What:** `.maestro/journeys/` drives the real `devDebug` app through whole user journeys (onboarding, players, bets, payouts, leaderboard) and checks hand-worked coin numbers. Shared steps live in `.maestro/common/`.
+- **When:** `.github/workflows/e2e.yml` runs it on every push to `develop`, on PRs into `main` and on demand (`workflow_dispatch`). Not on PRs into `develop`.
+- **Locally:** `scripts/emulator.sh start`, `ANDROID_SERIAL=emulator-5580 ./gradlew installDevDebug`, then `maestro --device emulator-5580 test .maestro/journeys/`.
+- **Keep test IDs when you rebuild a screen.** Flows select elements by `testTag` only (exposed through `testTagsAsResourceId`), so a missing ID fails the suite.
+
 ---
 
 ## 14. Build Flavors (prod / dev)
