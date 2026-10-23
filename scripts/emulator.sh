@@ -10,12 +10,16 @@ PORT=5580
 SERIAL="emulator-$PORT"
 
 booted() { [ "$("$ADB" -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; }
+# Run without inherited fds (e.g. a caller's flock) so long-lived daemons don't hold them
+# Call inside ( ) so only that subshell closes its fds before exec.
+detached() { for fd in /proc/$BASHPID/fd/*; do fd=${fd##*/}; [ "$fd" -gt 2 ] && eval "exec $fd>&-"; done; exec "$@"; }
 
 case "${1:-start}" in
   start)
+    (detached "$ADB" start-server >/dev/null 2>&1)
     if booted; then echo "$SERIAL already running"; exit 0; fi
-    nohup "$SDK/emulator/emulator" -avd "$AVD" -port "$PORT" -no-window -no-audio -no-boot-anim \
-      -gpu swiftshader_indirect >"${TMPDIR:-/tmp}/betcoin-emulator.log" 2>&1 &
+    (detached nohup "$SDK/emulator/emulator" -avd "$AVD" -port "$PORT" -no-window -no-audio -no-boot-anim \
+      -gpu swiftshader_indirect >"${TMPDIR:-/tmp}/betcoin-emulator.log" 2>&1) &
     "$ADB" -s "$SERIAL" wait-for-device
     for _ in $(seq 1 120); do booted && break; sleep 2; done
     booted || { echo "emulator did not finish booting; see ${TMPDIR:-/tmp}/betcoin-emulator.log" >&2; exit 1; }
