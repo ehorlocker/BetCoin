@@ -38,6 +38,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Unit-test coverage (JaCoCo) -> createDevDebugUnitTestCoverageReport
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
