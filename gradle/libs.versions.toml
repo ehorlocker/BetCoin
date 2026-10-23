@@ -34,6 +34,7 @@ room-testing = { group = "androidx.room", name = "room-testing", version.ref = "
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-serialization-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-bom", version.ref = "kotlinxSerialization" }
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 # Hilt

@@ -71,20 +71,6 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-// Room's migration bundle (room-migration, used by MigrationTestHelper) is compiled against
-// kotlinx-serialization 1.8.1, but navigation transitively pins the family to 1.7.3. That skew
-// throws AbstractMethodError when the schema JSON is deserialized, so align the whole family.
-val kotlinxSerialization = libs.versions.kotlinxSerialization.get()
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlinx" &&
-            requested.name.startsWith("kotlinx-serialization")
-        ) {
-            useVersion(kotlinxSerialization)
-        }
-    }
-}
-
 // Passes each variant's merged manifest to its unit tests, so the dev flavor's
 // tests can assert backup stays off (DevManifestBackupTest).
 class MergedManifestArgument(
@@ -113,6 +99,9 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+    // room-migration (MigrationTestHelper) needs kotlinx-serialization 1.8.1; navigation pulls
+    // 1.7.3, and AGP pins androidTest to the app's versions, so align the app to 1.8.1.
+    implementation(platform(libs.kotlinx.serialization.bom))
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
