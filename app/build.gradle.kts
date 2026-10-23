@@ -61,6 +61,13 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets {
+        // Export the checked-in Room schemas into the androidTest assets so
+        // MigrationTestHelper can load them (spec §3 Schema Versioning).
+        getByName("androidTest") {
+            assets.srcDir("$projectDir/schemas")
+        }
+    }
 }
 
 ksp {
@@ -96,6 +103,9 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+    // room-migration (MigrationTestHelper) needs kotlinx-serialization 1.8.1; navigation pulls
+    // 1.7.3, and AGP pins androidTest to the app's versions, so align the app to 1.8.1.
+    implementation(platform(libs.kotlinx.serialization.bom))
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
