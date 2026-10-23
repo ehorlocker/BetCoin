@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -426,6 +427,8 @@ private fun PlayerDropdown(state: NewBetViewModel.UiState, onSelected: (Long) ->
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            // The menu is a popup window, so it doesn't inherit the root's testTagsAsResourceId.
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
         ) {
             state.availableUsers.forEach { user ->
                 DropdownMenuItem(

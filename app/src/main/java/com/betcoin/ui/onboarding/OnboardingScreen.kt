@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -125,12 +126,14 @@ private fun EnterPinStep(
         isError = state.error != null,
         enabled = !state.isSaving,
         imeAction = ImeAction.Next,
+        modifier = Modifier.testTag("onboarding_pin"),
     )
     Spacer(modifier = Modifier.height(8.dp))
     PinTextField(
         value = state.confirmPin,
         onValueChange = onConfirmPinChanged,
         label = "Confirm PIN",
+        modifier = Modifier.testTag("onboarding_pin_confirm"),
         isError = state.error != null,
         enabled = !state.isSaving,
         imeAction = ImeAction.Done,
@@ -143,7 +146,9 @@ private fun EnterPinStep(
         text = "Set PIN",
         onClick = onSavePin,
         enabled = !state.isSaving,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("onboarding_set_pin"),
     )
 }
 
@@ -162,5 +167,7 @@ private fun RecoveryCodeStep(
         onAcknowledgedChanged = onAcknowledgedChanged,
         onContinue = onContinue,
         codeTestTag = RECOVERY_CODE_TAG,
+        ackTestTag = "onboarding_recovery_ack",
+        continueTestTag = "onboarding_continue",
     )
 }

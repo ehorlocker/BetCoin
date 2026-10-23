@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,7 +93,7 @@ fun HomeScreen(
             text = "New Bet",
             onClick = onNewBet,
             enabled = canStartBet,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("home_new_bet"),
         )
         if (!canStartBet) {
             Spacer(modifier = Modifier.height(4.dp))
@@ -106,19 +107,19 @@ fun HomeScreen(
         BetCoinButton(
             text = "Leaderboard",
             onClick = onLeaderboard,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("home_leaderboard"),
         )
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Bet History",
             onClick = onBetHistory,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("home_bet_history"),
         )
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
             text = "Manage Players",
             onClick = onManagePlayers,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("home_manage_players"),
         )
     }
 }

@@ -40,6 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -144,7 +147,7 @@ fun ManagePlayersScreen(
             BetCoinButton(
                 text = "Add Player",
                 onClick = viewModel::onAddPlayerClicked,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("manage_players_add"),
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -179,7 +182,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 /** A player's avatar and username. Tapping opens Player Detail. */
 @Composable
 private fun PlayerRow(player: User, avatar: Any?, onClick: () -> Unit) {
-    BetCoinCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    BetCoinCard(onClick = onClick, modifier = Modifier.fillMaxWidth().testTag("player_row_${player.username}")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             BetCoinAvatar(initials = initialsOf(player.username), imageModel = avatar)
             Spacer(modifier = Modifier.width(16.dp))
@@ -202,6 +205,8 @@ private fun AddPlayerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        // A dialog is its own window, so it doesn't inherit the root's testTagsAsResourceId.
+        modifier = Modifier.semantics { testTagsAsResourceId = true },
         title = { Text("Create New Player") },
         text = {
             Column {
@@ -210,12 +215,17 @@ private fun AddPlayerDialog(
                     onValueChange = onUsernameChange,
                     label = { Text("Username") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("add_player_username"),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                PinTextField(value = form.pin, onValueChange = onPinChange, label = "PIN (4 digits)")
+                PinTextField(value = form.pin, onValueChange = onPinChange, label = "PIN (4 digits)", testTag = "add_player_pin")
                 Spacer(modifier = Modifier.height(8.dp))
-                PinTextField(value = form.confirmPin, onValueChange = onConfirmPinChange, label = "Confirm PIN")
+                PinTextField(
+                    value = form.confirmPin,
+                    onValueChange = onConfirmPinChange,
+                    label = "Confirm PIN",
+                    testTag = "add_player_pin_confirm",
+                )
                 if (form.error != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -227,7 +237,11 @@ private fun AddPlayerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = !form.isSaving) {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !form.isSaving,
+                modifier = Modifier.testTag("add_player_create"),
+            ) {
                 Text("Create")
             }
         },
@@ -240,7 +254,7 @@ private fun AddPlayerDialog(
 }
 
 @Composable
-private fun PinTextField(value: String, onValueChange: (String) -> Unit, label: String) {
+private fun PinTextField(value: String, onValueChange: (String) -> Unit, label: String, testTag: String) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -248,7 +262,7 @@ private fun PinTextField(value: String, onValueChange: (String) -> Unit, label: 
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(testTag),
     )
 }
 
