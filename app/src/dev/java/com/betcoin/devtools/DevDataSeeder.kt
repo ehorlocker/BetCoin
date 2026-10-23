@@ -3,7 +3,10 @@ package com.betcoin.devtools
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.data.repository.UserRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -92,7 +95,16 @@ class DevDataSeeder @Inject constructor(
             join(betId, first.id, "Heads", minOf(PENDING_WAGER, first.balance))
             join(betId, second.id, "Tails", minOf(PENDING_WAGER, second.balance))
         } catch (e: Exception) {
-            runCatching { betRepository.discardPendingBet(betId) }
+            // Also runs when this coroutine was cancelled, so no malformed bet is left behind.
+            withContext(NonCancellable) {
+                try {
+                    betRepository.discardPendingBet(betId)
+                } catch (cleanup: CancellationException) {
+                    throw cleanup
+                } catch (_: Exception) {
+                    // Keep the original failure.
+                }
+            }
             throw e
         }
     }

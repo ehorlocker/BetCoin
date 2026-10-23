@@ -16,6 +16,9 @@ class ProdHasNoDevToolsTest {
             "DevDatabaseTools",
             "DevToolsScreenKt",
             "DevAppProcessKt",
+            "DevToolsActions",
+            "DefaultDevToolsActions",
+            "DevDatabaseInfo",
         ).forEach { name ->
             assertThrows(name, ClassNotFoundException::class.java) {
                 Class.forName("com.betcoin.devtools.$name")

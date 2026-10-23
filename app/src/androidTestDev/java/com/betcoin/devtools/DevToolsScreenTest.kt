@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -41,13 +42,14 @@ class DevToolsScreenTest {
         onConfirm: () -> Unit = {},
         onDismiss: () -> Unit = {},
         onRecoveryCodeShown: () -> Unit = {},
+        onNavigateBack: () -> Unit = {},
     ) {
         composeTestRule.setContent {
             BetCoinTheme(themePreference = ThemePreference.DARK) {
                 DevToolsScreen(
                     state = state,
                     snackbarHostState = SnackbarHostState(),
-                    onNavigateBack = {},
+                    onNavigateBack = onNavigateBack,
                     onRequest = onRequest,
                     onConfirm = onConfirm,
                     onDismissConfirmation = onDismiss,
@@ -140,5 +142,26 @@ class DevToolsScreenTest {
         show()
 
         composeTestRule.onNodeWithText("Seed sample data").assertIsEnabled()
+    }
+
+    @Test
+    fun busy_disablesBackButton() {
+        var backs = 0
+        show(DevToolsUiState(info = info, busy = true), onNavigateBack = { backs++ })
+
+        composeTestRule.onNodeWithContentDescription("Back").assertIsNotEnabled()
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+        assertThat(backs).isEqualTo(0)
+    }
+
+    @Test
+    fun idle_backButtonNavigates() {
+        var backs = 0
+        show(onNavigateBack = { backs++ })
+
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+        assertThat(backs).isEqualTo(1)
     }
 }

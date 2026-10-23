@@ -3,6 +3,7 @@ package com.betcoin.devtools
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -123,6 +124,9 @@ fun DevToolsScreen(
     onDismissConfirmation: () -> Unit,
     onRecoveryCodeShown: () -> Unit,
 ) {
+    // Leaving while an action runs would cancel it mid-way.
+    BackHandler(enabled = state.busy) {}
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -130,7 +134,7 @@ fun DevToolsScreen(
             TopAppBar(
                 title = { Text("Dev Tools") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, enabled = !state.busy) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -156,6 +160,11 @@ fun DevToolsScreen(
                         } else {
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         },
+                        supportingColor = if (enabled) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
                     ),
                     modifier = Modifier.clickable(enabled = enabled) { onRequest(action) },
                 )
@@ -175,7 +184,7 @@ fun DevToolsScreen(
 
     state.recoveryCode?.let { code ->
         AlertDialog(
-            onDismissRequest = onRecoveryCodeShown,
+            onDismissRequest = {},
             title = { Text("Recovery code") },
             text = {
                 Column {
