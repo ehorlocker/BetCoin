@@ -19,3 +19,4 @@ local.properties
 /tmp
 /docs
 AGENTS.md
+.claude/worktrees/
