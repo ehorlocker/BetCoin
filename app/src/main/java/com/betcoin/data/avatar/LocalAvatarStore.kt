@@ -69,7 +69,9 @@ class LocalAvatarStore @Inject constructor(
     withContext(Dispatchers.IO) { fileFor(avatarRef)?.delete() }
   }
 
-  override fun load(avatarRef: String): Any? = fileFor(avatarRef)?.takeIf { it.isFile }
+  override suspend fun load(avatarRef: String): Any? = withContext(Dispatchers.IO) {
+    fileFor(avatarRef)?.takeIf { it.isFile }
+  }
 
   /** The file for [avatarRef], or null when the ref could escape the avatars directory. */
   private fun fileFor(avatarRef: String): File? {

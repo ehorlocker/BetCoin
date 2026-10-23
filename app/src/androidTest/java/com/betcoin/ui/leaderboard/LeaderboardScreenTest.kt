@@ -1,5 +1,6 @@
 package com.betcoin.ui.leaderboard
 
+import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -31,7 +32,7 @@ class LeaderboardScreenTest {
         onNavigateBack: () -> Unit = {},
         onPlayerClick: (Long) -> Unit = {},
     ) {
-        val viewModel = LeaderboardViewModel(repository)
+        val viewModel = LeaderboardViewModel(repository, FakeAvatarStore())
         composeTestRule.setContent {
             BetCoinTheme(themePreference = ThemePreference.DARK) {
                 LeaderboardScreen(

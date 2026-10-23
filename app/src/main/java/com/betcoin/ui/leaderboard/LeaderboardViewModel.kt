@@ -2,6 +2,7 @@ package com.betcoin.ui.leaderboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.betcoin.data.avatar.AvatarStore
 import com.betcoin.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LeaderboardViewModel @Inject constructor(
     userRepository: UserRepository,
+    private val avatarStore: AvatarStore,
 ) : ViewModel() {
 
     data class Row(
@@ -29,6 +31,7 @@ class LeaderboardViewModel @Inject constructor(
         val netWorth: Long,
         val wins: Int,
         val losses: Int,
+        val avatarModel: Any? = null,
     )
 
     data class UiState(
@@ -49,6 +52,7 @@ class LeaderboardViewModel @Inject constructor(
                             netWorth = user.balance - user.totalDebt,
                             wins = user.totalWins,
                             losses = user.totalLosses,
+                            avatarModel = user.avatarRef?.let { avatarStore.load(it) },
                         )
                     },
                 )

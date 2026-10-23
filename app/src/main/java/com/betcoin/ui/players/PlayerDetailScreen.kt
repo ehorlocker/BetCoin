@@ -1,6 +1,12 @@
 package com.betcoin.ui.players
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.provider.MediaStore
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,12 +38,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.betcoin.ui.components.BetCoinAvatar
 import com.betcoin.ui.components.BetCoinButton
 import com.betcoin.ui.components.BetCoinCard
+import com.betcoin.ui.components.ButtonVariant
 import com.betcoin.ui.components.PinEntryDialog
 import com.betcoin.ui.components.formatCoins
 import com.betcoin.ui.players.PlayerDetailViewModel.PlayerStats
@@ -62,6 +70,33 @@ fun PlayerDetailScreen(
     BackHandler(enabled = !isNavigatingBack) {
         isNavigatingBack = true
         onNavigateBack()
+    }
+
+    val context = LocalContext.current
+    val canTakePhoto = remember {
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).resolveActivity(context.packageManager) != null
+    }
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+        viewModel::onImagePicked,
+    )
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+        viewModel::onPhotoCaptured,
+    )
+
+    val launchCamera = (uiState as? UiState.Loaded)?.launchCamera
+    LaunchedEffect(launchCamera) {
+        launchCamera?.let {
+            val launched = try {
+                takePictureLauncher.launch(it)
+                true
+            } catch (e: ActivityNotFoundException) {
+                false
+            }
+            viewModel.onCameraLaunched()
+            if (!launched) viewModel.onCameraUnavailable()
+        }
     }
 
     val message = (uiState as? UiState.Loaded)?.message
@@ -113,6 +148,7 @@ fun PlayerDetailScreen(
                 is UiState.Loaded -> PlayerDetailContent(
                     state = state,
                     onBailout = viewModel::onBailoutClicked,
+                    onChangePicture = viewModel::onChangePictureClicked,
                 )
             }
         }
@@ -128,10 +164,38 @@ fun PlayerDetailScreen(
             onDismiss = viewModel::onBailoutPinDismissed,
         )
     }
+    if (loaded != null && loaded.showPicturePin) {
+        PinEntryDialog(
+            label = loaded.stats.username,
+            title = "Change Profile Picture",
+            verifier = viewModel::verifyPin,
+            onVerified = viewModel::onPicturePinVerified,
+            onDismiss = viewModel::onPicturePinDismissed,
+        )
+    }
+    if (loaded != null && loaded.showPictureOptions) {
+        ProfilePictureOptionsSheet(
+            hasProfilePicture = loaded.hasProfilePicture,
+            canTakePhoto = canTakePhoto,
+            onGallery = {
+                viewModel.onGallerySelected()
+                pickImageLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            },
+            onTakePhoto = viewModel::onTakePhotoSelected,
+            onRemove = viewModel::onRemovePhotoSelected,
+            onDismiss = viewModel::onPictureOptionsDismissed,
+        )
+    }
 }
 
 @Composable
-private fun PlayerDetailContent(state: UiState.Loaded, onBailout: () -> Unit) {
+internal fun PlayerDetailContent(
+    state: UiState.Loaded,
+    onBailout: () -> Unit,
+    onChangePicture: () -> Unit,
+) {
     val stats = state.stats
     Column(
         modifier = Modifier
@@ -139,8 +203,18 @@ private fun PlayerDetailContent(state: UiState.Loaded, onBailout: () -> Unit) {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Default avatar until profile pictures land (BET-20).
-        BetCoinAvatar(initials = initialsOf(stats.username), size = 96)
+        BetCoinAvatar(
+            initials = initialsOf(stats.username),
+            size = 96,
+            imageModel = state.avatarModel,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        BetCoinButton(
+            text = "Change Profile Picture",
+            onClick = onChangePicture,
+            variant = ButtonVariant.Secondary,
+            enabled = !state.isUpdatingPicture,
+        )
         Spacer(modifier = Modifier.height(12.dp))
         Text(text = stats.username, style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(24.dp))

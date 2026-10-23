@@ -131,7 +131,11 @@ fun ManagePlayersScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(uiState.players, key = { it.id }) { player ->
-                        PlayerRow(player = player, onClick = { onPlayerClick(player.id) })
+                        PlayerRow(
+                            player = player,
+                            avatar = uiState.avatars[player.id],
+                            onClick = { onPlayerClick(player.id) },
+                        )
                     }
                 }
             }
@@ -174,11 +178,10 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 
 /** A player's avatar and username. Tapping opens Player Detail. */
 @Composable
-private fun PlayerRow(player: User, onClick: () -> Unit) {
+private fun PlayerRow(player: User, avatar: Any?, onClick: () -> Unit) {
     BetCoinCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Default avatar until profile pictures land (BET-20).
-            BetCoinAvatar(initials = initialsOf(player.username))
+            BetCoinAvatar(initials = initialsOf(player.username), imageModel = avatar)
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = player.username,

@@ -1,6 +1,7 @@
 package com.betcoin.ui.leaderboard
 
 import com.betcoin.data.database.entity.User
+import com.betcoin.testing.FakeAvatarStore
 import com.betcoin.testing.FakeUserRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -24,12 +25,14 @@ class LeaderboardViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var fakeUserRepository: FakeUserRepository
+    private lateinit var fakeAvatarStore: FakeAvatarStore
     private lateinit var viewModel: LeaderboardViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeUserRepository = FakeUserRepository()
+        fakeAvatarStore = FakeAvatarStore()
     }
 
     @After
@@ -39,7 +42,7 @@ class LeaderboardViewModelTest {
 
     /** Creates the ViewModel and keeps its WhileSubscribed state collected for the test. */
     private fun TestScope.createViewModel() {
-        viewModel = LeaderboardViewModel(fakeUserRepository)
+        viewModel = LeaderboardViewModel(fakeUserRepository, fakeAvatarStore)
         backgroundScope.launch { viewModel.uiState.collect {} }
         advanceUntilIdle()
     }
@@ -66,10 +69,24 @@ class LeaderboardViewModelTest {
 
     @Test
     fun initialState_isLoading() {
-        viewModel = LeaderboardViewModel(fakeUserRepository)
+        viewModel = LeaderboardViewModel(fakeUserRepository, fakeAvatarStore)
 
         assertThat(state.isLoading).isTrue()
         assertThat(state.rows).isEmpty()
+    }
+
+    @Test
+    fun rows_carryAvatarModel() = runTest {
+        fakeUserRepository.users = listOf(
+            user(1L, "Alice").copy(avatarRef = "a.jpg"),
+            user(2L, "Bob"),
+        )
+        fakeAvatarStore.images["a.jpg"] = "MODEL"
+        createViewModel()
+
+        val byId = state.rows.associateBy { it.userId }
+        assertThat(byId.getValue(1L).avatarModel).isEqualTo("MODEL")
+        assertThat(byId.getValue(2L).avatarModel).isNull()
     }
 
     @Test

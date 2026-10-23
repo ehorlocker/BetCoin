@@ -1,7 +1,9 @@
 package com.betcoin.di
 
 import com.betcoin.data.avatar.AvatarStore
+import com.betcoin.data.avatar.CameraCaptureStore
 import com.betcoin.data.avatar.LocalAvatarStore
+import com.betcoin.data.avatar.LocalCameraCaptureStore
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.data.repository.UserRepository
@@ -38,4 +40,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAvatarStore(impl: LocalAvatarStore): AvatarStore
+
+    @Binds
+    @Singleton
+    abstract fun bindCameraCaptureStore(impl: LocalCameraCaptureStore): CameraCaptureStore
 }

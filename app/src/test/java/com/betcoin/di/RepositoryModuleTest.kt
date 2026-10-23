@@ -1,5 +1,7 @@
 package com.betcoin.di
 
+import com.betcoin.data.avatar.CameraCaptureStore
+import com.betcoin.data.avatar.LocalCameraCaptureStore
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.data.repository.UserRepository
@@ -65,11 +67,21 @@ class RepositoryModuleTest {
     }
 
     @Test
-    fun repositoryModule_hasFourBindsMethods() {
+    fun repositoryModule_bindsCameraCaptureStore() {
+        val method = RepositoryModule::class.java.declaredMethods.find {
+            it.name == "bindCameraCaptureStore"
+        }
+        assertThat(method).isNotNull()
+        assertThat(method!!.returnType).isEqualTo(CameraCaptureStore::class.java)
+        assertThat(method.parameterTypes).asList().contains(LocalCameraCaptureStore::class.java)
+    }
+
+    @Test
+    fun repositoryModule_hasFiveBindsMethods() {
         val bindsMethods = RepositoryModule::class.java.declaredMethods.filter {
             it.isAnnotationPresent(Binds::class.java)
         }
-        assertThat(bindsMethods).hasSize(4)
+        assertThat(bindsMethods).hasSize(5)
     }
 
     @Test

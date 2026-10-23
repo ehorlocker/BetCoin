@@ -29,6 +29,7 @@ class FakeUserRepository : UserRepository {
     var shouldThrowOnDelete: Throwable? = null
     var shouldThrowOnBailout: Throwable? = null
     var shouldThrowOnRename: Throwable? = null
+    var shouldThrowOnProfilePicture: Throwable? = null
     var shouldThrowOnVerifyPin: Throwable? = null
 
     /** When set, [createUser] suspends on it before doing anything, so tests can interleave other writes. */
@@ -166,11 +167,13 @@ class FakeUserRepository : UserRepository {
     val profilePictureClears = mutableListOf<Long>()
 
     override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {
+        shouldThrowOnProfilePicture?.let { throw it }
         requireUser(userId)
         profilePictureUpdates += userId
     }
 
     override suspend fun clearProfilePicture(userId: Long) {
+        shouldThrowOnProfilePicture?.let { throw it }
         requireUser(userId)
         profilePictureClears += userId
     }
