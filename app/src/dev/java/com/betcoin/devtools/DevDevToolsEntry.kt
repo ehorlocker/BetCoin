@@ -17,7 +17,7 @@ const val DEV_TOOLS_ROUTE = "dev_tools"
 class DevDevToolsEntry @Inject constructor() : DevToolsEntry {
     override fun NavGraphBuilder.devToolsDestinations(navController: NavHostController) {
         composable(DEV_TOOLS_ROUTE) {
-            DevToolsPlaceholderScreen(onNavigateBack = { navController.popBackStack() })
+            DevToolsRoute(onNavigateBack = { navController.popBackStack() })
         }
     }
 
