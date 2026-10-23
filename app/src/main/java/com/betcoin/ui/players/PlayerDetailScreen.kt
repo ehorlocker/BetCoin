@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -221,7 +222,9 @@ internal fun PlayerDetailContent(
 
         BetCoinCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                statRows(stats).forEach { (label, value) -> StatRow(label = label, value = value) }
+                statRows(stats).forEach { (label, value, key) ->
+                    StatRow(label = label, value = value, modifier = Modifier.testTag("player_detail_stat_$key"))
+                }
             }
         }
 
@@ -231,29 +234,29 @@ internal fun PlayerDetailContent(
                 text = "Bailout",
                 onClick = onBailout,
                 enabled = !state.isBailingOut,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag("player_detail_bailout"),
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-/** Label and formatted value for each stat, in display order (§4.2 Player Detail). */
-internal fun statRows(stats: PlayerStats): List<Pair<String, String>> = listOf(
-    "Balance" to formatCoins(stats.balance),
-    "Net worth" to formatCoins(stats.netWorth),
-    "W-L" to "${stats.totalWins}-${stats.totalLosses}",
-    "Total earnings" to formatCoins(stats.totalEarnings),
-    "Total lost" to formatCoins(stats.totalLost),
-    "Bailouts" to stats.bailoutCount.toString(),
-    "Total debt" to formatCoins(stats.totalDebt),
-    "Locked in active bets" to formatCoins(stats.lockedBalance),
+/** Label, formatted value and test-tag key for each stat, in display order (§4.2 Player Detail). */
+internal fun statRows(stats: PlayerStats): List<Triple<String, String, String>> = listOf(
+    Triple("Balance", formatCoins(stats.balance), "balance"),
+    Triple("Net worth", formatCoins(stats.netWorth), "net_worth"),
+    Triple("W-L", "${stats.totalWins}-${stats.totalLosses}", "wl"),
+    Triple("Total earnings", formatCoins(stats.totalEarnings), "total_earnings"),
+    Triple("Total lost", formatCoins(stats.totalLost), "total_lost"),
+    Triple("Bailouts", stats.bailoutCount.toString(), "bailouts"),
+    Triple("Total debt", formatCoins(stats.totalDebt), "total_debt"),
+    Triple("Locked in active bets", formatCoins(stats.lockedBalance), "locked"),
 )
 
 @Composable
-private fun StatRow(label: String, value: String) {
+private fun StatRow(label: String, value: String, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {},
         horizontalArrangement = Arrangement.SpaceBetween,

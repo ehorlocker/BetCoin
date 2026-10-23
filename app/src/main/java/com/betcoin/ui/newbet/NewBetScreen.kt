@@ -232,13 +232,13 @@ private fun StepA(state: NewBetViewModel.UiState, viewModel: NewBetViewModel) {
         onClick = viewModel::onAddOutcome,
         enabled = state.canAddOutcome,
         variant = ButtonVariant.Secondary,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("new_bet_add_outcome"),
     )
     BetCoinButton(
         text = "Next",
         onClick = viewModel::onNext,
         enabled = state.canProceedToStepB,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("new_bet_next"),
     )
 }
 
@@ -264,7 +264,7 @@ private fun StepB(
     state.participants.forEach { entry ->
         val name = entry.user?.username ?: entry.participant.deletedUsername.orEmpty()
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("new_bet_participant_$name"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -308,11 +308,12 @@ private fun StepB(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    state.betOutcomes.forEach { outcome ->
+                    state.betOutcomes.forEachIndexed { index, outcome ->
                         BetCoinChip(
                             label = outcome.outcomeText,
                             selected = outcome.id == state.selectedOutcomeId,
                             onClick = { viewModel.onOutcomeSelected(outcome.id) },
+                            modifier = Modifier.testTag("new_bet_pick_$index"),
                         )
                     }
                 }
@@ -329,7 +330,7 @@ private fun StepB(
                     onClick = viewModel::onAddParticipant,
                     enabled = state.canAddParticipant,
                     variant = ButtonVariant.BettingAction,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("new_bet_add_participant"),
                 )
             }
         }
@@ -346,7 +347,7 @@ private fun StepB(
         text = "Continue",
         onClick = viewModel::onContinue,
         enabled = state.canContinue,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("new_bet_continue"),
     )
 }
 
@@ -393,7 +394,7 @@ private fun StepC(state: NewBetViewModel.UiState, viewModel: NewBetViewModel) {
         onClick = viewModel::onLockRequested,
         enabled = state.canLock,
         variant = ButtonVariant.BettingAction,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("new_bet_lock"),
     )
     BetCoinButton(
         text = "Back",
@@ -433,6 +434,7 @@ private fun PlayerDropdown(state: NewBetViewModel.UiState, onSelected: (Long) ->
             state.availableUsers.forEach { user ->
                 DropdownMenuItem(
                     text = { Text("${user.username} (${user.balance})") },
+                    modifier = Modifier.testTag("new_bet_player_option_${user.username}"),
                     onClick = {
                         onSelected(user.id)
                         expanded = false

@@ -1,0 +1,45 @@
+# Home is open → fills in New Bet Step A and taps Next → the bet exists as pending, Step B is open.
+# env: PROMPT, OUTCOME_0, OUTCOME_1, optional OUTCOME_2
+appId: com.betcoin.dev
+---
+- tapOn:
+    id: home_new_bet
+- extendedWaitUntil:
+    visible:
+      id: new_bet_prompt
+    timeout: 15000
+- tapOn:
+    id: new_bet_prompt
+- inputText: ${PROMPT}
+- hideKeyboard
+- tapOn:
+    id: new_bet_outcome_0
+- inputText: ${OUTCOME_0}
+- hideKeyboard
+- tapOn:
+    id: new_bet_outcome_1
+- inputText: ${OUTCOME_1}
+- hideKeyboard
+- runFlow:
+    when:
+      true: ${typeof OUTCOME_2 !== 'undefined' && OUTCOME_2 !== ''}
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: new_bet_add_outcome
+      - tapOn:
+          id: new_bet_add_outcome
+      - tapOn:
+          id: new_bet_outcome_2
+      - inputText: ${OUTCOME_2}
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: new_bet_next
+- tapOn:
+    id: new_bet_next
+# Step B is open once the player picker shows.
+- extendedWaitUntil:
+    visible:
+      id: new_bet_player
+    timeout: 15000

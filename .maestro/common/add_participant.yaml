@@ -1,0 +1,40 @@
+# New Bet Step B is open → NAME joins on outcome OUTCOME_INDEX (0-based) for WAGER, confirmed with
+# their PIN → NAME is listed as a participant.
+# env: NAME, PIN, OUTCOME_INDEX, WAGER
+appId: com.betcoin.dev
+---
+- scrollUntilVisible:
+    element:
+      id: new_bet_player
+- tapOn:
+    id: new_bet_player
+- tapOn:
+    id: new_bet_player_option_${NAME}
+- scrollUntilVisible:
+    element:
+      id: new_bet_pick_${OUTCOME_INDEX}
+- tapOn:
+    id: new_bet_pick_${OUTCOME_INDEX}
+- scrollUntilVisible:
+    element:
+      id: new_bet_wager
+- tapOn:
+    id: new_bet_wager
+- inputText: ${WAGER}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: new_bet_add_participant
+- tapOn:
+    id: new_bet_add_participant
+- runFlow:
+    file: enter_pin.yaml
+    env:
+      NAME: ${NAME}
+      PIN: ${PIN}
+# The participant list sits above the form, so scroll up to it.
+- scrollUntilVisible:
+    element:
+      id: new_bet_participant_${NAME}
+    direction: UP
+    timeout: 15000
