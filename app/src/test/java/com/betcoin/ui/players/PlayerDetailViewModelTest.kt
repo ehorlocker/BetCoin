@@ -482,6 +482,36 @@ class PlayerDetailViewModelTest {
     }
 
     @Test
+    fun takePhoto_twice_createsOneCapture() = runTest {
+        playerId = createPlayer(balance = 500)
+        createViewModel()
+
+        viewModel.onTakePhotoSelected()
+        viewModel.onTakePhotoSelected()
+        advanceUntilIdle()
+        viewModel.onTakePhotoSelected()
+        advanceUntilIdle()
+
+        assertThat(cameraStore.createCount).isEqualTo(1)
+    }
+
+    @Test
+    fun cameraUnavailable_discardsAndShowsGenericMessage() = runTest {
+        playerId = createPlayer(balance = 500)
+        createViewModel()
+        viewModel.onTakePhotoSelected()
+        advanceUntilIdle()
+        viewModel.onCameraLaunched()
+
+        viewModel.onCameraUnavailable()
+        advanceUntilIdle()
+
+        assertThat(cameraStore.discarded).containsExactly(cameraStore.nextUri)
+        assertThat(repository.profilePictureUpdates).isEmpty()
+        assertThat(loaded.message).isEqualTo(GENERIC_ERROR_MESSAGE)
+    }
+
+    @Test
     fun cameraLaunched_clearsLaunchCamera() = runTest {
         playerId = createPlayer(balance = 500)
         createViewModel()

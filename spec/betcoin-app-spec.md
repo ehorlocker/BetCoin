@@ -6,6 +6,7 @@
 > **Design system:** [`dark-mode-design.md`](dark-mode-design.md) (Pastel Playroom Dark)  
 
 ### Revision Log
+- **2026-10-22** — BET-20: `AvatarStore.load` is `suspend`; added the `CameraCaptureStore` abstraction (temp capture file behind a FileProvider) for taking a profile picture with the camera, with its DI binding and project-structure entries.
 - **2026-10-19** — BET-18: Settings screen with theme picker (System default / Light / Dark) and a light color scheme; the stored theme is applied at the app root through an activity-scoped `AppThemeViewModel`, and the Dev Tools row is wired through a flavor `DevToolsEntry` hook.
 - **2026-10-17** — Resolved open questions: Step B participants persisted to Room; exiting New Bet discards the pending bet; resolving to an unpicked outcome refunds everyone; bailout eligibility counts locked wagers; leaderboard ranks by net worth (4 columns); delete/rename moved behind Admin Panel; admin PIN recovery code; profile pictures via an `AvatarStore` abstraction; Settings screen with theme picker; system insets; input limits; destructive migrations until v1.0. Fixed the RESOLVED→ACTIVE reopen reversal (it previously refunded losers, creating coins). The dev build indicator is now one app-wide banner instead of a Home-only one. Added a dev-only Dev Tools screen (seed sample data, wipe database, reset admin PIN) and backup rules (prod backed up, dev excluded). Spelled out why there's no in-app database switch.
 - **2026-10-18** — BET-39: corrected `ParticipantWithUser` in §3 (`deletedUsername` lives on the participant), removed the stale §6 implementation-gap note, and synced the §13 tree with the code.
@@ -521,10 +522,20 @@ Keeps image storage behind the same swappable boundary as the repositories, so p
 |--------|-------------|
 | `save(source: Uri): String` | Decode, downscale to at most 512×512 (keeping the aspect ratio, EXIF orientation applied), encode as JPEG at quality 85, store it, and return an opaque `avatarRef` |
 | `delete(avatarRef)` | Remove the stored image. A missing image is fine (no-op). |
-| `load(avatarRef): Any?` | Returns a model the image loader can display (Coil `ImageRequest` data, e.g. a `File` or URL), or null if the image is missing. The UI falls back to the default avatar. |
+| `suspend load(avatarRef): Any?` | Returns a model the image loader can display (Coil `ImageRequest` data, e.g. a `File` or URL), or null if the image is missing. The UI falls back to the default avatar. |
 
 - **`LocalAvatarStore`** (current) stores files in `filesDir/avatars/<uuid>.jpg`, and the `avatarRef` is the file name. Using a UUID rather than the user id means an update never shows a stale cached image.
 - **Future:** `RemoteAvatarStore` uploads to cloud storage and returns its key/URL, or a `RoomAvatarStore` keeps the bytes in a blob table. Either is swapped in with `@Binds` in `RepositoryModule`.
+
+#### CameraCaptureStore (interface)
+Hands the camera app a place to write a photo, so the UI never touches files.
+
+| Method | Description |
+|--------|-------------|
+| `suspend createCaptureUri(): Uri` | Creates an empty temp file and returns a `content://` Uri for the `TakePicture` contract |
+| `suspend discard(uri)` | Deletes the temp file. A missing or foreign Uri is a no-op. |
+
+- **`LocalCameraCaptureStore`** uses `cacheDir/camera/<uuid>.jpg` behind a FileProvider (`${applicationId}.fileprovider`). The file is discarded after the capture is processed or cancelled.
 
 ---
 
@@ -598,6 +609,9 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindAvatarStore(impl: LocalAvatarStore): AvatarStore
+
+    @Binds @Singleton
+    abstract fun bindCameraCaptureStore(impl: LocalCameraCaptureStore): CameraCaptureStore
 }
 ```
 
@@ -713,7 +727,9 @@ app/src/main/java/com/betcoin/
 │   ├── security/PinHasher.kt             ✅ jBCrypt PIN hashing
 │   ├── avatar/
 │   │   ├── AvatarStore.kt                🆕 interface
-│   │   └── LocalAvatarStore.kt           🆕 filesDir/avatars
+│   │   ├── LocalAvatarStore.kt           🆕 filesDir/avatars
+│   │   ├── CameraCaptureStore.kt         🆕 interface
+│   │   └── LocalCameraCaptureStore.kt    🆕 cacheDir/camera via FileProvider (res/xml/file_paths.xml 🆕)
 │   └── repository/
 │       ├── UserRepository.kt             ✅ interface
 │       ├── BetRepository.kt              ✅ interface
@@ -730,7 +746,7 @@ app/src/main/java/com/betcoin/
 │   ├── onboarding/                       ✅ OnboardingScreen/ViewModel
 │   ├── recovery/                         ✅ RecoveryScreen/ViewModel
 │   ├── home/                             ✅ HomeScreen/ViewModel
-│   ├── players/                          ✅ ManagePlayers, PlayerDetail (Screen + ViewModel each)
+│   ├── players/                          ✅ ManagePlayers, PlayerDetail (Screen + ViewModel each), ProfilePictureSheet.kt 🆕
 │   ├── admin/                            🆕 AdminScreen/ViewModel
 │   ├── newbet/                           ✅ NewBetScreen/ViewModel
 │   ├── betdetail/                        ✅ BetDetailScreen/ViewModel

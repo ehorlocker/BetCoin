@@ -1,5 +1,6 @@
 package com.betcoin.ui.players
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.provider.MediaStore
 import androidx.activity.compose.BackHandler
@@ -87,8 +88,14 @@ fun PlayerDetailScreen(
     val launchCamera = (uiState as? UiState.Loaded)?.launchCamera
     LaunchedEffect(launchCamera) {
         launchCamera?.let {
-            takePictureLauncher.launch(it)
+            val launched = try {
+                takePictureLauncher.launch(it)
+                true
+            } catch (e: ActivityNotFoundException) {
+                false
+            }
             viewModel.onCameraLaunched()
+            if (!launched) viewModel.onCameraUnavailable()
         }
     }
 

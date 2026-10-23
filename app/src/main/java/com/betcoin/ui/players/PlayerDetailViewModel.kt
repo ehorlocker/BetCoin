@@ -95,6 +95,9 @@ class PlayerDetailViewModel @Inject constructor(
 
     private val localState = MutableStateFlow(LocalState())
 
+    /** True while a capture file is being created, so a double tap can't create two. */
+    private var creatingCapture = false
+
     private val user = userRepository.getAllUsers().map { users -> users.find { it.id == userId } }
 
     val uiState: StateFlow<UiState> =
@@ -186,6 +189,8 @@ class PlayerDetailViewModel @Inject constructor(
 
     fun onTakePhotoSelected() {
         localState.update { it.copy(showPictureOptions = false) }
+        if (creatingCapture || savedState.get<Uri>(CAPTURE_URI_KEY) != null || localState.value.launchCamera != null) return
+        creatingCapture = true
         viewModelScope.launch {
             try {
                 val uri = cameraCaptureStore.createCaptureUri()
@@ -193,12 +198,20 @@ class PlayerDetailViewModel @Inject constructor(
                 localState.update { it.copy(launchCamera = uri) }
             } catch (e: IOException) {
                 localState.update { it.copy(message = GENERIC_ERROR_MESSAGE) }
+            } finally {
+                creatingCapture = false
             }
         }
     }
 
     fun onCameraLaunched() {
         localState.update { it.copy(launchCamera = null) }
+    }
+
+    /** The camera app could not be launched: run the cancel path and tell the user. */
+    fun onCameraUnavailable() {
+        onPhotoCaptured(false)
+        localState.update { it.copy(message = GENERIC_ERROR_MESSAGE) }
     }
 
     /** The camera's result. The capture file is always discarded once the update finishes. */

@@ -15,8 +15,13 @@ class FakeCameraCaptureStore : CameraCaptureStore {
   /** Uris passed to [discard], in call order. */
   val discarded = mutableListOf<Uri>()
 
+  /** Number of successful [createCaptureUri] calls. */
+  var createCount = 0
+    private set
+
   override suspend fun createCaptureUri(): Uri {
     createFailure?.let { throw it }
+    createCount++
     return nextUri
   }
 
