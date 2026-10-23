@@ -11,6 +11,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.betcoin.ui.components.DEV_BUILD_BANNER_TAG
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,10 +21,14 @@ import org.junit.runner.RunWith
  * Dev flavor only: launches the real app and checks the root dev build banner is shown on every
  * top-level destination (spec §14 Dev Build Indicator).
  */
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class DevBuildBannerTest {
 
-    @get:Rule
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Test
