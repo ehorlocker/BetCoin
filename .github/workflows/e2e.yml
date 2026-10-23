@@ -73,6 +73,10 @@ jobs:
             # The journeys' number regexes expect en-US formatting ("1,007"), the image's default.
             # (-change-locale restarts the framework while the action is still configuring it.)
             adb shell getprop | grep -E 'locale\]: \[en-US\]'
+            # A freshly booted CI emulator is slow, and an "isn't responding" dialog for the launcher
+            # would cover the app. Suppress ANR/crash dialogs and close any already showing.
+            adb shell settings put global hide_error_dialogs 1
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
             adb install app/build/outputs/apk/dev/debug/app-dev-debug.apk
             maestro test .maestro/journeys/ --test-output-dir build/maestro --debug-output build/maestro
 
