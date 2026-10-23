@@ -783,6 +783,12 @@ app/src/prod/
 - **Coverage:** `./gradlew createDevDebugUnitTestCoverageReport` generates a JaCoCo report for the devDebug unit tests in `app/build/reports/coverage/test/dev/debug/` (HTML `index.html`, XML `report.xml`). It's enabled by `enableUnitTestCoverage = true` on the debug build type. No threshold gate yet.
 - **CI:** `.github/workflows/ci.yml` runs on every PR into `develop` and every push to `develop`: it builds both flavors, runs the JVM unit tests (devDebug under coverage) and `lintDevDebug`, and uploads the coverage report as the `coverage` artifact. Instrumented and Compose UI tests need an emulator, so they stay local.
 
+#### End-to-end (Maestro)
+- **What:** `.maestro/journeys/` drives the real `devDebug` app through whole user journeys (onboarding, players, bets, payouts, leaderboard) and checks hand-worked coin numbers. Shared steps live in `.maestro/common/`.
+- **When:** `.github/workflows/e2e.yml` runs it on every push to `develop`, on PRs into `main` and on demand (`workflow_dispatch`). Not on PRs into `develop`.
+- **Locally:** `scripts/emulator.sh start`, `ANDROID_SERIAL=emulator-5580 ./gradlew installDevDebug`, then `maestro --device emulator-5580 test .maestro/journeys/`.
+- **Keep test IDs when you rebuild a screen.** Flows select elements by `testTag` only (exposed through `testTagsAsResourceId`), so a missing ID fails the suite.
+
 ---
 
 ## 14. Build Flavors (prod / dev)

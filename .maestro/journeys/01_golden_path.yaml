@@ -1,0 +1,303 @@
+# Journey 1: golden path, capped payout with a remainder coin.
+#
+# Alice 7 on X, Bob 5 on Y, Cara 11 on Y. X wins. Losing wagers (16) exceed winning wagers (7), so
+# the payout is capped: Alice gets 14, Bob 2 and Cara 7 (Cara gets the leftover coin as the
+# largest losing wager). Pot 23. Expected numbers are worked out by hand; never compute them here.
+#
+# Selectors are test IDs only. Text appears only as a value check on an element found by ID.
+# Numbers are regexes, so "1,007" and "1007" both pass.
+appId: com.betcoin.dev
+---
+- runFlow: ../common/onboard.yaml
+- runFlow: ../common/add_three_players.yaml
+
+# --- New Bet: X vs Y, three participants, everyone locks with their PIN ---
+- runFlow:
+    file: ../common/create_bet.yaml
+    env:
+      PROMPT: Who wins the race?
+      OUTCOME_0: X
+      OUTCOME_1: Y
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+      OUTCOME_INDEX: "0"
+      WAGER: "7"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+      OUTCOME_INDEX: "1"
+      WAGER: "5"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"
+      OUTCOME_INDEX: "1"
+      WAGER: "11"
+- scrollUntilVisible:
+    element:
+      id: new_bet_continue
+- tapOn:
+    id: new_bet_continue
+- scrollUntilVisible:
+    element:
+      id: new_bet_lock
+- tapOn:
+    id: new_bet_lock
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"
+
+# --- Bet Detail after lock: Active, right picks and wagers, pot 23 ---
+- extendedWaitUntil:
+    visible:
+      id: status_badge
+      containsDescendants:
+        - text: ACTIVE
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: bet_detail_wager_Alice
+- assertVisible:
+    id: bet_detail_pick_Alice
+    text: '.*X'
+- assertVisible:
+    id: bet_detail_wager_Alice
+    text: '\D*7\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_wager_Bob
+- assertVisible:
+    id: bet_detail_pick_Bob
+    text: '.*Y'
+- assertVisible:
+    id: bet_detail_wager_Bob
+    text: '\D*5\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_wager_Cara
+- assertVisible:
+    id: bet_detail_pick_Cara
+    text: '.*Y'
+- assertVisible:
+    id: bet_detail_wager_Cara
+    text: '\D*11\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_pot
+- assertVisible:
+    id: bet_detail_pot
+    containsDescendants:
+      - text: '\D*23\D*'
+
+# --- Balances after lock: wagers deducted (993 / 995 / 989) ---
+# New Bet was popped after locking, so Back from Bet Detail lands on Home.
+- back
+- tapOn:
+    id: home_leaderboard
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*993\D*'
+    timeout: 15000
+- back
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*995\D*'
+    timeout: 15000
+- back
+- tapOn:
+    id: leaderboard_row_Cara
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*989\D*'
+    timeout: 15000
+- back
+- back
+
+# --- Resolve with X; every participant confirms, in participant order ---
+- tapOn:
+    id: home_bet_history
+# The only bet in this journey; the row's tag ends in a database id the flow can't know.
+- tapOn:
+    id: 'bet_history_row_\d+'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_resolve
+- tapOn:
+    id: bet_detail_resolve
+- tapOn:
+    id: outcome_picker_option_0
+- tapOn:
+    id: outcome_picker_continue
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"
+
+# --- Final Bet Detail: Resolved, X won, net +7 / −3 / −4 (U+2212 minus) ---
+# The list is still scrolled down to the Resolve button, so scroll back up to the header.
+- scrollUntilVisible:
+    element:
+      id: status_badge
+      containsDescendants:
+        - text: RESOLVED
+    direction: UP
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: winning_outcome
+- assertVisible:
+    id: winning_outcome
+    containsDescendants:
+      - text: X
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Alice
+- assertVisible:
+    id: bet_detail_net_Alice
+    text: '\D*\+7\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Bob
+- assertVisible:
+    id: bet_detail_net_Bob
+    text: '\D*−3\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Cara
+- assertVisible:
+    id: bet_detail_net_Cara
+    text: '\D*−4\D*'
+
+# --- Leaderboard: Alice 1, Bob 2, Cara 3 ---
+# Back to Bet History, then Home.
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'bet_history_row_\d+'
+    timeout: 15000
+- back
+- tapOn:
+    id: home_leaderboard
+- assertVisible:
+    id: leaderboard_rank_Alice
+    text: '1'
+- assertVisible:
+    id: leaderboard_rank_Bob
+    text: '2'
+- assertVisible:
+    id: leaderboard_rank_Cara
+    text: '3'
+
+# --- Player Detail: final balance, W-L, total earnings (net won), total lost (net lost) ---
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?007\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_total_lost
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '1-0'
+- assertVisible:
+    id: player_detail_stat_total_earnings
+    containsDescendants:
+      - text: '\D*7\D*'
+- assertVisible:
+    id: player_detail_stat_total_lost
+    containsDescendants:
+      - text: '\D*0\D*'
+- back
+
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*997\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_total_lost
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-1'
+- assertVisible:
+    id: player_detail_stat_total_earnings
+    containsDescendants:
+      - text: '\D*0\D*'
+- assertVisible:
+    id: player_detail_stat_total_lost
+    containsDescendants:
+      - text: '\D*3\D*'
+- back
+
+- tapOn:
+    id: leaderboard_row_Cara
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*996\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_total_lost
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-1'
+- assertVisible:
+    id: player_detail_stat_total_earnings
+    containsDescendants:
+      - text: '\D*0\D*'
+- assertVisible:
+    id: player_detail_stat_total_lost
+    containsDescendants:
+      - text: '\D*4\D*'

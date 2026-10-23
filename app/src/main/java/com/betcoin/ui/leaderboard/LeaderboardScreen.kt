@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -154,9 +155,15 @@ private fun HeaderText(text: String, textAlign: TextAlign = TextAlign.Start) {
 /** One player's rank, username, net worth, and win-loss record. Tapping opens Player Detail. */
 @Composable
 private fun LeaderboardRow(row: LeaderboardViewModel.Row, onClick: () -> Unit) {
-    BetCoinCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    BetCoinCard(onClick = onClick, modifier = Modifier.fillMaxWidth().testTag("leaderboard_row_${row.username}")) {
         LeaderboardColumns(
-            rank = { Text(text = "${row.rank}", style = MaterialTheme.typography.titleMedium) },
+            rank = {
+                Text(
+                    text = "${row.rank}",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.testTag("leaderboard_rank_${row.username}"),
+                )
+            },
             username = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     BetCoinAvatar(
@@ -181,6 +188,7 @@ private fun LeaderboardRow(row: LeaderboardViewModel.Row, onClick: () -> Unit) {
                     textAlign = TextAlign.End,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("leaderboard_net_worth_${row.username}"),
                 )
             },
             winLoss = {
@@ -190,6 +198,7 @@ private fun LeaderboardRow(row: LeaderboardViewModel.Row, onClick: () -> Unit) {
                     textAlign = TextAlign.End,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("leaderboard_wl_${row.username}"),
                 )
             },
             modifier = Modifier.fillMaxWidth(),

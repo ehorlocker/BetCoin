@@ -1,0 +1,33 @@
+# Fresh install → onboarding done → Home.
+# Sets the admin PIN to 0000 and acknowledges the recovery code.
+appId: com.betcoin.dev
+---
+- launchApp:
+    clearState: true
+# The first launch after clearState can be slow, so wait for the first field.
+- extendedWaitUntil:
+    visible:
+      id: onboarding_pin
+    timeout: 15000
+- tapOn:
+    id: onboarding_pin
+- inputText: "0000"
+- hideKeyboard
+- tapOn:
+    id: onboarding_pin_confirm
+- inputText: "0000"
+- hideKeyboard
+- tapOn:
+    id: onboarding_set_pin
+- extendedWaitUntil:
+    visible:
+      id: onboarding_recovery_ack
+    timeout: 15000
+- tapOn:
+    id: onboarding_recovery_ack
+- tapOn:
+    id: onboarding_continue
+- extendedWaitUntil:
+    visible:
+      id: home_manage_players
+    timeout: 15000

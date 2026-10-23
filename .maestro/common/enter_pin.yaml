@@ -1,0 +1,16 @@
+# A PIN dialog is opening for NAME → types their PIN. The dialog submits itself on the 4th digit.
+# env: NAME, PIN
+appId: com.betcoin.dev
+---
+# In a consent sequence each 4th digit swaps in the next player's dialog. Wait until the dialog
+# asks for NAME, or the digits would go to the previous player's dialog.
+- extendedWaitUntil:
+    visible:
+      id: pin_entry_label
+      text: '.*${NAME}.*'
+    timeout: 15000
+- tapOn:
+    id: pin_entry_input
+- inputText: ${PIN}
+# No hideKeyboard here: it presses Back, and the dialog has already closed itself, so Back would
+# cancel the next dialog or leave the screen.

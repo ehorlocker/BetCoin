@@ -18,6 +18,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.betcoin.devtools.DevToolsEntry
@@ -84,7 +86,10 @@ class MainActivity : ComponentActivity() {
 
             BetCoinTheme(themePreference) {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
+                    // Exposes testTags as resource-ids for the Maestro E2E suite (.maestro/).
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics { testTagsAsResourceId = true },
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     AppRootLayout {

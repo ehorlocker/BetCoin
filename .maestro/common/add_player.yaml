@@ -1,0 +1,32 @@
+# Manage Players is open → creates player NAME with PIN → their row is listed.
+# env: NAME, PIN
+appId: com.betcoin.dev
+---
+- extendedWaitUntil:
+    visible:
+      id: manage_players_add
+    timeout: 15000
+- tapOn:
+    id: manage_players_add
+- extendedWaitUntil:
+    visible:
+      id: add_player_username
+    timeout: 15000
+- tapOn:
+    id: add_player_username
+- inputText: ${NAME}
+- hideKeyboard
+- tapOn:
+    id: add_player_pin
+- inputText: ${PIN}
+- hideKeyboard
+- tapOn:
+    id: add_player_pin_confirm
+- inputText: ${PIN}
+- hideKeyboard
+- tapOn:
+    id: add_player_create
+- extendedWaitUntil:
+    visible:
+      id: player_row_${NAME}
+    timeout: 15000

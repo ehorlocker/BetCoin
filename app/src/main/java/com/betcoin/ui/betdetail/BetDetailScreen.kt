@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -317,13 +319,16 @@ private fun OutcomePickerDialog(
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
+        // A dialog is its own window, so it doesn't inherit the root's testTagsAsResourceId.
+        modifier = Modifier.semantics { testTagsAsResourceId = true },
         title = { Text("Pick the winning outcome") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                outcomes.forEach { outcome ->
+                outcomes.forEachIndexed { index, outcome ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag("outcome_picker_option_$index")
                             .selectable(
                                 selected = selectedId == outcome.id,
                                 onClick = { selectedId = outcome.id },
@@ -343,7 +348,11 @@ private fun OutcomePickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { selectedId?.let(onPicked) }, enabled = selectedId != null) {
+            TextButton(
+                onClick = { selectedId?.let(onPicked) },
+                enabled = selectedId != null,
+                modifier = Modifier.testTag("outcome_picker_continue"),
+            ) {
                 Text("Continue")
             }
         },
@@ -462,17 +471,20 @@ private fun ParticipantItem(participant: ParticipantRow) {
                 Text(
                     text = if (participant.isDeletedUser) "${participant.name} (deleted)" else participant.name,
                     style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.testTag("bet_detail_name_${participant.name}"),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Picked ${participant.pick}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("bet_detail_pick_${participant.name}"),
                 )
                 Text(
                     text = "Wager ${participant.wager}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("bet_detail_wager_${participant.name}"),
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -483,6 +495,7 @@ private fun ParticipantItem(participant: ParticipantRow) {
                         text = formatNet(net),
                         style = MaterialTheme.typography.titleMedium,
                         color = netColor(net),
+                        modifier = Modifier.testTag("bet_detail_net_${participant.name}"),
                     )
                 }
             }
@@ -522,6 +535,7 @@ private fun PotSummary(detail: BetDetail) {
             "Pot: ${detail.potSize} BetCoin",
             if (count == 1) "1 participant" else "$count participants",
         ),
+        modifier = Modifier.testTag("bet_detail_pot"),
     )
 }
 
@@ -538,8 +552,8 @@ private fun ResolutionInfo(detail: BetDetail) {
 }
 
 @Composable
-private fun InfoCard(lines: List<String>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun InfoCard(lines: List<String>, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

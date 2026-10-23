@@ -38,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -50,6 +52,9 @@ const val PIN_LENGTH = 4
 
 /** Test tag of the PIN text field, for Compose UI tests. */
 const val PIN_INPUT_TAG = "pin_entry_input"
+
+/** Test tag of the "<label>, enter your PIN" prompt. */
+const val PIN_LABEL_TAG = "pin_entry_label"
 
 /**
  * Reusable modal PIN entry dialog (§5.5).
@@ -112,7 +117,10 @@ fun PinEntryDialog(
         properties = DialogProperties(dismissOnClickOutside = false),
     ) {
         Surface(
-            modifier = modifier.windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+            // A dialog is its own window, so it doesn't inherit the root's testTagsAsResourceId.
+            modifier = modifier
+                .semantics { testTagsAsResourceId = true }
+                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
@@ -140,6 +148,7 @@ fun PinEntryDialog(
                     text = "$label, enter your PIN",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.testTag(PIN_LABEL_TAG),
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 PinField(

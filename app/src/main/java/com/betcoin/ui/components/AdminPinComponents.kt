@@ -76,6 +76,8 @@ fun PinTextField(
  * Back handling.
  *
  * @param codeTestTag Test tag of the code text, so each screen can use its own.
+ * @param ackTestTag Optional test tag of the "I've written this down" row.
+ * @param continueTestTag Optional test tag of the continue button.
  */
 @Composable
 fun RecoveryCodeReveal(
@@ -86,6 +88,8 @@ fun RecoveryCodeReveal(
     modifier: Modifier = Modifier,
     codeTestTag: String = RECOVERY_CODE_REVEAL_TAG,
     continueLabel: String = "Continue",
+    ackTestTag: String? = null,
+    continueTestTag: String? = null,
 ) {
     Column(
         modifier = modifier,
@@ -122,7 +126,8 @@ fun RecoveryCodeReveal(
                     role = Role.Checkbox,
                     onValueChange = onAcknowledgedChanged,
                 )
-                .padding(vertical = 8.dp),
+                .padding(vertical = 8.dp)
+                .then(ackTestTag?.let { Modifier.testTag(it) } ?: Modifier),
         ) {
             Checkbox(checked = acknowledged, onCheckedChange = null)
             Spacer(modifier = Modifier.width(12.dp))
@@ -134,7 +139,9 @@ fun RecoveryCodeReveal(
             text = continueLabel,
             onClick = onContinue,
             enabled = acknowledged,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(continueTestTag?.let { Modifier.testTag(it) } ?: Modifier),
         )
     }
 }

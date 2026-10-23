@@ -1,0 +1,25 @@
+# Home is open → adds Alice (1111), Bob (2222) and Cara (3333) → back on Home.
+appId: com.betcoin.dev
+---
+- tapOn:
+    id: home_manage_players
+- runFlow:
+    file: add_player.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: add_player.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- runFlow:
+    file: add_player.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"
+- back
+- extendedWaitUntil:
+    visible:
+      id: home_manage_players
+    timeout: 15000
