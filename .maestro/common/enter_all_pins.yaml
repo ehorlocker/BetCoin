@@ -1,0 +1,19 @@
+# A consent sequence is opening → Alice, Bob and Cara confirm in participant order.
+# Used by lock, resolve, cancel and reopen: all four ask every participant for their PIN.
+appId: com.betcoin.dev
+---
+- runFlow:
+    file: enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: enter_pin.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- runFlow:
+    file: enter_pin.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"

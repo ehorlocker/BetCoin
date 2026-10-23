@@ -1,0 +1,14 @@
+# New Bet Step B has all participants → Continue, Lock, every participant confirms their PIN.
+appId: com.betcoin.dev
+---
+- scrollUntilVisible:
+    element:
+      id: new_bet_continue
+- tapOn:
+    id: new_bet_continue
+- scrollUntilVisible:
+    element:
+      id: new_bet_lock
+- tapOn:
+    id: new_bet_lock
+- runFlow: enter_all_pins.yaml
