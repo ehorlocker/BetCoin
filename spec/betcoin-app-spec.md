@@ -6,6 +6,7 @@
 > **Design system:** [`dark-mode-design.md`](dark-mode-design.md) (Pastel Playroom Dark)  
 
 ### Revision Log
+- **2026-10-19** — BET-35: system bar icon colors follow the resolved theme through a single `systemBarStyle` helper; on dev, the status bar icons contrast with the banner in both themes, and API 24-25 use a dark navigation scrim.
 - **2026-10-19** — BET-18: Settings screen with theme picker (System default / Light / Dark) and a light color scheme; the stored theme is applied at the app root through an activity-scoped `AppThemeViewModel`, and the Dev Tools row is wired through a flavor `DevToolsEntry` hook.
 - **2026-10-17** — Resolved open questions: Step B participants persisted to Room; exiting New Bet discards the pending bet; resolving to an unpicked outcome refunds everyone; bailout eligibility counts locked wagers; leaderboard ranks by net worth (4 columns); delete/rename moved behind Admin Panel; admin PIN recovery code; profile pictures via an `AvatarStore` abstraction; Settings screen with theme picker; system insets; input limits; destructive migrations until v1.0. Fixed the RESOLVED→ACTIVE reopen reversal (it previously refunded losers, creating coins). The dev build indicator is now one app-wide banner instead of a Home-only one. Added a dev-only Dev Tools screen (seed sample data, wipe database, reset admin PIN) and backup rules (prod backed up, dev excluded). Spelled out why there's no in-app database switch.
 - **2026-10-18** — BET-39: corrected `ParticipantWithUser` in §3 (`deletedUsername` lives on the participant), removed the stale §6 implementation-gap note, and synced the §13 tree with the code.
@@ -152,6 +153,8 @@ Home ──┬── New Bet ── Step A ── Step B ── Step C (Review &
 
 ### 4.1.1 System Insets
 The app runs edge-to-edge (`enableEdgeToEdge()`). Every screen applies `WindowInsets.safeDrawing` (via `Scaffold` content padding or `windowInsetsPadding`) so the status bar, navigation bar and display cutouts never cover interactive elements such as the top-bar Back button. Bottom sheets and dialogs respect `navigationBars` insets.
+
+The status and navigation bars are transparent and their icon color follows the resolved theme (`ThemePreference` plus `isSystemInDarkTheme()`), updating immediately when the theme changes. On the dev flavor the status bar icons sit over the banner's `errorContainer`.
 
 ### 4.2 Screen Descriptions
 
