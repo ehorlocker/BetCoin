@@ -94,7 +94,10 @@ fun DevToolsRoute(
         }
     }
 
-    LaunchedEffect(state.message) {
+    // Hold the message while the recovery-code dialog is up, otherwise the snackbar would
+    // expire behind it; it shows right after "Done".
+    LaunchedEffect(state.message, state.recoveryCode) {
+        if (state.recoveryCode != null) return@LaunchedEffect
         state.message?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.onMessageShown()
