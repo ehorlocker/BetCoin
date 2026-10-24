@@ -149,7 +149,7 @@ appId: com.betcoin.dev
     id: bet_detail_wager_Bob
     text: '\D*20\D*'
 
-# --- Balances after lock: wagers deducted (990 / 980) ---
+# --- Balances after lock: wagers deducted (990 / 980), locked in active bets 10 / 20 ---
 - runFlow: ../common/go_home.yaml
 - tapOn:
     id: home_leaderboard
@@ -161,6 +161,13 @@ appId: com.betcoin.dev
       containsDescendants:
         - text: '\D*990\D*'
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_locked
+- assertVisible:
+    id: player_detail_stat_locked
+    containsDescendants:
+      - text: '\D*10\D*'
 - back
 - tapOn:
     id: leaderboard_row_Bob
@@ -170,3 +177,10 @@ appId: com.betcoin.dev
       containsDescendants:
         - text: '\D*980\D*'
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_locked
+- assertVisible:
+    id: player_detail_stat_locked
+    containsDescendants:
+      - text: '\D*20\D*'
