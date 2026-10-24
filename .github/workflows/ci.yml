@@ -1,5 +1,6 @@
-# Instrumented (connectedAndroidTest) and Compose UI tests are out of scope here because they need an emulator;
-# run them locally (see spec/betcoin-app-spec.md section 13, Testing Expectations).
+# Instrumented (connectedAndroidTest) and Compose UI tests are not run here because they need an emulator;
+# run them locally (see spec/betcoin-app-spec.md section 13, Testing Expectations). Their source sets
+# (androidTest, androidTestDev) are compiled here so a broken instrumented test fails CI without an emulator.
 name: CI
 
 on:
@@ -40,12 +41,13 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
 
-      - name: Build, unit test, coverage and lint
+      - name: Build, compile instrumented tests, unit test, coverage and lint
         run: >
           ./gradlew --stacktrace
           assembleDevDebug assembleProdDebug
+          assembleDevDebugAndroidTest assembleProdDebugAndroidTest
           createDevDebugUnitTestCoverageReport testProdDebugUnitTest
-          lintDevDebug
+          lintDevDebug lintProdDebug
           -Porg.gradle.java.installations.fromEnv=JAVA_HOME_11_X64,JAVA_HOME_21_X64
 
       - name: Upload reports
@@ -57,6 +59,7 @@ jobs:
             app/build/reports/tests/
             app/build/test-results/
             app/build/reports/lint-results-devDebug.*
+            app/build/reports/lint-results-prodDebug.*
           if-no-files-found: ignore
           retention-days: 14
 
