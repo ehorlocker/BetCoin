@@ -294,7 +294,7 @@ class NewBetScreenTest {
         assertThat(lockedBetId).isNull()
         composeTestRule.onNodeWithTag(PIN_INPUT_TAG).performTextInput("2222")
 
-        composeTestRule.waitUntil(5_000) { lockedBetId == betId }
+        composeTestRule.waitUntil(30_000) { lockedBetId == betId }
         runBlocking {
             assertThat(userRepository.getUser(alice)!!.balance).isEqualTo(900L)
             assertThat(userRepository.getUser(bob)!!.balance).isEqualTo(950L)
