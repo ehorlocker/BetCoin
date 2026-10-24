@@ -1,0 +1,172 @@
+# Journey 4: interrupted bet → recovery.
+#
+# 1. Fresh start, onboarding, two players (Alice, Bob: 1000 each).
+# 2. New Bet "Who wins the race?" X vs Y, Next (the bet is saved as PENDING_CONFIRMATION), then
+#    Alice joins with 10 on X.
+# 3. stopApp, then launchApp without clearing state → the Recovery screen opens, 1 participant.
+# 4. Return to the bet: Alice is still listed. Bob joins with 20 on Y, then lock (both confirm).
+# 5. Bet Detail is Active with Alice 10 on X and Bob 20 on Y. Wagers are deducted at lock, not at
+#    join, so the balances are Alice 990 and Bob 980.
+# Expected numbers are worked out by hand; never compute them here. Numbers are regexes, so
+# "1,000" and "1000" both pass. Selectors are test IDs only.
+appId: com.betcoin.dev
+---
+- runFlow: ../common/onboard.yaml
+
+# --- Two players: Alice (1111) and Bob (2222), 1000 each ---
+- tapOn:
+    id: home_manage_players
+- runFlow:
+    file: ../common/add_player.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/add_player.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- back
+- extendedWaitUntil:
+    visible:
+      id: home_manage_players
+    timeout: 15000
+- tapOn:
+    id: home_leaderboard
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?000\D*'
+    timeout: 15000
+- back
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?000\D*'
+    timeout: 15000
+- runFlow: ../common/go_home.yaml
+
+# --- New Bet: Next saves it as pending, then Alice joins with 10 on X ---
+- runFlow:
+    file: ../common/create_bet.yaml
+    env:
+      PROMPT: Who wins the race?
+      OUTCOME_0: X
+      OUTCOME_1: Y
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+      OUTCOME_INDEX: "0"
+      WAGER: "10"
+
+# --- Interrupt: kill the app and relaunch with the data kept ---
+- stopApp
+- launchApp
+
+# --- Recovery screen: the pending bet with 1 participant ---
+- extendedWaitUntil:
+    visible:
+      id: recovery_heading
+    timeout: 15000
+- assertVisible:
+    id: recovery_prompt
+    text: Who wins the race\?
+- assertVisible:
+    id: recovery_participant_count
+    text: '1 participant added so far'
+- tapOn:
+    id: recovery_return_to_bet
+
+# --- Back in the bet: Alice is still listed; Bob joins with 20 on Y and everyone locks ---
+- extendedWaitUntil:
+    visible:
+      id: new_bet_player
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: new_bet_participant_Alice
+    direction: UP
+    timeout: 15000
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+      OUTCOME_INDEX: "1"
+      WAGER: "20"
+- scrollUntilVisible:
+    element:
+      id: new_bet_continue
+- tapOn:
+    id: new_bet_continue
+- scrollUntilVisible:
+    element:
+      id: new_bet_lock
+- tapOn:
+    id: new_bet_lock
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+
+# --- Bet Detail after lock: Active, both participants with the right picks and wagers ---
+- extendedWaitUntil:
+    visible:
+      id: status_badge
+      containsDescendants:
+        - text: ACTIVE
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: bet_detail_wager_Alice
+- assertVisible:
+    id: bet_detail_pick_Alice
+    text: '.*X'
+- assertVisible:
+    id: bet_detail_wager_Alice
+    text: '\D*10\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_wager_Bob
+- assertVisible:
+    id: bet_detail_pick_Bob
+    text: '.*Y'
+- assertVisible:
+    id: bet_detail_wager_Bob
+    text: '\D*20\D*'
+
+# --- Balances after lock: wagers deducted (990 / 980) ---
+- runFlow: ../common/go_home.yaml
+- tapOn:
+    id: home_leaderboard
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*990\D*'
+    timeout: 15000
+- back
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*980\D*'
+    timeout: 15000
