@@ -1,0 +1,9 @@
+# Any screen → Home, by pressing Back until the Home menu shows.
+appId: com.betcoin.dev
+---
+- repeat:
+    while:
+      notVisible:
+        id: home_leaderboard
+    commands:
+      - back

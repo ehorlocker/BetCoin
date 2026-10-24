@@ -1,0 +1,374 @@
+# Journey 2: cancel → repeat → push → reopen → real winner.
+#
+# 1. Bet X/Y/Z is locked, then cancelled: every balance is back to 1000.
+# 2. Repeat it (same prompt and outcomes): Alice 3 on X, Bob 4 on X, Cara 6 on Y, nobody on Z.
+# 3. Z wins → push: every wager refunded, net ±0, balances 1000, W-L still 0-0.
+# 4. Reopen: Active again, wagers deducted again (997 / 996 / 994).
+# 5. X wins (uncapped: losing 6 <= winning 7, pot 13): Alice gets 5, Bob 8 (Bob gets the leftover
+#    coin as the largest winning wager), Cara 0 → net +2 / +4 / −6 (U+2212 minus), balances
+#    1002 / 1004 / 994, W-L 1-0 / 1-0 / 0-1.
+# Expected numbers are worked out by hand; never compute them here. Numbers are regexes, so
+# "1,002" and "1002" both pass. Selectors are test IDs only.
+appId: com.betcoin.dev
+---
+- runFlow: ../common/onboard.yaml
+- runFlow: ../common/add_three_players.yaml
+
+# --- First bet: X / Y / Z, any wagers, locked ---
+- runFlow:
+    file: ../common/create_bet.yaml
+    env:
+      PROMPT: Who wins the race?
+      OUTCOME_0: X
+      OUTCOME_1: Y
+      OUTCOME_2: Z
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+      OUTCOME_INDEX: "0"
+      WAGER: "5"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+      OUTCOME_INDEX: "1"
+      WAGER: "5"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"
+      OUTCOME_INDEX: "2"
+      WAGER: "5"
+- runFlow: ../common/lock_bet.yaml
+- extendedWaitUntil:
+    visible:
+      id: status_badge
+      containsDescendants:
+        - text: ACTIVE
+    timeout: 15000
+
+# --- Cancel: Cancelled, every balance back to 1000 ---
+- scrollUntilVisible:
+    element:
+      id: bet_detail_cancel
+- tapOn:
+    id: bet_detail_cancel
+- runFlow: ../common/enter_all_pins.yaml
+- scrollUntilVisible:
+    element:
+      id: status_badge
+      containsDescendants:
+        - text: CANCELLED
+    direction: UP
+    timeout: 15000
+- runFlow: ../common/go_home.yaml
+- runFlow:
+    file: ../common/check_balances.yaml
+    env:
+      ALICE: '\D*1,?000\D*'
+      BOB: '\D*1,?000\D*'
+      CARA: '\D*1,?000\D*'
+
+# --- Repeat the cancelled bet: opens at the participants step with the same bet ---
+- tapOn:
+    id: home_bet_history
+- tapOn:
+    id: 'bet_history_row_\d+'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_repeat
+- tapOn:
+    id: bet_detail_repeat
+- extendedWaitUntil:
+    visible:
+      id: new_bet_player
+    timeout: 15000
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+      OUTCOME_INDEX: "0"
+      WAGER: "3"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+      OUTCOME_INDEX: "0"
+      WAGER: "4"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Cara
+      PIN: "3333"
+      OUTCOME_INDEX: "1"
+      WAGER: "6"
+- runFlow: ../common/lock_bet.yaml
+
+# --- The repeated bet kept the prompt and all three outcomes (X, Y, Z), and is Active ---
+- extendedWaitUntil:
+    visible:
+      id: status_badge
+      containsDescendants:
+        - text: ACTIVE
+    timeout: 15000
+- assertVisible:
+    id: bet_detail_prompt
+    text: '.*Who wins the race.*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_resolve
+- tapOn:
+    id: bet_detail_resolve
+- extendedWaitUntil:
+    visible:
+      id: outcome_picker_option_2
+    timeout: 15000
+- assertVisible:
+    id: outcome_picker_option_0
+    containsDescendants:
+      - text: 'X'
+- assertVisible:
+    id: outcome_picker_option_1
+    containsDescendants:
+      - text: 'Y'
+- assertVisible:
+    id: outcome_picker_option_2
+    containsDescendants:
+      - text: 'Z'
+
+# --- Resolve with Z → push: nobody picked Z ---
+- tapOn:
+    id: outcome_picker_option_2
+- tapOn:
+    id: outcome_picker_continue
+- runFlow: ../common/enter_all_pins.yaml
+- scrollUntilVisible:
+    element:
+      id: status_badge
+      containsDescendants:
+        - text: RESOLVED
+    direction: UP
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Alice
+- assertVisible:
+    id: bet_detail_net_Alice
+    text: '\D*±0\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Bob
+- assertVisible:
+    id: bet_detail_net_Bob
+    text: '\D*±0\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Cara
+- assertVisible:
+    id: bet_detail_net_Cara
+    text: '\D*±0\D*'
+- runFlow: ../common/go_home.yaml
+- runFlow:
+    file: ../common/check_balances.yaml
+    env:
+      ALICE: '\D*1,?000\D*'
+      BOB: '\D*1,?000\D*'
+      CARA: '\D*1,?000\D*'
+
+# --- W-L unchanged after the push (0-0) ---
+- tapOn:
+    id: home_leaderboard
+- tapOn:
+    id: leaderboard_row_Alice
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_wl
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-0'
+- back
+- tapOn:
+    id: leaderboard_row_Bob
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_wl
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-0'
+- back
+- tapOn:
+    id: leaderboard_row_Cara
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_wl
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-0'
+- runFlow: ../common/go_home.yaml
+
+# --- Reopen: Active again, wagers deducted again (997 / 996 / 994) ---
+# Two bets are in the history; the repeated one is the Resolved one.
+- tapOn:
+    id: home_bet_history
+- tapOn:
+    id: 'bet_history_row_\d+'
+    containsDescendants:
+      - text: RESOLVED
+- scrollUntilVisible:
+    element:
+      id: bet_detail_reopen
+- tapOn:
+    id: bet_detail_reopen
+- runFlow: ../common/enter_all_pins.yaml
+- scrollUntilVisible:
+    element:
+      id: status_badge
+      containsDescendants:
+        - text: ACTIVE
+    direction: UP
+    timeout: 15000
+- runFlow: ../common/go_home.yaml
+- runFlow:
+    file: ../common/check_balances.yaml
+    env:
+      ALICE: '\D*997\D*'
+      BOB: '\D*996\D*'
+      CARA: '\D*994\D*'
+
+# --- Resolve with X (index 0): Alice 5, Bob 8, Cara 0 ---
+- tapOn:
+    id: home_bet_history
+- tapOn:
+    id: 'bet_history_row_\d+'
+    containsDescendants:
+      - text: ACTIVE
+- scrollUntilVisible:
+    element:
+      id: bet_detail_resolve
+- tapOn:
+    id: bet_detail_resolve
+- tapOn:
+    id: outcome_picker_option_0
+- tapOn:
+    id: outcome_picker_continue
+- runFlow: ../common/enter_all_pins.yaml
+
+# --- Final Bet Detail: Resolved, X won, net +2 / +4 / −6 ---
+- scrollUntilVisible:
+    element:
+      id: status_badge
+      containsDescendants:
+        - text: RESOLVED
+    direction: UP
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: winning_outcome
+- assertVisible:
+    id: winning_outcome
+    containsDescendants:
+      - text: X
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Alice
+- assertVisible:
+    id: bet_detail_net_Alice
+    text: '\D*\+2\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Bob
+- assertVisible:
+    id: bet_detail_net_Bob
+    text: '\D*\+4\D*'
+- scrollUntilVisible:
+    element:
+      id: bet_detail_net_Cara
+- assertVisible:
+    id: bet_detail_net_Cara
+    text: '\D*−6\D*'
+- runFlow: ../common/go_home.yaml
+
+# --- Leaderboard: Bob 1, Alice 2, Cara 3 ---
+- tapOn:
+    id: home_leaderboard
+- assertVisible:
+    id: leaderboard_rank_Bob
+    text: '1'
+- assertVisible:
+    id: leaderboard_rank_Alice
+    text: '2'
+- assertVisible:
+    id: leaderboard_rank_Cara
+    text: '3'
+
+# --- Player Detail: final balance, W-L, total earnings (net won), total lost (net lost) ---
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?002\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_total_lost
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '1-0'
+- assertVisible:
+    id: player_detail_stat_total_earnings
+    containsDescendants:
+      - text: '\D*2\D*'
+- back
+
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?004\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_total_lost
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '1-0'
+- assertVisible:
+    id: player_detail_stat_total_earnings
+    containsDescendants:
+      - text: '\D*4\D*'
+- back
+
+- tapOn:
+    id: leaderboard_row_Cara
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*994\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_total_lost
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-1'
+- assertVisible:
+    id: player_detail_stat_total_lost
+    containsDescendants:
+      - text: '\D*6\D*'

@@ -1,0 +1,38 @@
+# Home is open → the leaderboard's Player Detail shows these balances → back on Home.
+# env: ALICE, BOB, CARA (regexes for the balance text, written by hand in the journey)
+appId: com.betcoin.dev
+---
+- tapOn:
+    id: home_leaderboard
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: ${ALICE}
+    timeout: 15000
+- back
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: ${BOB}
+    timeout: 15000
+- back
+- tapOn:
+    id: leaderboard_row_Cara
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: ${CARA}
+    timeout: 15000
+- back
+- back
+- extendedWaitUntil:
+    visible:
+      id: home_leaderboard
+    timeout: 15000
