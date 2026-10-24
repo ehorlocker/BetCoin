@@ -285,8 +285,10 @@ class BetDetailScreenTest {
     fun activeBet_showsResolveAndCancel() {
         show(BetDetailUiState.Success(detail(BetStatus.ACTIVE, twoRows(ParticipantResult.PENDING))))
 
+        // Scroll to each button: on a smaller screen (the CI emulator) Cancel sits below Resolve.
         scrollTo("Resolve")
         composeTestRule.onNodeWithTag(BET_DETAIL_RESOLVE_TAG).assertIsDisplayed()
+        composeTestRule.onNode(hasScrollAction()).performScrollToNode(hasTestTag(BET_DETAIL_CANCEL_TAG))
         composeTestRule.onNodeWithTag(BET_DETAIL_CANCEL_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithTag(BET_DETAIL_REOPEN_TAG).assertDoesNotExist()
     }
@@ -416,7 +418,8 @@ class BetDetailScreenTest {
             actionState = BetActionState(errorMessage = "This bet has changed. Nothing was updated."),
         )
 
-        scrollTo("Resolve")
+        composeTestRule.onNode(hasScrollAction())
+            .performScrollToNode(hasTestTag(BET_DETAIL_ACTION_ERROR_TAG))
         composeTestRule.onNodeWithTag(BET_DETAIL_ACTION_ERROR_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText("This bet has changed. Nothing was updated.").assertIsDisplayed()
     }
