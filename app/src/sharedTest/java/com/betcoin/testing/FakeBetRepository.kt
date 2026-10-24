@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Shared in-memory fake of [BetRepository] for unit and instrumented tests.
@@ -34,7 +35,7 @@ class FakeBetRepository(private val users: FakeUserRepository = FakeUserReposito
     /** Every bet with its outcomes and participants. Assign it to seed or replace the whole store. */
     val bets = MutableStateFlow<List<BetWithDetails>>(emptyList())
     private var nextId = 1L
-    private var activeBetsSubscribers = 0
+    private val activeBetsSubscribers = AtomicInteger()
 
     /** Calls in order, e.g. `resolve(7, 1)`, `cancel(7)`, `reopen(7)`, `repeat(7)`. */
     val calls = mutableListOf<String>()
@@ -84,7 +85,7 @@ class FakeBetRepository(private val users: FakeUserRepository = FakeUserReposito
         }
 
     /** Number of collectors currently subscribed to [getActiveBets]. */
-    val activeBetsSubscriberCount: Int get() = activeBetsSubscribers
+    val activeBetsSubscriberCount: Int get() = activeBetsSubscribers.get()
 
     val allBets: List<Bet> get() = bets.value.map { it.bet }
     fun outcomesOf(betId: Long): List<BetOutcome> = detailsOf(betId)?.outcomes.orEmpty()
@@ -188,8 +189,8 @@ class FakeBetRepository(private val users: FakeUserRepository = FakeUserReposito
 
     override fun getActiveBets(): Flow<List<BetWithDetails>> =
         bets.map { list -> list.filter { it.bet.status == BetStatus.ACTIVE } }
-            .onStart { activeBetsSubscribers++ }
-            .onCompletion { activeBetsSubscribers-- }
+            .onStart { activeBetsSubscribers.incrementAndGet() }
+            .onCompletion { activeBetsSubscribers.decrementAndGet() }
 
     override fun getAllBets(): Flow<List<BetWithDetails>> = bets.map { list ->
         list.filter { it.bet.status != BetStatus.PENDING_CONFIRMATION }

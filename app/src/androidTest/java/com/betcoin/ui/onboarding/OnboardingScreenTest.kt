@@ -19,12 +19,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.betcoin.data.model.ThemePreference
-import com.betcoin.data.repository.RecoveryCode
-import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.data.security.PinHasher
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import com.betcoin.testing.FakeSettingsRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -181,7 +177,7 @@ class OnboardingScreenTest {
 
     @Test
     fun fullFlow_mismatchThenMatch_showsCodeAndCompletesAfterAcknowledging() {
-        val repository = HashingSettingsRepository()
+        val repository = FakeSettingsRepository()
         val viewModel = OnboardingViewModel(repository)
         var completed by mutableStateOf(false)
         composeTestRule.setContent {
@@ -192,7 +188,7 @@ class OnboardingScreenTest {
         composeTestRule.onNodeWithText("Confirm PIN").performTextInput("1243")
         composeTestRule.onNodeWithText("Set PIN").performClick()
         composeTestRule.onNodeWithText("PINs don't match").assertIsDisplayed()
-        assertEquals(null, repository.pinHash)
+        assertEquals(null, repository.storedHash)
 
         composeTestRule.onNodeWithText("Confirm PIN").performTextClearance()
         composeTestRule.onNodeWithText("Confirm PIN").performTextInput("1234")
@@ -203,7 +199,7 @@ class OnboardingScreenTest {
 
         val shownCode = (viewModel.uiState.value as OnboardingUiState.ShowRecoveryCode).recoveryCode
         composeTestRule.onNodeWithTag(RECOVERY_CODE_TAG).assertTextEquals(shownCode)
-        assertTrue(PinHasher.verifyBlocking("1234", repository.pinHash!!))
+        assertTrue(PinHasher.verifyBlocking("1234", repository.storedHash!!))
 
         composeTestRule.onNodeWithText("Continue").assertIsNotEnabled().performClick()
         composeTestRule.waitForIdle()
@@ -213,30 +209,4 @@ class OnboardingScreenTest {
         composeTestRule.onNodeWithText("Continue").assertIsEnabled().performClick()
         composeTestRule.waitUntil(timeoutMillis = 5_000) { completed }
     }
-}
-
-/**
- * Minimal [SettingsRepository] that keeps only bcrypt hashes of the admin PIN and recovery
- * code, like the real implementation (spec §5.5).
- */
-private class HashingSettingsRepository : SettingsRepository {
-    var pinHash: String? = null
-    var recoveryCodeHash: String? = null
-
-    override suspend fun getAdminPinHash(): String? = pinHash
-    override suspend fun setAdminPin(pin: String) {
-        pinHash = PinHasher.hash(pin)
-    }
-    override suspend fun verifyAdminPin(pin: String): Boolean =
-        pinHash?.let { PinHasher.verify(pin, it) } ?: false
-    override suspend fun isFirstLaunch(): Boolean = pinHash == null
-    override suspend fun regenerateRecoveryCode(): String {
-        val code = RecoveryCode.generate()
-        recoveryCodeHash = PinHasher.hash(RecoveryCode.normalize(code)!!)
-        return code
-    }
-    override suspend fun resetAdminPinWithRecoveryCode(code: String, newPin: String): String =
-        throw UnsupportedOperationException()
-    override fun getThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.SYSTEM)
-    override suspend fun setThemePreference(pref: ThemePreference) {}
 }

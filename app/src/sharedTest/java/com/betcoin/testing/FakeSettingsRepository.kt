@@ -5,6 +5,8 @@ import com.betcoin.data.model.ThemePreference
 import com.betcoin.data.model.WrongRecoveryCodeException
 import com.betcoin.data.repository.RecoveryCode
 import com.betcoin.data.repository.SettingsRepository
+import com.betcoin.data.security.PinHasher
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -26,7 +28,7 @@ class FakeSettingsRepository : SettingsRepository {
     var isFirstLaunchError: Throwable? = null
 
     /** When set, [isFirstLaunch] suspends until it completes. */
-    var isFirstLaunchGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+    var isFirstLaunchGate: CompletableDeferred<Unit>? = null
 
     /** Number of [isFirstLaunch] calls. */
     var isFirstLaunchCalls = 0
@@ -89,7 +91,7 @@ class FakeSettingsRepository : SettingsRepository {
     }
 
     private fun requireValidPin(pin: String) {
-        if (!Regex("[0-9]{4}").matches(pin)) {
+        if (!PinHasher.isValidPin(pin)) {
             throw InvalidInputException("PIN must be exactly 4 digits")
         }
     }
