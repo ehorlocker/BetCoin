@@ -91,4 +91,14 @@ class RecoveryScreenTest {
         composeTestRule.onNodeWithContentDescription("Back").assertDoesNotExist()
         composeTestRule.onNodeWithContentDescription("Navigate up").assertDoesNotExist()
     }
+
+    @Test
+    fun pending_exposesTestTagsForE2e() {
+        show(pending(count = 2))
+        composeTestRule.onNodeWithTag("recovery_heading").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("recovery_prompt").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("recovery_participant_count").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("recovery_return_to_bet").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("recovery_discard").assertIsDisplayed()
+    }
 }

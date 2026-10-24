@@ -101,25 +101,28 @@ private fun PendingContent(
             text = "You have an unfinished bet",
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
+            modifier = Modifier.testTag("recovery_heading"),
         )
         Spacer(modifier = Modifier.height(24.dp))
         BetCoinCard(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = state.prompt,
                 style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag("recovery_prompt"),
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "${state.participantCount} $noun added so far",
             style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.testTag("recovery_participant_count"),
         )
         Spacer(modifier = Modifier.height(32.dp))
         BetCoinButton(
             text = "Return to Bet",
             onClick = { onReturnToBet(state.betId) },
             enabled = !state.isDiscarding,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("recovery_return_to_bet"),
         )
         Spacer(modifier = Modifier.height(12.dp))
         BetCoinButton(
@@ -127,7 +130,7 @@ private fun PendingContent(
             onClick = onDiscard,
             enabled = !state.isDiscarding,
             variant = ButtonVariant.Secondary,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("recovery_discard"),
         )
     }
 }
