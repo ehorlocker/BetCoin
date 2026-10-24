@@ -37,6 +37,17 @@ class NavGraphForwardEdgesTest : NavGraphTestBase() {
         awaitHome()
     }
 
+    /** An ACTIVE bet "Who wins Smash?" (Jay / Austin) between Alice and Bob. */
+    private fun seedLockedBet(): Long = runBlocking {
+        val (alice, bob) = seedPlayers("Alice" to "1111", "Bob" to "2222")
+        val id = betRepository.createBet("Who wins Smash?", listOf("Jay", "Austin"))
+        val outcomes = betRepository.getBetWithDetails(id).first()!!.outcomes
+        betRepository.addParticipant(id, alice, outcomes[0].id, 100)
+        betRepository.addParticipant(id, bob, outcomes[1].id, 50)
+        betRepository.lockBet(id)
+        id
+    }
+
     private fun scrollClick(text: String) {
         waitForText(text)
         compose.onNodeWithText(text).performScrollTo().performClick()
@@ -61,17 +72,7 @@ class NavGraphForwardEdgesTest : NavGraphTestBase() {
 
     @Test
     fun home_betHistory_betDetail_andBackEachStep() {
-        val betId = runBlocking {
-            val (alice, bob) = seedPlayers("Alice" to "1111", "Bob" to "2222").let { it[0] to it[1] }
-            val id = betRepository.createBet("Who wins Smash?", listOf("Jay", "Austin"))
-            val outcomes = betRepository.getBetWithDetails(id).let { flow ->
-                flow.first()!!.outcomes
-            }
-            betRepository.addParticipant(id, alice, outcomes[0].id, 100)
-            betRepository.addParticipant(id, bob, outcomes[1].id, 50)
-            betRepository.lockBet(id)
-            id
-        }
+        val betId = seedLockedBet()
         launchHome()
 
         clickTag("home_bet_history")
@@ -83,6 +84,31 @@ class NavGraphForwardEdgesTest : NavGraphTestBase() {
         waitForText("Bet History")
         clickText("Back")
         awaitHome()
+    }
+
+    @Test
+    fun betDetail_repeatBet_opensNewBetStepBWithTheBetPreFilled_andBackReturnsToBetDetail() {
+        // Repeat Bet is offered on resolved and cancelled bets only.
+        val betId = seedLockedBet().also { runBlocking { betRepository.cancelBet(it) } }
+        launchHome()
+
+        clickTag("home_bet_history")
+        clickTag("bet_history_row_$betId")
+        waitForText("Bet Detail")
+        scrollClick("Repeat Bet")
+
+        waitForText("Step B", substring = true)
+        waitForText("Who wins Smash?")
+        waitForText("Jay")
+        waitForText("Austin")
+        waitForText("No one has joined yet.")
+        // Closing the repeated bet asks before discarding it, then returns to the original bet.
+        clickText("Close")
+        clickText("Discard")
+        waitForText("Bet Detail")
+        waitForText("Who wins Smash?")
+        pressBack()
+        waitForText("Bet History")
     }
 
     @Test

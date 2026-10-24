@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso
 import com.betcoin.MainActivity
+import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.SettingsRepository
 import com.betcoin.data.repository.UserRepository
@@ -41,6 +42,7 @@ abstract class NavGraphTestBase {
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var userRepository: UserRepository
     @Inject lateinit var betRepository: BetRepository
+    @Inject lateinit var database: BetCoinDatabase
 
     protected val compose get() = composeRule
     protected var scenario: ActivityScenario<MainActivity>? = null
@@ -52,10 +54,8 @@ abstract class NavGraphTestBase {
 
     @After
     fun closeActivity() {
-        // Let a popped destination finish its exit transition before the activity is destroyed.
-        compose.waitForIdle()
-        Thread.sleep(SETTLE_MS)
         scenario?.close()
+        database.close()
     }
 
     protected fun launchApp() {
@@ -122,6 +122,5 @@ abstract class NavGraphTestBase {
 
     companion object {
         const val WAIT_MS = 15_000L
-        const val SETTLE_MS = 1_000L
     }
 }

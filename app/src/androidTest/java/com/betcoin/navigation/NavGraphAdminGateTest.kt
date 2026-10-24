@@ -10,7 +10,6 @@ import com.betcoin.ui.components.PIN_INPUT_TAG
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -43,11 +42,6 @@ class NavGraphAdminGateTest : NavGraphTestBase() {
         compose.onNodeWithText("Change Admin PIN").assertDoesNotExist()
     }
 
-    // The test body passes, but destroying the activity afterwards crashes inside Navigation
-    // ("State must be at least 'CREATED' to be moved to 'DESTROYED'", route admin_panel) when the
-    // panel was opened through the gate. The real app rotates fine on the panel, so this looks
-    // specific to the test harness; the follow-up ticket tracks finding out why.
-    @Ignore("Teardown crash after opening Admin Panel via the PIN gate; see PR description")
     @Test
     fun adminPanel_opensAfterCorrectPin_andBackReturnsToManagePlayers() {
         openGate()
@@ -57,9 +51,7 @@ class NavGraphAdminGateTest : NavGraphTestBase() {
 
         pressBack()
         waitForText("Manage Players")
-        Thread.sleep(2000)
         assertTextGone("Change Admin PIN")
-        waitForText("Manage Players")
     }
 
     @Test

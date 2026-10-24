@@ -1,12 +1,12 @@
 package com.betcoin.navigation
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.common.truth.Truth.assertThat
 
 /** Spec §4.1 launch branches, driven through the real MainActivity and NavGraph. */
 @HiltAndroidTest
