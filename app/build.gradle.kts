@@ -20,7 +20,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.betcoin.HiltTestRunner"
     }
 
     flavorDimensions += "environment"
@@ -160,4 +160,8 @@ dependencies {
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
+
+    // Hilt instrumented tests (HiltTestRunner, in-memory database module)
+    androidTestImplementation(libs.hilt.android.testing)
+    kspAndroidTest(libs.hilt.compiler)
 }

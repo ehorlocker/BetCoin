@@ -45,7 +45,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Number of digits in a player or admin PIN (§5.5). */
 const val PIN_LENGTH = 4
@@ -105,9 +107,13 @@ fun PinEntryDialog(
             verifying = true
             scope.launch {
                 val accepted = verifier(digits)
-                pin = ""
-                verifying = false
-                if (accepted) onVerified() else wrongPin = true
+                // The verifier may resume us on a background thread (BCrypt runs on Default);
+                // onVerified navigates and writes UI state, so it must run on the main thread.
+                withContext(Dispatchers.Main.immediate) {
+                    pin = ""
+                    verifying = false
+                    if (accepted) onVerified() else wrongPin = true
+                }
             }
         }
     }
