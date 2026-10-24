@@ -1,8 +1,8 @@
 package com.betcoin.ui.leaderboard
 
-import com.betcoin.data.database.entity.User
-import com.betcoin.testing.FakeAvatarStore
 import com.betcoin.testing.FakeUserRepository
+import com.betcoin.testing.FakeAvatarStore
+import com.betcoin.data.database.entity.User
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

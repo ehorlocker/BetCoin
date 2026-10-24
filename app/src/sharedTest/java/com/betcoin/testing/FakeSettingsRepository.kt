@@ -1,4 +1,4 @@
-package com.betcoin.ui.onboarding
+package com.betcoin.testing
 
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.ThemePreference

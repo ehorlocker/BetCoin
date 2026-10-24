@@ -1,5 +1,6 @@
 package com.betcoin.ui.bethistory
 
+import com.betcoin.testing.FakeBetRepository
 import com.betcoin.data.database.entity.Bet
 import com.betcoin.data.database.entity.BetOutcome
 import com.betcoin.data.database.entity.BetParticipant
@@ -7,7 +8,6 @@ import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.BetWithDetails
 import com.betcoin.data.model.ParticipantWithUser
 import com.betcoin.data.repository.BetRepository
-import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

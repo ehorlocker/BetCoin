@@ -1,9 +1,9 @@
 package com.betcoin.ui.settings
 
+import com.betcoin.testing.FakeSettingsRepository
 import android.database.sqlite.SQLiteException
 import com.betcoin.data.model.ThemePreference
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
-import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -62,6 +62,9 @@ android {
         buildConfig = true
     }
     sourceSets {
+        // One fake per interface, compiled into both the unit and the instrumented tests.
+        getByName("test").kotlin.srcDir("src/sharedTest/java")
+        getByName("androidTest").kotlin.srcDir("src/sharedTest/java")
         // Export the checked-in Room schemas into the androidTest assets so
         // MigrationTestHelper can load them (spec §3 Schema Versioning).
         getByName("androidTest") {

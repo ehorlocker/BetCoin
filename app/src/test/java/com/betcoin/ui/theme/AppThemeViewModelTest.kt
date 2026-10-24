@@ -1,10 +1,10 @@
 package com.betcoin.ui.theme
 
+import com.betcoin.testing.FakeSettingsRepository
 import com.betcoin.data.model.ThemePreference
 import android.database.sqlite.SQLiteException
 import com.betcoin.navigation.LAUNCH_LOG_TAG
 import com.betcoin.testing.RecordingErrorLogger
-import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

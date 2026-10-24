@@ -1,8 +1,8 @@
 package com.betcoin.ui.recovery
 
+import com.betcoin.testing.FakeBetRepository
 import com.betcoin.data.model.BetStatus
 import com.betcoin.data.model.InvalidBetStateException
-import com.betcoin.testing.FakePendingBetRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,12 +21,12 @@ import org.junit.Test
 class RecoveryViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var repository: FakePendingBetRepository
+    private lateinit var repository: FakeBetRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        repository = FakePendingBetRepository()
+        repository = FakeBetRepository()
     }
 
     @After
@@ -36,7 +36,7 @@ class RecoveryViewModelTest {
 
     @Test
     fun pendingBet_emitsPendingWithPromptAndParticipantCount() = runTest {
-        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.bets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         advanceUntilIdle()
@@ -56,13 +56,13 @@ class RecoveryViewModelTest {
 
     @Test
     fun pendingBetDisappears_navigatesHome() = runTest {
-        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.bets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         advanceUntilIdle()
         assertThat(viewModel.uiState.value).isInstanceOf(RecoveryUiState.Pending::class.java)
 
-        repository.pendingBets.value = emptyList()
+        repository.bets.value = emptyList()
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value).isEqualTo(RecoveryUiState.GoHome)
@@ -70,7 +70,7 @@ class RecoveryViewModelTest {
 
     @Test
     fun discard_callsDiscardPendingBet_thenGoHome() = runTest {
-        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.bets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         advanceUntilIdle()
@@ -84,7 +84,7 @@ class RecoveryViewModelTest {
 
     @Test
     fun discard_twice_callsRepositoryOnce() = runTest {
-        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.bets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
         advanceUntilIdle()
@@ -99,7 +99,7 @@ class RecoveryViewModelTest {
 
     @Test
     fun discard_whenRepositoryThrows_navigatesHome() = runTest {
-        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.bets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
         repository.discardError = InvalidBetStateException(7, BetStatus.ACTIVE)
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
@@ -113,7 +113,7 @@ class RecoveryViewModelTest {
 
     @Test
     fun discard_onIoFailure_staysPendingAndCanRetry() = runTest {
-        repository.pendingBets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
+        repository.bets.value = listOf(repository.pendingBet(7, "Who wins Smash?", 3))
         repository.discardError = java.io.IOException("disk")
         val viewModel = RecoveryViewModel(repository)
         backgroundScope.launch(testDispatcher) { viewModel.uiState.collect {} }
@@ -140,7 +140,7 @@ class RecoveryViewModelTest {
         advanceUntilIdle()
         assertThat(viewModel.uiState.value).isEqualTo(RecoveryUiState.GoHome)
 
-        repository.pendingBets.value = listOf(repository.pendingBet(9, "Late bet", 2))
+        repository.bets.value = listOf(repository.pendingBet(9, "Late bet", 2))
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value).isEqualTo(RecoveryUiState.GoHome)

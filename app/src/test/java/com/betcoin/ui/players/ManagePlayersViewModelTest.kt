@@ -1,10 +1,10 @@
 package com.betcoin.ui.players
 
+import com.betcoin.testing.FakeUserRepository
+import com.betcoin.testing.FakeAvatarStore
 import android.database.sqlite.SQLiteException
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.InvalidInputException
-import com.betcoin.testing.FakeAvatarStore
-import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred

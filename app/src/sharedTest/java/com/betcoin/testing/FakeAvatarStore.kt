@@ -1,11 +1,12 @@
-package com.betcoin.data.avatar
+package com.betcoin.testing
 
 import android.net.Uri
+import com.betcoin.data.avatar.AvatarStore
 import com.betcoin.data.model.InvalidImageException
 
 /**
- * In-memory [AvatarStore] for repository tests. Ignores the source [Uri]; [save] returns
- * `"fake-<n>.jpg"`, and [failNextSave] makes the next [save] throw [InvalidImageException].
+ * In-memory [AvatarStore] shared by unit and instrumented tests. Ignores the source [Uri]; [save]
+ * returns `"fake-<n>.jpg"`, and [failNextSave] makes the next [save] throw [InvalidImageException].
  */
 class FakeAvatarStore : AvatarStore {
 
@@ -14,6 +15,14 @@ class FakeAvatarStore : AvatarStore {
 
   /** Refs passed to [delete], in call order. */
   val deleted: MutableList<String> = mutableListOf()
+
+  /** Images returned by [load], keyed by avatarRef. A stored ref without an entry loads as itself. */
+  val images = mutableMapOf<String, Any>()
+
+  private val _loadCalls = mutableListOf<String>()
+
+  /** Refs passed to [load], in call order. */
+  val loadCalls: List<String> get() = _loadCalls
 
   /** When true, the next [save] throws [InvalidImageException] (then resets to false). */
   var failNextSave: Boolean = false
@@ -37,7 +46,11 @@ class FakeAvatarStore : AvatarStore {
   override suspend fun delete(avatarRef: String) {
     deleted += avatarRef
     saved -= avatarRef
+    images.remove(avatarRef)
   }
 
-  override suspend fun load(avatarRef: String): Any? = if (avatarRef in saved) avatarRef else null
+  override suspend fun load(avatarRef: String): Any? {
+    _loadCalls += avatarRef
+    return images[avatarRef] ?: if (avatarRef in saved) avatarRef else null
+  }
 }

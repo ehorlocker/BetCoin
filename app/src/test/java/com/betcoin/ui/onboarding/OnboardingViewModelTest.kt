@@ -1,5 +1,6 @@
 package com.betcoin.ui.onboarding
 
+import com.betcoin.testing.FakeSettingsRepository
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.repository.RecoveryCode
 import com.betcoin.data.repository.SettingsRepository

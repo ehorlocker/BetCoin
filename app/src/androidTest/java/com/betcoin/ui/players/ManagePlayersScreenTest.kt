@@ -1,6 +1,7 @@
 package com.betcoin.ui.players
 
-import com.betcoin.data.avatar.FakeAvatarStore
+import com.betcoin.testing.FakeUserRepository
+import com.betcoin.testing.FakeAvatarStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -28,7 +29,7 @@ class ManagePlayersScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val repository = PlayersTestRepository()
+    private val repository = FakeUserRepository()
 
     private fun showScreen(
         onPlayerClick: (Long) -> Unit = {},
@@ -126,7 +127,7 @@ class ManagePlayersScreenTest {
         composeTestRule.onNodeWithText("Create").performClick()
 
         composeTestRule.onNodeWithText("PINs don't match").assertIsDisplayed()
-        assertThat(repository.users.value).isEmpty()
+        assertThat(repository.users).isEmpty()
     }
 
     @Test
@@ -139,7 +140,7 @@ class ManagePlayersScreenTest {
         typeInto("Confirm PIN", "1234")
         composeTestRule.onNodeWithText("Create").performClick()
 
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { repository.users.value.isNotEmpty() }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { repository.users.isNotEmpty() }
         composeTestRule.onNodeWithText("Create New Player").assertDoesNotExist()
         composeTestRule.onNodeWithText("Carol").assertIsDisplayed()
     }

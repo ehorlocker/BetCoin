@@ -3,7 +3,7 @@ package com.betcoin.testing
 import android.net.Uri
 import com.betcoin.data.avatar.CameraCaptureStore
 
-/** [CameraCaptureStore] for JVM tests. */
+/** [CameraCaptureStore] shared by unit and instrumented tests; never launches the camera. */
 class FakeCameraCaptureStore : CameraCaptureStore {
 
   /** Uri returned by the next [createCaptureUri]. */

@@ -1,5 +1,6 @@
 package com.betcoin.ui.newbet
 
+import com.betcoin.testing.FakeAvatarStore
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -16,7 +17,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.repository.local.LocalBetRepository
 import com.betcoin.data.repository.local.LocalUserRepository

@@ -1,7 +1,7 @@
 package com.betcoin.ui.admin
 
+import com.betcoin.testing.FakeSettingsRepository
 import com.betcoin.data.repository.SettingsRepository
-import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,6 +1,7 @@
 package com.betcoin.ui.leaderboard
 
-import com.betcoin.data.avatar.FakeAvatarStore
+import com.betcoin.testing.FakeUserRepository
+import com.betcoin.testing.FakeAvatarStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -10,7 +11,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.betcoin.ui.components.formatCoins
-import com.betcoin.ui.players.PlayersTestRepository
 import com.betcoin.ui.theme.BetCoinTheme
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -26,7 +26,7 @@ class LeaderboardScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val repository = PlayersTestRepository()
+    private val repository = FakeUserRepository()
 
     private fun showScreen(
         onNavigateBack: () -> Unit = {},

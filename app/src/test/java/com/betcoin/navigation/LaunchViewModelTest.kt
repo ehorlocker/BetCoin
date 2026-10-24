@@ -1,13 +1,13 @@
 package com.betcoin.navigation
 
+import com.betcoin.testing.FakeBetRepository
+import com.betcoin.testing.FakeSettingsRepository
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
-import com.betcoin.testing.FakePendingBetRepository
 import com.betcoin.testing.RecordingErrorLogger
-import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -28,14 +28,14 @@ class LaunchViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var settings: FakeSettingsRepository
-    private lateinit var bets: FakePendingBetRepository
+    private lateinit var bets: FakeBetRepository
     private lateinit var logger: RecordingErrorLogger
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         settings = FakeSettingsRepository()
-        bets = FakePendingBetRepository()
+        bets = FakeBetRepository()
         logger = RecordingErrorLogger()
     }
 

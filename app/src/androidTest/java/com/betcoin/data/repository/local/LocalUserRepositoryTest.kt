@@ -1,10 +1,10 @@
 package com.betcoin.data.repository.local
 
+import com.betcoin.testing.FakeAvatarStore
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.betcoin.data.avatar.FakeAvatarStore
 import com.betcoin.data.database.BetCoinDatabase
 import com.betcoin.data.database.entity.Bet
 import com.betcoin.data.database.entity.BetOutcome

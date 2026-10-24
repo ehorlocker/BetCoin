@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
- * Shared in-memory fake of [UserRepository] for ViewModel tests.
+ * Shared in-memory fake of [UserRepository] for unit and instrumented tests.
  *
  * Applies the same rules as [LocalUserRepository] and hashes PINs with the same [PinHasher] (its blocking forms, so tests stay on the test dispatcher), so
  * no plain-text PIN is ever kept. Users seeded through [users] or [userCount] carry a placeholder
@@ -61,6 +61,32 @@ class FakeUserRepository : UserRepository {
                 )
             }
         }
+
+    /**
+     * Adds a player whose PIN is [pin] (hashed like the real repository) with the given stats and
+     * returns their ID.
+     */
+    fun addPlayer(
+        username: String,
+        pin: String = "1234",
+        balance: Long = LocalUserRepository.STARTING_BALANCE,
+        totalDebt: Long = 0L,
+        totalWins: Int = 0,
+        totalLosses: Int = 0,
+    ): Long {
+        val id = (users.maxOfOrNull { it.id } ?: 0L) + 1
+        users = users + User(
+            id = id,
+            username = username,
+            pinHash = PinHasher.hashBlocking(pin),
+            balance = balance,
+            totalDebt = totalDebt,
+            totalWins = totalWins,
+            totalLosses = totalLosses,
+            createdAt = 0L,
+        )
+        return id
+    }
 
     /** Number of collectors currently subscribed to [getAllUsers]. */
     val allUsersSubscriberCount: Int
