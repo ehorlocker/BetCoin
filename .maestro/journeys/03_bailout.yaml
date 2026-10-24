@@ -1,0 +1,230 @@
+# Journey 3: going broke → bailout.
+#
+# 1. Alice bets 950 on X, Bob bets 950 on Y, Y wins. Equal wagers keep it uncapped, so Alice
+#    loses all 950 and Bob collects 1900 (net +950): balances 50 / 1950.
+# 2. Alice's 50 is under 100 with nothing locked, so Bailout shows on her Player Detail; Bob's has none.
+# 3. Bailout with Alice's PIN: balance 1050, bailouts 1, total debt 1000, net worth 50 (1050 − 1000),
+#    W-L 0-1, lost 950. Bob stays 1950, 1-0, earnings 950. Leaderboard ranks by net worth: Bob 1, Alice 2.
+# Expected numbers are worked out by hand; never compute them here. Numbers are regexes, so
+# "1,050" and "1050" both pass. Selectors are test IDs only.
+appId: com.betcoin.dev
+---
+- runFlow: ../common/onboard.yaml
+
+# --- Two players (add_three_players.yaml adds Cara too, so Manage Players is driven here) ---
+- tapOn:
+    id: home_manage_players
+- runFlow:
+    file: ../common/add_player.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/add_player.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- back
+- extendedWaitUntil:
+    visible:
+      id: home_manage_players
+    timeout: 15000
+
+# --- Bet: Alice 950 on X, Bob 950 on Y, locked with both PINs ---
+- runFlow:
+    file: ../common/create_bet.yaml
+    env:
+      PROMPT: Who wins the race?
+      OUTCOME_0: X
+      OUTCOME_1: Y
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+      OUTCOME_INDEX: "0"
+      WAGER: "950"
+- runFlow:
+    file: ../common/add_participant.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+      OUTCOME_INDEX: "1"
+      WAGER: "950"
+# lock_bet.yaml and enter_all_pins.yaml ask for Cara's PIN too, so the two-player consent is inline.
+- scrollUntilVisible:
+    element:
+      id: new_bet_continue
+- tapOn:
+    id: new_bet_continue
+- scrollUntilVisible:
+    element:
+      id: new_bet_lock
+- tapOn:
+    id: new_bet_lock
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- extendedWaitUntil:
+    visible:
+      id: status_badge
+      containsDescendants:
+        - text: ACTIVE
+    timeout: 15000
+
+# --- Y (index 1) wins ---
+- scrollUntilVisible:
+    element:
+      id: bet_detail_resolve
+- tapOn:
+    id: bet_detail_resolve
+- tapOn:
+    id: outcome_picker_option_1
+- tapOn:
+    id: outcome_picker_continue
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Bob
+      PIN: "2222"
+- scrollUntilVisible:
+    element:
+      id: status_badge
+      containsDescendants:
+        - text: RESOLVED
+    direction: UP
+    timeout: 15000
+- runFlow: ../common/go_home.yaml
+
+# --- Alice: balance 50, Bailout available ---
+- tapOn:
+    id: home_leaderboard
+- tapOn:
+    id: leaderboard_row_Alice
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*50\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_bailout
+- assertVisible:
+    id: player_detail_stat_bailouts
+    containsDescendants:
+      - text: '\D*0\D*'
+- back
+
+# --- Bob: balance 1950, no Bailout ---
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?950\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_locked
+- assertNotVisible:
+    id: player_detail_bailout
+- back
+
+# --- Alice takes the Bailout with her PIN ---
+- tapOn:
+    id: leaderboard_row_Alice
+- scrollUntilVisible:
+    element:
+      id: player_detail_bailout
+- tapOn:
+    id: player_detail_bailout
+- runFlow:
+    file: ../common/enter_pin.yaml
+    env:
+      NAME: Alice
+      PIN: "1111"
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?050\D*'
+    timeout: 15000
+
+# --- Alice's Player Detail: balance 1050, net worth 50, W-L 0-1, lost 950, bailouts 1, debt 1000 ---
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_locked
+- assertVisible:
+    id: player_detail_stat_net_worth
+    containsDescendants:
+      - text: '\D*50\D*'
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '0-1'
+- assertVisible:
+    id: player_detail_stat_total_lost
+    containsDescendants:
+      - text: '\D*950\D*'
+- assertVisible:
+    id: player_detail_stat_bailouts
+    containsDescendants:
+      - text: '1'
+- assertVisible:
+    id: player_detail_stat_total_debt
+    containsDescendants:
+      - text: '\D*1,?000\D*'
+# Her balance is 1050 now, so Bailout is no longer offered.
+- assertNotVisible:
+    id: player_detail_bailout
+- back
+
+# --- Bob is unchanged: 1950, 1-0, earnings 950 ---
+- tapOn:
+    id: leaderboard_row_Bob
+- extendedWaitUntil:
+    visible:
+      id: player_detail_stat_balance
+      containsDescendants:
+        - text: '\D*1,?950\D*'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: player_detail_stat_locked
+- assertVisible:
+    id: player_detail_stat_wl
+    containsDescendants:
+      - text: '1-0'
+- assertVisible:
+    id: player_detail_stat_total_earnings
+    containsDescendants:
+      - text: '\D*950\D*'
+- back
+
+# --- Leaderboard ranks by net worth: Bob (1950) 1, Alice (50) 2 ---
+- assertVisible:
+    id: leaderboard_rank_Bob
+    text: '1'
+- assertVisible:
+    id: leaderboard_rank_Alice
+    text: '2'
+- assertVisible:
+    id: leaderboard_net_worth_Bob
+    text: '\D*1,?950\D*'
+- assertVisible:
+    id: leaderboard_net_worth_Alice
+    text: '\D*50\D*'
