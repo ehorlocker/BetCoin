@@ -1,17 +1,13 @@
 package com.betcoin.ui.home
 
-import android.net.Uri
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.betcoin.data.database.entity.User
-import com.betcoin.data.repository.BetRepository
-import com.betcoin.data.repository.UserRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import com.betcoin.testing.FakeBetRepository
+import com.betcoin.testing.FakeUserRepository
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,54 +23,11 @@ class HomeScreenTest {
 
     @Test
     fun homeScreen_showsTitleAndCounts() {
-        val fakeBetRepo = object : BetRepository {
-            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
-            override suspend fun discardPendingBet(betId: Long) {}
-            override suspend fun discardOlderPendingBets() {}
-            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
-                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
-                outcomes = emptyList(),
-                participants = emptyList()
-            ))
-            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
-            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
-            override suspend fun removeParticipant(participantId: Long) {}
-            override suspend fun lockBet(betId: Long) {}
-            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun cancelBet(betId: Long) {}
-            override suspend fun forceCancelBet(betId: Long) {}
-            override suspend fun reopenBet(betId: Long) {}
-            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
-            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
-            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
-            override suspend fun deleteBet(betId: Long) {}
-            override suspend fun repeatBet(betId: Long) = 0L
+        val users = FakeUserRepository().apply {
+            addPlayer("Alice")
+            addPlayer("Bob")
         }
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(listOf(
-                User(id = 1, username = "Alice", pinHash = "hash", createdAt = 0),
-                User(id = 2, username = "Bob", pinHash = "hash", createdAt = 0),
-            ))
-            override fun getLeaderboard() = flowOf(emptyList<User>())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
-            override suspend fun clearProfilePicture(userId: Long) {}
-        }
-
-        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
+        val homeViewModel = HomeViewModel(FakeBetRepository(users), users)
         composeTestRule.setContent {
             HomeScreen(viewModel = homeViewModel)
         }
@@ -86,55 +39,12 @@ class HomeScreenTest {
 
     @Test
     fun homeScreen_newBetButton_triggersCallback() {
-        val fakeBetRepo = object : BetRepository {
-            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
-            override suspend fun discardPendingBet(betId: Long) {}
-            override suspend fun discardOlderPendingBets() {}
-            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
-                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
-                outcomes = emptyList(),
-                participants = emptyList()
-            ))
-            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
-            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
-            override suspend fun removeParticipant(participantId: Long) {}
-            override suspend fun lockBet(betId: Long) {}
-            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun cancelBet(betId: Long) {}
-            override suspend fun forceCancelBet(betId: Long) {}
-            override suspend fun reopenBet(betId: Long) {}
-            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
-            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
-            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
-            override suspend fun deleteBet(betId: Long) {}
-            override suspend fun repeatBet(betId: Long) = 0L
+        val users = FakeUserRepository().apply {
+            addPlayer("Alice")
+            addPlayer("Bob")
         }
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(listOf(
-                User(id = 1, username = "Alice", pinHash = "hash", createdAt = 0),
-                User(id = 2, username = "Bob", pinHash = "hash", createdAt = 0),
-            ))
-            override fun getLeaderboard() = flowOf(emptyList<User>())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
-            override suspend fun clearProfilePicture(userId: Long) {}
-        }
-
         var newBetClicked = false
-        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
+        val homeViewModel = HomeViewModel(FakeBetRepository(users), users)
         composeTestRule.setContent {
             HomeScreen(
                 viewModel = homeViewModel,
@@ -148,52 +58,9 @@ class HomeScreenTest {
 
     @Test
     fun homeScreen_leaderboardButton_triggersCallback() {
-        val fakeBetRepo = object : BetRepository {
-            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
-            override suspend fun discardPendingBet(betId: Long) {}
-            override suspend fun discardOlderPendingBets() {}
-            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
-                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
-                outcomes = emptyList(),
-                participants = emptyList()
-            ))
-            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
-            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
-            override suspend fun removeParticipant(participantId: Long) {}
-            override suspend fun lockBet(betId: Long) {}
-            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun cancelBet(betId: Long) {}
-            override suspend fun forceCancelBet(betId: Long) {}
-            override suspend fun reopenBet(betId: Long) {}
-            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
-            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
-            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
-            override suspend fun deleteBet(betId: Long) {}
-            override suspend fun repeatBet(betId: Long) = 0L
-        }
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(emptyList<User>())
-            override fun getLeaderboard() = flowOf(emptyList<User>())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
-            override suspend fun clearProfilePicture(userId: Long) {}
-        }
-
+        val users = FakeUserRepository()
         var leaderboardClicked = false
-        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
+        val homeViewModel = HomeViewModel(FakeBetRepository(users), users)
         composeTestRule.setContent {
             HomeScreen(
                 viewModel = homeViewModel,
@@ -207,52 +74,9 @@ class HomeScreenTest {
 
     @Test
     fun homeScreen_betHistoryButton_triggersCallback() {
-        val fakeBetRepo = object : BetRepository {
-            override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getAllBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            override fun getPendingBet() = flowOf<com.betcoin.data.model.BetWithDetails?>(null)
-            override suspend fun discardPendingBet(betId: Long) {}
-            override suspend fun discardOlderPendingBets() {}
-            override fun getBetWithDetails(betId: Long) = flowOf(com.betcoin.data.model.BetWithDetails(
-                bet = com.betcoin.data.database.entity.Bet(id = 1, prompt = "", status = com.betcoin.data.model.BetStatus.ACTIVE, createdAt = 0),
-                outcomes = emptyList(),
-                participants = emptyList()
-            ))
-            override suspend fun createBet(prompt: String, outcomes: List<String>) = 0L
-            override suspend fun addParticipant(betId: Long, userId: Long, outcomeId: Long, wagerAmount: Long) {}
-            override suspend fun removeParticipant(participantId: Long) {}
-            override suspend fun lockBet(betId: Long) {}
-            override suspend fun resolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun cancelBet(betId: Long) {}
-            override suspend fun forceCancelBet(betId: Long) {}
-            override suspend fun reopenBet(betId: Long) {}
-            override suspend fun adminResolveBet(betId: Long, winningOutcomeId: Long) {}
-            override suspend fun updateBetPrompt(betId: Long, newPrompt: String) {}
-            override suspend fun adminRemoveParticipant(betId: Long, participantId: Long) {}
-            override suspend fun adminEditWager(participantId: Long, newWagerAmount: Long) {}
-            override suspend fun deleteBet(betId: Long) {}
-            override suspend fun repeatBet(betId: Long) = 0L
-        }
-        val fakeUserRepo = object : UserRepository {
-            override fun getAllUsers() = flowOf(emptyList<User>())
-            override fun getLeaderboard() = flowOf(emptyList<User>())
-            override suspend fun createUser(username: String, pin: String) = 0L
-            override suspend fun verifyPin(userId: Long, pin: String) = false
-            override suspend fun getUser(userId: Long) = null
-            override fun getLockedBalance(userId: Long): Flow<Long> = flowOf(0L)
-            override suspend fun bailout(userId: Long) {}
-            override suspend fun forceBailout(userId: Long) {}
-            override suspend fun deleteUser(userId: Long) {}
-            override suspend fun resetPin(userId: Long, newPin: String) {}
-            override suspend fun updateBalance(userId: Long, delta: Long) {}
-            override suspend fun setBalance(userId: Long, newBalance: Long) {}
-            override suspend fun updateUsername(userId: Long, newUsername: String) {}
-            override suspend fun updateProfilePicture(userId: Long, imageUri: Uri) {}
-            override suspend fun clearProfilePicture(userId: Long) {}
-        }
-
+        val users = FakeUserRepository()
         var betHistoryClicked = false
-        val homeViewModel = HomeViewModel(fakeBetRepo, fakeUserRepo)
+        val homeViewModel = HomeViewModel(FakeBetRepository(users), users)
         composeTestRule.setContent {
             HomeScreen(
                 viewModel = homeViewModel,
@@ -266,14 +90,8 @@ class HomeScreenTest {
 
     @Test
     fun gearIcon_callsOnSettings() {
-        val homeViewModel = HomeViewModel(
-            object : BetRepository by unsupported<BetRepository>() {
-                override fun getActiveBets() = flowOf(emptyList<com.betcoin.data.model.BetWithDetails>())
-            },
-            object : UserRepository by unsupported<UserRepository>() {
-                override fun getAllUsers() = flowOf(emptyList<User>())
-            },
-        )
+        val users = FakeUserRepository()
+        val homeViewModel = HomeViewModel(FakeBetRepository(users), users)
         var settingsClicked = false
         composeTestRule.setContent {
             HomeScreen(viewModel = homeViewModel, onSettings = { settingsClicked = true })
@@ -282,10 +100,4 @@ class HomeScreenTest {
         composeTestRule.onNodeWithContentDescription("Settings").performClick()
         assert(settingsClicked) { "Settings callback was not invoked" }
     }
-
-    /** A stub whose members all throw; the test overrides the few it needs. */
-    private inline fun <reified T : Any> unsupported(): T = java.lang.reflect.Proxy.newProxyInstance(
-        T::class.java.classLoader,
-        arrayOf(T::class.java),
-    ) { _, method, _ -> throw UnsupportedOperationException(method.name) } as T
 }

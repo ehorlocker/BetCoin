@@ -1,7 +1,8 @@
 package com.betcoin.ui.players
 
-import com.betcoin.data.avatar.FakeAvatarStore
-import com.betcoin.data.avatar.FakeCameraCaptureStore
+import com.betcoin.testing.FakeUserRepository
+import com.betcoin.testing.FakeAvatarStore
+import com.betcoin.testing.FakeCameraCaptureStore
 import com.betcoin.data.model.ThemePreference
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -32,7 +33,7 @@ class PlayerDetailScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val repository = PlayersTestRepository()
+    private val repository = FakeUserRepository()
 
     private fun showScreen(playerId: Long) {
         val viewModel = PlayerDetailViewModel(
@@ -55,10 +56,10 @@ class PlayerDetailScreenTest {
     @Test
     fun showsEveryStat() {
         val id = repository.addPlayer("Alice", balance = 700, totalDebt = 1000)
-        repository.users.value = repository.users.value.map {
+        repository.users = repository.users.map {
             it.copy(totalWins = 5, totalLosses = 2, totalEarnings = 640, totalLost = 300, bailoutCount = 1)
         }
-        repository.lockedBalances.value = mapOf(id to 250L)
+        repository.lockedBalances = mapOf(id to 250L)
         showScreen(id)
 
         composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
@@ -75,7 +76,7 @@ class PlayerDetailScreenTest {
     @Test
     fun notEligible_hidesBailoutButton() {
         val id = repository.addPlayer("Alice", balance = 60)
-        repository.lockedBalances.value = mapOf(id to 40L)
+        repository.lockedBalances = mapOf(id to 40L)
         showScreen(id)
 
         composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
@@ -99,7 +100,7 @@ class PlayerDetailScreenTest {
         composeTestRule.onNodeWithText("Cancel").performClick()
 
         composeTestRule.onNodeWithText("Alice, enter your PIN").assertDoesNotExist()
-        assertThat(repository.users.value.single().bailoutCount).isEqualTo(0)
+        assertThat(repository.users.single().bailoutCount).isEqualTo(0)
     }
 
     @Test
@@ -113,7 +114,7 @@ class PlayerDetailScreenTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.onAllNodes(hasText("Wrong PIN")).fetchSemanticsNodes().isNotEmpty()
         }
-        assertThat(repository.users.value.single().bailoutCount).isEqualTo(0)
+        assertThat(repository.users.single().bailoutCount).isEqualTo(0)
     }
 
     @Test
@@ -125,7 +126,7 @@ class PlayerDetailScreenTest {
         composeTestRule.onNodeWithTag(PIN_INPUT_TAG).performTextInput("2468")
 
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            repository.users.value.single().bailoutCount == 1
+            repository.users.single().bailoutCount == 1
         }
         assertStat("Balance", "1,050")
         assertStat("Total debt", "1,000")

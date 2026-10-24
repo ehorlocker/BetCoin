@@ -1,10 +1,11 @@
 package com.betcoin.ui.newbet
 
+import com.betcoin.testing.FakeBetRepository
+import com.betcoin.testing.FakeUserRepository
 import androidx.lifecycle.SavedStateHandle
 import com.betcoin.data.model.InsufficientBalanceException
 import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.navigation.Routes
-import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +31,7 @@ class NewBetViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var users: FakeUserRepository
-    private lateinit var bets: FakeNewBetRepository
+    private lateinit var bets: FakeBetRepository
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var viewModel: NewBetViewModel
 
@@ -38,7 +39,7 @@ class NewBetViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         users = FakeUserRepository()
-        bets = FakeNewBetRepository(users)
+        bets = FakeBetRepository(users)
     }
 
     @After

@@ -1,15 +1,15 @@
 package com.betcoin.ui.admin
 
+import com.betcoin.testing.FakeBetRepository
+import com.betcoin.testing.FakeSettingsRepository
+import com.betcoin.testing.FakeUserRepository
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.DuplicateUsernameException
 import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.repository.UserRepository
-import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.common.toUserMessage
 import com.betcoin.ui.components.formatCoins
-import com.betcoin.ui.home.FakeBetRepository
-import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers

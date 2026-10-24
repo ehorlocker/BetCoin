@@ -1,5 +1,7 @@
 package com.betcoin.ui.betdetail
 
+import com.betcoin.testing.FakeBetRepository
+import com.betcoin.testing.FakeUserRepository
 import android.database.sqlite.SQLiteException
 import androidx.lifecycle.SavedStateHandle
 import com.betcoin.data.database.entity.Bet
@@ -16,10 +18,8 @@ import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
 import com.betcoin.navigation.Routes
-import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.common.toUserMessage
-import com.betcoin.ui.home.FakeBetRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -358,7 +358,7 @@ class BetDetailViewModelTest {
         )
     }
 
-    private class Fixture(val repo: RecordingBetRepository, val vm: BetDetailViewModel) {
+    private class Fixture(val repo: FakeBetRepository, val vm: BetDetailViewModel) {
         val state get() = vm.actionState.value
     }
 
@@ -368,7 +368,7 @@ class BetDetailViewModelTest {
         kimDeleted: Boolean = false,
         jayDeleted: Boolean = false,
     ): Fixture {
-        val repo = RecordingBetRepository(actionBet(status, kimDeleted, jayDeleted))
+        val repo = FakeBetRepository().apply { serve(actionBet(status, kimDeleted, jayDeleted)) }
         return Fixture(repo, viewModel(repo, users))
     }
 
@@ -619,7 +619,7 @@ class BetDetailViewModelTest {
         f.vm.onCancelRequested()
         assertThat(f.state.consent).isNotNull()
 
-        f.repo.bet.value = actionBet(BetStatus.CANCELLED)
+        f.repo.serve(actionBet(BetStatus.CANCELLED))
 
         assertThat(f.state.consent).isNull()
     }
@@ -630,7 +630,7 @@ class BetDetailViewModelTest {
         f.vm.onResolveRequested()
         assertThat(f.state.pickingOutcome).isTrue()
 
-        f.repo.bet.value = null
+        f.repo.serve(null)
 
         assertThat(f.state.pickingOutcome).isFalse()
     }
@@ -641,7 +641,7 @@ class BetDetailViewModelTest {
         f.vm.onCancelRequested()
         assertThat(f.state.consent).isNotNull()
 
-        f.repo.bet.value = null
+        f.repo.serve(null)
 
         assertThat(f.state.consent).isNull()
     }
@@ -654,7 +654,7 @@ class BetDetailViewModelTest {
         f.vm.onAllPinsConfirmed()
         assertThat(f.state.errorMessage).isNotNull()
 
-        f.repo.bet.value = actionBet(BetStatus.ACTIVE)
+        f.repo.serve(actionBet(BetStatus.ACTIVE))
 
         assertThat(f.state.errorMessage).isNull()
     }

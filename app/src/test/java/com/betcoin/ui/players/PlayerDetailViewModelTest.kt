@@ -1,5 +1,8 @@
 package com.betcoin.ui.players
 
+import com.betcoin.testing.FakeUserRepository
+import com.betcoin.testing.FakeAvatarStore
+import com.betcoin.testing.FakeCameraCaptureStore
 import androidx.lifecycle.SavedStateHandle
 import com.betcoin.data.database.entity.User
 import com.betcoin.data.model.BetStatus
@@ -8,11 +11,8 @@ import com.betcoin.data.model.InvalidInputException
 import com.betcoin.data.model.NotEligibleForBailoutException
 import com.betcoin.data.model.InvalidImageException
 import com.betcoin.navigation.Routes
-import com.betcoin.testing.FakeAvatarStore
-import com.betcoin.testing.FakeCameraCaptureStore
 import com.betcoin.testing.testUri
 import kotlinx.coroutines.CompletableDeferred
-import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.players.PlayerDetailViewModel.UiState
 import com.google.common.truth.Truth.assertThat

@@ -1,5 +1,8 @@
 package com.betcoin.ui.admin
 
+import com.betcoin.testing.FakeBetRepository
+import com.betcoin.testing.FakeSettingsRepository
+import com.betcoin.testing.FakeUserRepository
 import com.betcoin.data.database.entity.Bet
 import com.betcoin.data.database.entity.BetOutcome
 import com.betcoin.data.database.entity.BetParticipant
@@ -12,11 +15,8 @@ import com.betcoin.data.model.ParticipantWithUser
 import com.betcoin.data.model.UnanimousPickException
 import com.betcoin.data.repository.BetRepository
 import com.betcoin.data.repository.UserRepository
-import com.betcoin.testing.FakeUserRepository
 import com.betcoin.ui.common.GENERIC_ERROR_MESSAGE
 import com.betcoin.ui.common.toUserMessage
-import com.betcoin.ui.home.FakeBetRepository
-import com.betcoin.ui.onboarding.FakeSettingsRepository
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
