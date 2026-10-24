@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import com.betcoin.navigation.LaunchViewModel
 import com.betcoin.ui.components.AppRootLayout
 import com.betcoin.ui.theme.AppThemeViewModel
 import com.betcoin.ui.theme.BetCoinTheme
+import com.betcoin.ui.theme.applyApplicationNightMode
 import com.betcoin.ui.theme.isDarkTheme
 import com.betcoin.ui.theme.systemBarStyle
 import dagger.hilt.android.AndroidEntryPoint
@@ -74,6 +76,11 @@ class MainActivity : ComponentActivity() {
             val themePreference = appThemeViewModel.themePreference
                 .collectAsStateWithLifecycle().value ?: return@setContent
             val darkTheme = themePreference.isDarkTheme()
+
+            // Persist the stored theme as the app night mode so the next cold start matches it.
+            LaunchedEffect(themePreference) {
+                applyApplicationNightMode(this@MainActivity, themePreference)
+            }
 
             // System bar icon style follows the resolved theme.
             DisposableEffect(darkTheme) {
