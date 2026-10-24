@@ -6,6 +6,7 @@
 > **Design system:** [`dark-mode-design.md`](dark-mode-design.md) (Pastel Playroom Dark)  
 
 ### Revision Log
+- **2026-10-23** — BET-46: CI runs the instrumented and Compose UI tests on an emulator (§13 CI bullet).
 - **2026-10-23** — BET-45: CI compiles the instrumented test source sets for both flavors and lints the prod flavor (§13 CI bullet).
 - **2026-10-22** — BET-20: `AvatarStore.load` is `suspend`; added the `CameraCaptureStore` abstraction (temp capture file behind a FileProvider) for taking a profile picture with the camera, with its DI binding and project-structure entries.
 - **2026-10-19** — BET-35: system bar icon colors follow the resolved theme through a single `systemBarStyle` helper; on dev, the status bar icons contrast with the banner in both themes, and API 24-25 use a dark navigation scrim.
@@ -782,7 +783,7 @@ app/src/prod/
 - **Compose UI tests:** each screen's states (loading, empty, error) and its main interactions.
 - **Emulator check:** verify UI changes on the `BetCoin_Test` emulator per AGENTS.md before marking a ticket done.
 - **Coverage:** `./gradlew createDevDebugUnitTestCoverageReport` generates a JaCoCo report for the devDebug unit tests in `app/build/reports/coverage/test/dev/debug/` (HTML `index.html`, XML `report.xml`). It's enabled by `enableUnitTestCoverage = true` on the debug build type. No threshold gate yet.
-- **CI:** `.github/workflows/ci.yml` runs on every PR into `develop` and every push to `develop`: it builds both flavors, compiles the instrumented test source sets for both flavors (`assembleDevDebugAndroidTest`, `assembleProdDebugAndroidTest`, no emulator needed), runs the JVM unit tests (devDebug under coverage), and runs `lintDevDebug` and `lintProdDebug`. It uploads the test reports, the lint reports and the coverage report (`coverage` artifact). Instrumented and Compose UI tests are not run in CI because they need an emulator, so they stay local.
+- **CI:** `.github/workflows/ci.yml` runs on every PR into `develop` and every push to `develop`: it builds both flavors, compiles the instrumented test source sets for both flavors (`assembleDevDebugAndroidTest`, `assembleProdDebugAndroidTest`, no emulator needed), runs the JVM unit tests (devDebug under coverage), and runs `lintDevDebug` and `lintProdDebug`. It uploads the test reports, the lint reports and the coverage report (`coverage` artifact). A separate `Instrumented tests` job boots an API 34 emulator (same setup as the E2E workflow) and runs `connectedDevDebugAndroidTest` (in-memory Room, Compose UI and dev-flavor tests), failing the check on any test failure and uploading the `android-test-reports` artifact. It runs on every PR into `develop` and every push to `develop`.
 
 #### End-to-end (Maestro)
 - **What:** `.maestro/journeys/` drives the real `devDebug` app through whole user journeys (onboarding, players, bets, payouts, leaderboard) and checks hand-worked coin numbers. Shared steps live in `.maestro/common/`.

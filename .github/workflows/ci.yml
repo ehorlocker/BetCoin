@@ -1,6 +1,6 @@
-# Instrumented (connectedAndroidTest) and Compose UI tests are not run here because they need an emulator;
-# run them locally (see spec/betcoin-app-spec.md section 13, Testing Expectations). Their source sets
-# (androidTest, androidTestDev) are compiled here so a broken instrumented test fails CI without an emulator.
+# Build, unit tests and lint run on every PR. The "Instrumented tests" job runs the instrumented and
+# Compose UI tests (androidTest, androidTestDev) on an emulator; see spec/betcoin-app-spec.md section 13,
+# Testing Expectations. The source sets are also compiled in the build job, so a compile error fails fast.
 name: CI
 
 on:
@@ -69,5 +69,61 @@ jobs:
         with:
           name: coverage
           path: app/build/reports/coverage/test/dev/debug/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  instrumented:
+    name: Instrumented tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDKs (11 for the toolchain, 21 for the Gradle daemon)
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            11
+            21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/develop' }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumented tests on an emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            # A freshly booted CI emulator is slow, and an "isn't responding" dialog for the launcher
+            # would cover the app under test. Suppress ANR/crash dialogs and close any already showing.
+            adb shell settings put global hide_error_dialogs 1
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
+            ./gradlew --stacktrace connectedDevDebugAndroidTest -Porg.gradle.java.installations.fromEnv=JAVA_HOME_11_X64,JAVA_HOME_21_X64
+
+      - name: Upload androidTest reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-test-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
           if-no-files-found: ignore
           retention-days: 14
